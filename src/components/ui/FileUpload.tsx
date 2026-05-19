@@ -111,7 +111,7 @@ export function FileUpload({
         onDragLeave={handleDrag}
         onDrop={handleDrop}
         className={cn(
-          "relative border border-dashed rounded-xl p-5 flex flex-col items-center justify-center text-center transition-all bg-white/[0.01]",
+          "relative min-h-[132px] min-w-0 border border-dashed rounded-xl p-5 flex flex-col items-center justify-center text-center transition-all bg-white/[0.01]",
           dragActive
             ? "border-[#10B981] bg-[#10B981]/5 scale-[1.01]"
             : "border-white/10 hover:border-white/20",
@@ -138,12 +138,12 @@ export function FileUpload({
 
         {/* Main Interface States */}
         {uploading ? (
-          <div className="w-full py-4 flex flex-col items-center justify-center">
+          <div className="w-full min-w-0 py-4 flex flex-col items-center justify-center">
             <RefreshCw className="h-8 w-8 text-[#10B981] animate-spin mb-3" />
-            <p className="text-xs text-[#94A3B8] font-semibold mb-1">
+            <p className="w-full max-w-full truncate px-2 text-xs text-[#94A3B8] font-semibold mb-1">
               Uploading {localFileName}...
             </p>
-            <div className="w-48 bg-white/5 rounded-full h-1.5 overflow-hidden">
+            <div className="w-full max-w-48 bg-white/5 rounded-full h-1.5 overflow-hidden">
               <div
                 className="bg-gradient-to-r from-[#10B981] to-[#059669] h-1.5 rounded-full transition-all duration-150"
                 style={{ width: `${progress}%` }}
@@ -152,33 +152,33 @@ export function FileUpload({
             <span className="text-[10px] text-[#94A3B8]/60 mt-1">{progress}%</span>
           </div>
         ) : status === "not_uploaded" || status === "needs_reupload" ? (
-          <div className="flex flex-col items-center cursor-pointer py-3" onClick={triggerInputClick}>
+          <div className="flex max-w-full flex-col items-center cursor-pointer py-3" onClick={triggerInputClick}>
             <UploadCloud className="h-8 w-8 text-[#94A3B8] mb-2.5 hover:text-[#10B981] transition-colors" />
-            <p className="text-sm text-[#F8FAFC] font-semibold">
+            <p className="max-w-full text-sm text-[#F8FAFC] font-semibold leading-snug">
               Drag & drop document or <span className="text-[#10B981] hover:underline">browse</span>
             </p>
-            <p className="text-xs text-[#94A3B8]/60 mt-1">
+            <p className="max-w-full text-xs text-[#94A3B8]/60 mt-1 leading-snug">
               Supports PDF, PNG, JPG (Max {maxSizeMB}MB)
             </p>
           </div>
         ) : (
           /* File Preview State */
-          <div className="w-full flex items-center justify-between py-2 text-left">
-            <div className="flex items-center gap-3">
+          <div className="w-full min-w-0 flex items-center justify-between gap-3 pt-8 pb-1 text-left">
+            <div className="flex min-w-0 flex-1 items-center gap-3">
               <div className={cn(
-                "p-2.5 rounded-lg",
+                "shrink-0 p-2.5 rounded-lg",
                 status === "approved" ? "bg-[#22C55E]/10 text-[#22C55E]" :
                 status === "rejected" ? "bg-[#EF4444]/10 text-[#EF4444]" : "bg-[#10B981]/10 text-[#10B981]"
               )}>
                 <File className="h-5 w-5" />
               </div>
-              <div className="max-w-[200px] sm:max-w-xs md:max-w-md">
-                <p className="text-sm font-semibold text-[#F8FAFC] truncate">
+              <div className="min-w-0 flex-1">
+                <p className="max-w-full truncate text-sm font-semibold text-[#F8FAFC]">
                   {displayFileName}
                 </p>
-                <p className="text-xs text-[#94A3B8]/60 flex items-center gap-1">
+                <p className="flex max-w-full min-w-0 items-center gap-1 truncate text-xs text-[#94A3B8]/60">
                   {status === "approved" && (
-                    <span className="flex items-center gap-0.5 text-[#22C55E]">
+                    <span className="flex min-w-0 items-center gap-0.5 truncate text-[#22C55E]">
                       <CheckCircle2 className="h-3 w-3" /> Auto-verified
                     </span>
                   )}
@@ -190,7 +190,7 @@ export function FileUpload({
             </div>
 
             {/* Actions */}
-            <div className="flex items-center gap-1">
+            <div className="flex shrink-0 items-center gap-1">
               <button
                 onClick={triggerInputClick}
                 title="Replace File"

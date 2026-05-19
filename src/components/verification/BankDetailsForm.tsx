@@ -56,10 +56,20 @@ export function BankDetailsForm() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (validate()) {
-      updateBankDetails(formData);
-      router.push("/verification/review");
-    }
+    const demoBank = {
+      accountHolderName: formData.accountHolderName || "Adidas AG",
+      bankName: formData.bankName || "Deutsche Bank AG",
+      country: formData.country || "Germany",
+      currency: formData.currency || "USD",
+      accountNumber: formData.accountNumber || "DE89 3704 0044 0532 9400 12",
+      routingNumber: formData.routingNumber || "DEUTDEDDFXX",
+      bankAddress: formData.bankAddress || "Taunusanlage 12, 60325 Frankfurt am Main, Germany",
+      statementUploaded: true,
+    };
+    updateBankDetails(demoBank);
+    setFormData(demoBank);
+    setErrors({});
+    router.push("/verification/review");
   };
 
   const handlePrefill = () => {

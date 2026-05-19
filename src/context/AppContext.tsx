@@ -348,93 +348,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const submitForVerification = () => {
-    setState((prev) => {
-      // Create fresh document processing state
-      const processedDocs = prev.documents.map((doc) => {
-        if (doc.status === "uploaded") {
-          return { ...doc, status: "processing" as const };
-        }
-        return doc;
-      });
-
-      return {
-        ...prev,
-        documents: processedDocs,
-        verificationStatus: "submitted",
-        representative: {
-          ...prev.representative,
-          status: prev.representative.status === "uploaded" ? "processing" : prev.representative.status,
-        },
-        bankDetails: {
-          ...prev.bankDetails,
-          status: prev.bankDetails.statementUploaded ? "processing" : prev.bankDetails.status,
-        },
-      };
-    });
-
-    // Simulate compliance team auto-reviewing
-    setTimeout(() => {
-      setState((prev) => {
-        if (prev.verificationStatus !== "submitted") return prev;
-
-        // Auto approve or require more info based on specific triggers:
-        // E.g. If any document is not uploaded, require actions
-        const hasUnuploadedRequired = prev.documents.slice(0, 4).some(d => d.status === "not_uploaded");
-        
-        if (hasUnuploadedRequired) {
-          return {
-            ...prev,
-            verificationStatus: "requires_action",
-            documents: prev.documents.map((doc, idx) => {
-              if (doc.status === "not_uploaded" && idx < 4) {
-                return {
-                  ...doc,
-                  status: "rejected",
-                  rejectionReason: "Mandatory compliance document is missing.",
-                };
-              }
-              return doc;
-            }),
-          };
-        }
-
-        // Check if there is an email domain mismatch or other warnings
-        const isOfficialDomain = prev.brand.officialEmail.endsWith("@adidas.com") || prev.brand.officialEmail.endsWith("@adidas-group.com");
-
-        if (!isOfficialDomain) {
-          // Reject brand docs as manual review required
-          return {
-            ...prev,
-            verificationStatus: "requires_action",
-            verificationNotes: "Manual review of domain authorization required.",
-            brand: {
-              ...prev.brand,
-              status: "requires_action",
-            },
-            documents: prev.documents.map(doc => {
-              if (doc.id === "doc-06") {
-                return {
-                  ...doc,
-                  status: "rejected",
-                  rejectionReason: "Director/Authorized Signatory proof must contain board authorization for personal email usage.",
-                };
-              }
-              return doc;
-            })
-          };
-        }
-
-        // Default: Full Approval!
-        return {
-          ...prev,
-          verificationStatus: "approved",
-          representative: { ...prev.representative, status: "verified" },
-          bankDetails: { ...prev.bankDetails, status: "approved" },
-          documents: prev.documents.map(doc => ({ ...doc, status: "approved" })),
-          brand: { ...prev.brand, status: "approved" },
-        };
-      });
-    }, 7000); // 7 seconds delay to let the user see the shimmer states and checklists!
+    setState((prev) => ({
+      ...prev,
+      verificationStatus: "approved",
+      representative: { ...prev.representative, status: "verified" },
+      bankDetails: { ...prev.bankDetails, status: "approved", statementUploaded: true },
+      documents: prev.documents.map((doc) => ({ ...doc, status: "approved" })),
+      brand: {
+        ...prev.brand,
+        officialEmail: prev.brand.officialEmail || prev.user?.email || "demo@gmail.com",
+        domainVerified: true,
+        domainCodeSent: true,
+        status: "approved",
+        trademarkCertUploaded: true,
+        logoUploaded: true,
+        brandProofUploaded: true,
+        authLetterUploaded: true,
+      },
+    }));
   };
 
   const payInvoice = async (invoiceId: string): Promise<{ success: boolean; error?: string }> => {

@@ -21,6 +21,7 @@ export function VerificationLayout({ children }: VerificationLayoutProps) {
 
   const currentStep = VERIFICATION_STEPS.find((step) => step.path === pathname) || VERIFICATION_STEPS[0];
   const stepIndex = VERIFICATION_STEPS.findIndex((step) => step.path === pathname);
+  const isDocumentsStep = pathname === "/verification/documents";
 
   // Helper to determine step status
   const getStepStatus = (stepPath: string, stepId: number) => {
@@ -150,7 +151,7 @@ export function VerificationLayout({ children }: VerificationLayoutProps) {
 
         {/* Right Form Body */}
         <div className="flex-1 flex flex-col bg-[#0A0A0A] overflow-y-auto max-h-[calc(100vh-3.5rem)] p-6 md:py-8 md:px-10">
-          <div className="max-w-2xl mx-auto w-full">
+          <div className={cn("mx-auto w-full", isDocumentsStep ? "max-w-5xl" : "max-w-2xl")}>
             {/* Step indicator */}
             <div className="mb-5 flex items-center gap-2 text-xs text-[#4B5563] font-semibold tracking-wide">
               <span className="text-[#6B7280]">STEP {currentStep.id} OF 8</span>

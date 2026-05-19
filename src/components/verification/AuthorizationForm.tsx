@@ -72,10 +72,17 @@ export function AuthorizationForm() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (validate()) {
-      updateAuthorization(formData);
-      router.push("/verification/documents");
-    }
+    updateAuthorization({
+      ...formData,
+      isOwner: formData.isOwner ?? true,
+      owns25Percent: formData.owns25Percent ?? false,
+      isAuthorizedForPayments: formData.isAuthorizedForPayments ?? true,
+      signatoryName: formData.signatoryName || "Demo Approver",
+      signatoryEmail: formData.signatoryEmail || "demo@gmail.com",
+      roleInCompany: formData.roleInCompany || "Authorized Representative",
+    });
+    setErrors({});
+    router.push("/verification/documents");
   };
 
   return (

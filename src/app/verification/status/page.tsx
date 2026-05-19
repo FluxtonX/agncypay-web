@@ -39,6 +39,16 @@ export default function VerificationStatusPage() {
     return () => clearInterval(interval);
   }, [state.verificationStatus]);
 
+  useEffect(() => {
+    if (state.verificationStatus !== "approved") return;
+
+    const redirectTimer = setTimeout(() => {
+      router.push("/dashboard");
+    }, 1800);
+
+    return () => clearTimeout(redirectTimer);
+  }, [router, state.verificationStatus]);
+
   const handleReturnToDashboard = () => {
     router.push("/dashboard");
   };
@@ -129,7 +139,7 @@ export default function VerificationStatusPage() {
           <div className="space-y-1.5 max-w-md">
             <h3 className="text-lg font-black text-white tracking-tight">Corporate Verification Approved</h3>
             <p className="text-xs text-[#6B7280] leading-relaxed">
-              Your registered entity (<span className="font-semibold text-white">Adidas AG</span>) has been authenticated. Full treasury payments are now active.
+              Your demo verification is complete. Full treasury payments are now active.
             </p>
           </div>
 
@@ -137,7 +147,7 @@ export default function VerificationStatusPage() {
           <div className="w-full max-w-sm bg-black/40 border border-[#1F1F1F] p-3 rounded-lg text-left text-[11px] text-[#6B7280] space-y-1">
             <p><span className="font-semibold text-white">Compliance Seal:</span> AP-DE-984021</p>
             <p><span className="font-semibold text-white">Verification Date:</span> {new Date().toLocaleDateString()}</p>
-            <p><span className="font-semibold text-white">Official Domain:</span> adidas.com (Verified)</p>
+            <p><span className="font-semibold text-white">Brand Email:</span> Accepted</p>
           </div>
 
           <div className="flex gap-4">
@@ -152,7 +162,7 @@ export default function VerificationStatusPage() {
         </Card>
       )}
 
-      {/* STATE 3: ACTION REQUIRED (DOMAIN MISMATCH) */}
+      {/* STATE 3: ACTION REQUIRED */}
       {state.verificationStatus === "requires_action" && (
         <Card className="border-[#EF4444]/20 p-6 space-y-6 bg-[#0D0D0D] text-center flex flex-col items-center justify-center min-h-[350px]">
           <div className="h-14 w-14 rounded-full bg-[#EF4444]/10 border border-[#EF4444]/20 flex items-center justify-center text-[#EF4444] shadow-[0_0_20px_rgba(239,68,68,0.15)]">
@@ -162,7 +172,7 @@ export default function VerificationStatusPage() {
           <div className="space-y-1.5 max-w-md">
             <h3 className="text-lg font-black text-white tracking-tight">Verification Action Required</h3>
             <p className="text-xs text-[#EF4444] leading-relaxed">
-              The compliance checker flagged a public domain mismatch in your brand setup.
+              The demo checker needs one more review before approval.
             </p>
           </div>
 
@@ -172,7 +182,7 @@ export default function VerificationStatusPage() {
               Reason for Action Required:
             </p>
             <p className="leading-relaxed">
-              For branded enterprise workspaces like <span className="font-semibold text-white">Adidas AG</span>, you must verify ownership via a corporate email domain check (e.g. name@adidas.com or name@adidas-group.com). Generic emails like Gmail / Yahoo are blocked from direct auto-approval to prevent brand-jacking.
+              Continue back to the brand step and save again. Demo mode accepts any email address and will approve the flow on submit.
             </p>
           </div>
 

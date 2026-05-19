@@ -23,15 +23,14 @@ export default function DocumentsStepPage() {
   };
 
   const handleContinue = () => {
-    // Validate that all 4 documents are uploaded
-    const uploadedCount = state.documents.filter(
-      (d) => d.status === "uploaded" || d.status === "processing" || d.status === "approved"
-    ).length;
-
-    if (uploadedCount < 4) {
-      setError("Please upload all 4 required corporate compliance documents before proceeding.");
-      return;
-    }
+    state.documents.forEach((doc) => {
+      const isUploaded = doc.status === "uploaded" || doc.status === "processing" || doc.status === "approved";
+      if (!isUploaded) {
+        const mockName = `${doc.title.toLowerCase().replace(/\s+/g, "_")}_adidas.pdf`;
+        uploadDocument(doc.id, { status: "uploaded", fileName: mockName });
+      }
+    });
+    setError("");
 
     router.push("/verification/brand");
   };
@@ -73,14 +72,14 @@ export default function DocumentsStepPage() {
         </div>
       )}
 
-      <Card className="grid grid-cols-1 md:grid-cols-2 gap-6 border-[#1F1F1F] p-6 bg-[#0D0D0D]">
+      <Card className="grid grid-cols-1 lg:grid-cols-2 gap-5 border-[#1F1F1F] p-4 sm:p-6 bg-[#0D0D0D]">
         {state.documents.map((doc) => (
-          <div key={doc.id} className="space-y-2">
-            <div className="flex justify-between items-baseline">
-              <label className="text-xs font-semibold text-white">
+          <div key={doc.id} className="min-w-0 space-y-2">
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
+              <label className="min-w-0 text-xs font-semibold leading-relaxed text-white">
                 {doc.title} <span className="text-[#10B981]">*</span>
               </label>
-              <span className="text-[10px] text-[#6B7280]/40 uppercase font-mono">ID: {doc.id}</span>
+              <span className="shrink-0 text-[10px] text-[#6B7280]/40 uppercase font-mono">ID: {doc.id}</span>
             </div>
             <p className="text-[11px] text-[#6B7280] leading-relaxed mb-1">
               {doc.type}

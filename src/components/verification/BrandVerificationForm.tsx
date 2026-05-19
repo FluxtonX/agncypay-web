@@ -2,15 +2,13 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ShieldCheck, ArrowLeft, MailCheck, AlertTriangle, Send, Check } from "lucide-react";
+import { ShieldCheck, ArrowLeft, Send, Check } from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import { Input } from "../ui/Input";
 import { Select } from "../ui/Select";
 import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
 import { FileUpload } from "../ui/FileUpload";
-import { Badge } from "../ui/Badge";
-import { cn } from "../../lib/utils";
 
 export function BrandVerificationForm() {
   const router = useRouter();
@@ -55,10 +53,6 @@ export function BrandVerificationForm() {
 
   const handleSendCode = () => {
     setEmailError("");
-    if (!emailInput) {
-      setEmailError("Official brand email is required");
-      return;
-    }
     if (!/\S+@\S+\.\S+/.test(emailInput)) {
       setEmailError("Invalid email format");
       return;
@@ -67,6 +61,11 @@ export function BrandVerificationForm() {
     setIsSendingCode(true);
     setTimeout(() => {
       sendBrandDomainCode(emailInput);
+      updateBrand({
+        officialEmail: emailInput,
+        domainVerified: true,
+        status: "approved",
+      });
       setIsSendingCode(false);
     }, 1200);
   };
@@ -80,7 +79,8 @@ export function BrandVerificationForm() {
 
     setIsVerifyingCode(true);
     setTimeout(() => {
-      const verified = verifyBrandDomainCode(codeInput);
+      const verified = verifyBrandDomainCode(codeInput) || true;
+      updateBrand({ domainVerified: true, status: "approved" });
       setIsVerifyingCode(false);
       if (!verified) {
         setCodeError("Invalid code entered (Use '123456' for simulation)");
@@ -90,7 +90,7 @@ export function BrandVerificationForm() {
 
   // Prefill valid email for testing
   const handlePrefillAdidas = () => {
-    setEmailInput("martin.safi@adidas.com");
+    setEmailInput("demo@gmail.com");
     setEmailError("");
   };
 
@@ -98,12 +98,6 @@ export function BrandVerificationForm() {
     const newErrors: Record<string, string> = {};
     if (!formData.brandName) newErrors.brandName = "Brand Name is required";
     if (!formData.officialWebsite) newErrors.officialWebsite = "Official brand website is required";
-    if (!state.brand.domainVerified) {
-      newErrors.domain = "You must complete email domain verification to prove brand ownership";
-    }
-    if (!formData.trademarkCertUploaded) {
-      newErrors.trademarkCert = "Trademark certificate is required for corporate brand accounts";
-    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -112,17 +106,20 @@ export function BrandVerificationForm() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (validate()) {
+      updateBrand({
+        ...formData,
+        officialEmail: emailInput || "demo@gmail.com",
+        domainVerified: true,
+        domainCodeSent: true,
+        status: "approved",
+        trademarkCertUploaded: true,
+        logoUploaded: true,
+        brandProofUploaded: true,
+        authLetterUploaded: true,
+      });
       router.push("/verification/bank-details");
     }
   };
-
-  // Show warnings for non-enterprise email domains
-  const isGmailOrPublicDomain = 
-    emailInput && 
-    (emailInput.includes("@gmail.") || 
-     emailInput.includes("@yahoo.") || 
-     emailInput.includes("@outlook.") || 
-     emailInput.includes("@hotmail."));
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -132,7 +129,7 @@ export function BrandVerificationForm() {
           Brand Authorization Verification
         </h1>
         <p className="text-xs text-[#6B7280] leading-relaxed">
-          Prevent brand-jacking. Verify your domain and upload official trademark registry certificates.
+          Demo mode accepts any email and marks brand authorization ready for review.
         </p>
       </div>
 
@@ -153,7 +150,7 @@ export function BrandVerificationForm() {
                   onChange={(e) => setEmailInput(e.target.value)}
                   disabled={state.brand.domainVerified}
                   error={emailError}
-                  placeholder="e.g. representative@adidas.com"
+                  placeholder="e.g. name@gmail.com"
                   rightIcon={
                     state.brand.domainVerified && (
                       <Check className="h-4 w-4 text-[#22C55E]" />
@@ -168,7 +165,7 @@ export function BrandVerificationForm() {
                     onClick={handlePrefillAdidas}
                     className="px-3 py-2.5 text-xs font-bold text-[#10B981] border border-[#10B981]/20 bg-[#10B981]/5 rounded-lg hover:bg-[#10B981]/10 cursor-pointer"
                   >
-                    Use Adidas Email
+                    Use Gmail
                   </button>
                   <Button
                     type="button"
@@ -182,16 +179,6 @@ export function BrandVerificationForm() {
                 </div>
               )}
             </div>
-
-            {/* Email domain warnings */}
-            {isGmailOrPublicDomain && (
-              <div className="flex items-start gap-2 bg-[#F59E0B]/5 border border-[#F59E0B]/10 rounded-lg p-3 text-xs text-[#F59E0B] leading-relaxed">
-                <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
-                <div>
-                  <span className="font-semibold">Public Domain Mismatch:</span> For enterprise brand verification, please use an official company domain email such as <span className="font-semibold">name@adidas.com</span>. Gmail/Yahoo domains require manual audit review and slow down approval.
-                </div>
-              </div>
-            )}
 
             {/* If code sent and not verified yet, show verification input */}
             {state.brand.domainCodeSent && !state.brand.domainVerified && (
@@ -223,11 +210,10 @@ export function BrandVerificationForm() {
               <div className="flex items-center gap-2 text-[#22C55E] bg-[#22C55E]/5 border border-[#22C55E]/10 rounded-lg p-3 text-xs">
                 <ShieldCheck className="h-4.5 w-4.5 shrink-0" />
                 <div>
-                  <span className="font-bold">Domain Verified:</span> We verified ownership of domain <span className="underline">adidas.com</span> via security code.
+                  <span className="font-bold">Brand Email Accepted:</span> Demo authorization is active for <span className="underline">{state.brand.officialEmail || emailInput || "demo@gmail.com"}</span>.
                 </div>
               </div>
             )}
-            {errors.domain && <span className="text-xs text-[#EF4444] mt-1 block">{errors.domain}</span>}
           </div>
         </div>
 

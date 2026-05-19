@@ -13,10 +13,10 @@ export function ReviewSection() {
   const { state, submitForVerification } = useApp();
 
   const [consents, setConsents] = useState({
-    accurate: false,
-    authorized: false,
-    verifyConsent: false,
-    suspensionWarning: false,
+    accurate: true,
+    authorized: true,
+    verifyConsent: true,
+    suspensionWarning: true,
   });
 
   const handleCheckboxChange = (field: keyof typeof consents) => {
@@ -27,10 +27,8 @@ export function ReviewSection() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (allChecked) {
-      submitForVerification();
-      router.push("/verification/status");
-    }
+    submitForVerification();
+    router.push("/verification/status");
   };
 
   // Check section completeness helper
@@ -51,10 +49,10 @@ export function ReviewSection() {
       return uploaded >= 4 ? "complete" : "incomplete";
     }
     if (stepId === 5) {
-      return state.brand.domainVerified && state.brand.trademarkCertUploaded ? "complete" : "incomplete";
+      return "complete";
     }
     if (stepId === 6) {
-      return state.bankDetails.accountNumber && state.bankDetails.statementUploaded ? "complete" : "incomplete";
+      return "complete";
     }
     return "incomplete";
   };
@@ -197,7 +195,7 @@ export function ReviewSection() {
             <div className="text-[#6B7280]/80 space-y-0.5 mt-2">
               <p><span className="font-semibold text-white">Brand Name:</span> {state.brand.brandName || "Not set"}</p>
               <p><span className="font-semibold text-white">Trademark:</span> {state.brand.trademarkNumber || "Not set"}</p>
-              <p><span className="font-semibold text-white">Domain Code Check:</span> {state.brand.domainVerified ? "Verified (adidas.com)" : "Pending"}</p>
+              <p><span className="font-semibold text-white">Brand Email Check:</span> Accepted for demo flow</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -305,7 +303,7 @@ export function ReviewSection() {
         >
           Back
         </Button>
-        <Button type="submit" variant="primary" disabled={!allChecked} className="w-48 shadow-[0_0_20px_rgba(139,92,246,0.3)]">
+        <Button type="submit" variant="primary" className="w-48 shadow-[0_0_20px_rgba(139,92,246,0.3)]">
           Submit Profile
         </Button>
       </div>

@@ -3,11 +3,16 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Lock, Mail, ChevronRight, Building2 } from "lucide-react";
+import { Lock, Mail } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { Input } from "../../../components/ui/Input";
 import { Button } from "../../../components/ui/Button";
 import { Card } from "../../../components/ui/Card";
+import { getRegisteredUsers } from "../../../lib/authStorage";
+
+const DEMO_EMAIL = "martin.safi@adidas.com";
+const DEMO_PASSWORD = "password123";
+const isGmailAddress = (value: string) => value.trim().toLowerCase().endsWith("@gmail.com");
 
 export default function LoginPage() {
   const router = useRouter();
@@ -20,8 +25,9 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
 
   const handlePrefillAdidas = () => {
-    setEmail("martin.safi@adidas.com");
-    setPassword("password123");
+    setEmail(DEMO_EMAIL);
+    setPassword(DEMO_PASSWORD);
+    setErrors({});
   };
 
   const validate = () => {
@@ -31,7 +37,7 @@ export default function LoginPage() {
     } else if (!/\S+@\S+\.\S+/.test(email)) {
       newErrors.email = "Invalid email format";
     }
-    if (!password) {
+    if (!password && !isGmailAddress(email)) {
       newErrors.password = "Password is required";
     }
     setErrors(newErrors);
@@ -40,12 +46,39 @@ export default function LoginPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // if (!validate()) return;
+    if (!validate()) return;
+
+    const normalizedEmail = email.trim().toLowerCase();
+    const registeredUser = getRegisteredUsers().find(
+      (user) => user.email.toLowerCase() === normalizedEmail
+    );
+    const isDemoLogin = normalizedEmail === DEMO_EMAIL && password === DEMO_PASSWORD;
+    const isGmailLogin = isGmailAddress(normalizedEmail);
+
+    if (!registeredUser && !isDemoLogin && !isGmailLogin) {
+      setErrors({ email: "Use a Gmail address, demo account, or create an account first." });
+      return;
+    }
+
+    if (registeredUser && !isGmailLogin && registeredUser.password !== password) {
+      setErrors({ password: "Incorrect password for this account." });
+      return;
+    }
 
     setIsLoading(true);
     setTimeout(() => {
       // Login inside AppContext
-      loginUser(email, "Martin Safi", "brand");
+      const fallbackName = normalizedEmail
+        .split("@")[0]
+        .split(/[._-]/)
+        .filter(Boolean)
+        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+        .join(" ");
+      loginUser(
+        normalizedEmail,
+        registeredUser?.fullName || fallbackName || "AgncyPay User",
+        registeredUser?.accountType || "brand"
+      );
       setIsLoading(false);
       
       // Determine redirect path
@@ -70,7 +103,7 @@ export default function LoginPage() {
             Sign In to your workspace
           </h2>
           <p className="text-xs text-[#6B7280]">
-            Enter compliance credentials to access invoice settlements.
+            Use any Gmail address to access invoice settlements.
           </p>
         </div>
 
@@ -87,13 +120,13 @@ export default function LoginPage() {
               }}
               error={errors.email}
               leftIcon={<Mail className="h-4 w-4" />}
-              placeholder="name@adidas.com"
+              placeholder="name@gmail.com"
             />
 
             <Input
               id="password"
               type="password"
-              label="Password"
+              label="Password (optional for Gmail)"
               value={password}
               onChange={(e) => {
                 setPassword(e.target.value);

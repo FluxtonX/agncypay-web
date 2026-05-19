@@ -3,16 +3,15 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { User, Mail, Lock, AlertTriangle, Building2 } from "lucide-react";
-import { useApp } from "../../../context/AppContext";
+import { User, Mail, Lock, AlertTriangle } from "lucide-react";
 import { Input } from "../../../components/ui/Input";
 import { Select } from "../../../components/ui/Select";
 import { Button } from "../../../components/ui/Button";
 import { Card } from "../../../components/ui/Card";
+import { saveRegisteredUser } from "../../../lib/authStorage";
 
 export default function RegisterPage() {
   const router = useRouter();
-  const { loginUser } = useApp();
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -56,14 +55,18 @@ export default function RegisterPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // if (!validate()) return;
+    if (!validate()) return;
 
     setIsLoading(true);
     setTimeout(() => {
-      // Register (internally login user in draft)
-      loginUser(email, fullName, accountType);
+      saveRegisteredUser({
+        email,
+        password,
+        fullName,
+        accountType,
+      });
       setIsLoading(false);
-      router.push("/auth/verify-email");
+      router.push("/auth/login");
     }, 1500);
   };
 
