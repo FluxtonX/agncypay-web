@@ -21,21 +21,25 @@ export default function VerifyEmailPage() {
     e.preventDefault();
     setError("");
 
-    if (code.length !== 6) {
-      setError("Please enter a valid 6-digit confirmation code.");
-      return;
-    }
+    // if (code.length !== 6) {
+    //   setError("Please enter a valid 6-digit confirmation code.");
+    //   return;
+    // }
 
     setIsLoading(true);
     setTimeout(() => {
       // Simulate checking code
       const verified = verifyEmail(code);
       setIsLoading(false);
-      if (verified) {
-        router.push("/onboarding/business-setup");
-      } else {
-        setError("Invalid confirmation code. (Use code '123456' for simulation)");
-      }
+      
+      // Bypass validation check and always navigate
+      router.push("/onboarding/business-setup");
+      
+      // if (verified) {
+      //   router.push("/onboarding/business-setup");
+      // } else {
+      //   setError("Invalid confirmation code. (Use code '123456' for simulation)");
+      // }
     }, 1500);
   };
 

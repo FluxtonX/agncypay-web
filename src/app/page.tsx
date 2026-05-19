@@ -7,171 +7,119 @@ import {
   CheckCircle2,
   Lock,
   ArrowRight,
-  FileText,
-  Cpu,
-  MoreHorizontal,
-  ChevronRight,
+  Zap,
+  BarChart3,
+  Users,
+  Network
 } from "lucide-react";
-import { formatCurrency } from "../lib/formatCurrency";
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-[#0A0A0A] text-white flex flex-col">
-      {/* Navbar */}
-      <header className="h-24 border-b border-[#1F1F1F] px-6 md:px-12 flex items-center justify-between max-w-7xl mx-auto w-full">
+    <div className="min-h-screen bg-[#0A0A0A] text-white flex flex-col font-sans">
+      {/* Header */}
+      <header className="h-20 border-b border-[#1F1F1F] px-6 md:px-12 flex items-center justify-between w-full">
         <Link href="/" className="flex items-center cursor-pointer">
-          <img src="/agncypayLogo.png" alt="AgncyPay" className="h-20 w-auto object-contain" />
+          <img src="/agncypayLogo.png" alt="Agncy" className="h-16 md:h-20 w-auto object-contain mix-blend-lighten" />
         </Link>
 
-        <nav className="hidden md:flex items-center gap-6 text-sm text-[#6B7280]">
-          <span className="hover:text-white transition-colors cursor-pointer">Features</span>
+        <nav className="hidden md:flex items-center gap-8 text-sm text-[#A1A1AA] font-medium">
+          <span className="hover:text-white transition-colors cursor-pointer">Product</span>
           <span className="hover:text-white transition-colors cursor-pointer">Security</span>
           <span className="hover:text-white transition-colors cursor-pointer">Pricing</span>
         </nav>
 
-        <div className="flex items-center gap-3">
-          <Link href="/auth/login" className="text-sm text-[#6B7280] hover:text-white transition-colors">
-            Sign In
+        <div className="flex items-center gap-4">
+          <Link href="/auth/login" className="text-sm font-medium text-[#A1A1AA] hover:text-white transition-colors">
+            Log in
           </Link>
           <Link
             href="/auth/register"
-            className="px-4 py-2 text-sm font-bold bg-white text-black rounded-lg hover:bg-[#E5E7EB] transition-colors"
+            className="px-4 py-2 text-sm font-bold bg-white text-black rounded-md hover:bg-[#E5E7EB] transition-colors"
           >
-            Get Started
+            Get started
           </Link>
         </div>
       </header>
 
       {/* Hero */}
-      <section className="max-w-7xl mx-auto w-full px-6 md:px-12 pt-20 pb-24">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-          {/* Left copy */}
-          <div className="space-y-6">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-[#22C55E]/30 bg-[#22C55E]/10 text-[#22C55E] text-xs font-semibold">
-              <span className="h-1.5 w-1.5 rounded-full bg-[#22C55E] animate-pulse" />
-              Enterprise KYB Payments Platform
-            </div>
+      <section className="w-full px-6 md:px-12 pt-24 pb-32 flex flex-col items-center text-center relative overflow-hidden">
+        {/* Background decorative elements */}
+        <div className="absolute inset-0 z-0 pointer-events-none flex justify-center items-center opacity-30">
+           <div className="w-[800px] h-[500px] border border-[#333] rounded-3xl transform rotate-12 absolute blur-[2px]"></div>
+           <div className="w-[800px] h-[500px] border border-[#444] rounded-3xl transform -rotate-6 absolute blur-[1px]"></div>
+           <div className="w-[600px] h-[350px] bg-gradient-to-r from-[#FFD700]/20 to-[#FFA500]/20 rounded-3xl transform rotate-3 absolute blur-xl"></div>
+        </div>
 
-            <h1 className="text-4xl md:text-5xl font-black tracking-tight leading-[1.1] text-white">
-              Secure Adidas invoice payments with AgncyPay
-            </h1>
-
-            <p className="text-[#6B7280] leading-relaxed max-w-lg">
-              A verified brand payment platform for invoice management, business verification, and fast payment reconciliation — in compliance-audited rails.
-            </p>
-
-            <div className="flex flex-col sm:flex-row gap-3 pt-2">
-              <Link
-                href="/auth/register"
-                className="flex items-center justify-center gap-2 px-6 py-3 bg-white text-black text-sm font-bold rounded-lg hover:bg-[#E5E7EB] transition-colors"
-              >
-                Get Started <ArrowRight className="h-4 w-4" />
-              </Link>
-              <Link
-                href="/dashboard"
-                className="flex items-center justify-center gap-2 px-6 py-3 border border-[#1F1F1F] text-sm font-semibold rounded-lg text-[#9CA3AF] hover:bg-[#111] hover:text-white transition-colors"
-              >
-                View Demo
-              </Link>
-            </div>
-
-            {/* Trust badges */}
-            <div className="flex items-center gap-4 pt-4 text-xs text-[#4B5563]">
-              {["256-bit AES encrypted", "KYB compliant", "SOC 2 ready"].map((t) => (
-                <span key={t} className="flex items-center gap-1.5">
-                  <CheckCircle2 className="h-3.5 w-3.5 text-[#22C55E]" />
-                  {t}
-                </span>
-              ))}
-            </div>
+        <div className="relative z-10 max-w-4xl mx-auto space-y-8 flex flex-col items-center">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-[#333] bg-[#111] text-[#A1A1AA] text-xs font-semibold tracking-wider">
+            ENTERPRISE PAYMENTS FOR BRANDS
           </div>
 
-          {/* Right - Invoice preview card */}
-          <div className="rounded-xl border border-[#1F1F1F] bg-[#0D0D0D] overflow-hidden shadow-2xl">
-            {/* Card header */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-[#1F1F1F]">
-              <div>
-                <p className="text-sm font-bold">Recent Payouts</p>
-                <p className="text-[11px] text-[#4B5563]">Your latest account activity.</p>
-              </div>
-              <button className="px-3 py-1.5 text-xs border border-[#1F1F1F] rounded-lg text-[#6B7280] bg-[#111] hover:bg-[#1A1A1A] transition-colors cursor-pointer">
-                View All
-              </button>
-            </div>
+          <h1 className="text-5xl md:text-7xl font-bold tracking-tight leading-tight text-white">
+            Payment<br />Orchestration<br />Reimagined
+          </h1>
 
-            {/* Payout rows */}
+          <p className="text-[#A1A1AA] text-lg leading-relaxed max-w-2xl mx-auto">
+            Enterprise-grade payment infrastructure for brands managing agency workflows. Streamline invoice approval, track payments, and track settlements in real-time.
+          </p>
+
+          <div className="flex flex-col sm:flex-row gap-4 pt-4">
+            <Link
+              href="/auth/register"
+              className="flex items-center justify-center gap-2 px-6 py-3 bg-white text-black text-sm font-bold rounded-md hover:bg-[#E5E7EB] transition-colors"
+            >
+              Get Started Now <ArrowRight className="h-4 w-4" />
+            </Link>
+            <Link
+              href="/contact"
+              className="flex items-center justify-center gap-2 px-6 py-3 border border-[#333] text-sm font-semibold rounded-md text-white hover:bg-[#1A1A1A] transition-colors"
+            >
+              Contact Sales
+            </Link>
+          </div>
+
+          {/* Trust badges */}
+          <div className="flex items-center justify-center gap-6 pt-12 text-sm text-[#A1A1AA]">
             {[
-              { brand: "Adidas AG", campaign: "Q2 Ecomm Campaign", date: "Today, 10:24 AM", amount: formatCurrency(2450) },
-              { brand: "Adidas AG", campaign: "S/S Global Web", date: "Yesterday", amount: formatCurrency(1850) },
-              { brand: "Adidas AG", campaign: "Ad Domestic Socials", date: "May 17", amount: formatCurrency(4720) },
-            ].map((row, i) => (
-              <div key={i} className="flex items-center justify-between px-5 py-3.5 border-b border-[#111] hover:bg-[#111] transition-colors">
-                <div className="flex items-center gap-3">
-                  <div className="h-8 w-8 rounded bg-[#111] border border-[#1F1F1F] flex items-center justify-center text-[9px] font-bold shrink-0">
-                    三
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold">{row.brand}</p>
-                    <p className="text-[10px] text-[#4B5563]">{row.campaign}</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm font-bold">{row.amount}</p>
-                  <p className="text-[10px] text-[#4B5563]">{row.date}</p>
-                </div>
-              </div>
+              { icon: ShieldCheck, text: "SOC 2 Compliant" },
+              { icon: CheckCircle2, text: "Audit-ready" },
+              { icon: Lock, text: "Bank-level security" }
+            ].map((badge, i) => (
+              <span key={i} className="flex items-center gap-2 font-medium">
+                <badge.icon className="h-4 w-4 text-[#A1A1AA]" />
+                {badge.text}
+              </span>
             ))}
-
-            {/* Invoice table preview */}
-            <div className="border-t border-[#1F1F1F]">
-              <div className="px-5 py-3 flex justify-between items-center">
-                <p className="text-xs text-[#4B5563] font-semibold uppercase tracking-wider">Invoices</p>
-              </div>
-              {[
-                { id: "INV-AD-1001", status: "Done", amount: formatCurrency(2450), client: "Adidas AG" },
-                { id: "INV-AD-1002", status: "Done", amount: formatCurrency(1850), client: "Adidas AG" },
-                { id: "INV-AD-1003", status: "Pending", amount: formatCurrency(4720), client: "Adidas AG" },
-              ].map((row, i) => (
-                <div key={i} className="flex items-center justify-between px-5 py-2.5 border-b border-[#111] text-xs hover:bg-[#111] transition-colors">
-                  <span className="font-mono text-[#6B7280] text-[11px]">{row.id}</span>
-                  <span className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${row.status === "Done" ? "bg-[#22C55E]/10 text-[#22C55E]" : "bg-[#F59E0B]/10 text-[#F59E0B]"}`}>
-                    <span className={`h-1 w-1 rounded-full ${row.status === "Done" ? "bg-[#22C55E]" : "bg-[#F59E0B]"}`} />
-                    {row.status}
-                  </span>
-                  <span className="font-bold">{row.amount}</span>
-                  <span className="text-[#6B7280]">{row.client}</span>
-                </div>
-              ))}
-            </div>
           </div>
         </div>
       </section>
 
-      {/* Features */}
-      <section className="border-y border-[#1F1F1F] bg-[#0D0D0D] py-20">
-        <div className="max-w-7xl mx-auto px-6 md:px-12 space-y-12">
-          <div className="text-center max-w-xl mx-auto">
-            <h2 className="text-2xl md:text-3xl font-black tracking-tight">Enterprise Grade Brand Payments</h2>
-            <p className="text-sm text-[#6B7280] mt-3 leading-relaxed">
-              Specialized payment reconciliation pipelines combining compliance reviews with real-time settlement rails.
-            </p>
+      {/* Platform Capabilities */}
+      <section className="w-full px-6 md:px-12 py-24 bg-[#0D0D0D] border-t border-[#1F1F1F]">
+        <div className="max-w-6xl mx-auto space-y-16">
+          <div className="text-center space-y-4">
+            <p className="text-xs font-semibold tracking-widest text-[#6B7280] uppercase">Platform Capabilities</p>
+            <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Built for Finance Teams</h2>
+            <p className="text-[#A1A1AA]">Every feature designed for operational excellence and financial control.</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[
-              { icon: ShieldCheck, color: "#10B981", title: "Verified Brand Accounts", desc: "Prevents identity spoofing by locking accounts to validated trademark registrants." },
-              { icon: Cpu, color: "#10B981", title: "KYB/KYC Verification", desc: "Compliance validation of business registrations, VAT letters, and executive credentials." },
-              { icon: Lock, color: "#10B981", title: "Secure Document Vault", desc: "AES-256 encrypted document custody vaults protecting treasury details." },
-              { icon: FileText, color: "#10B981", title: "Invoice Management", desc: "Seamless ingestion of active corporate sportswear supplier invoices." },
+              { icon: Zap, title: "Instant Settlements", desc: "Real-time payment processing and management settlement tracking across your entire payment network." },
+              { icon: BarChart3, title: "Operational Analytics", desc: "Executive-grade dashboards with deep visibility into payment flows, spend allocation, and metrics." },
+              { icon: Users, title: "Multi-Agency Management", desc: "Centralized platform to manage relationships, invoices, and payments across all your agency partners." },
+              { icon: ShieldCheck, title: "Compliance First", desc: "Built-in KYC/AML and FinCEN screening to ensure complete compliance for every transaction." },
+              { icon: Lock, title: "Bank-Grade Security", desc: "End-to-end encryption, role-based access control, and SOC 2 Type II certified infrastructure." },
+              { icon: Network, title: "CRM Integration", desc: "Seamless integration with your existing systems, trackers, and flows automatically into AgencyPay." },
             ].map((feat, i) => {
               const Icon = feat.icon;
               return (
-                <div key={i} className="rounded-xl border border-[#1F1F1F] bg-[#0A0A0A] p-5 space-y-3 hover:border-[#2A2A2A] transition-colors">
-                  <div className="h-9 w-9 rounded-lg border border-[#1F1F1F] flex items-center justify-center" style={{ background: `${feat.color}15` }}>
-                    <Icon className="h-4.5 w-4.5" style={{ color: feat.color }} />
+                <div key={i} className="rounded-xl border border-[#1F1F1F] bg-[#111] p-8 space-y-4 hover:border-[#333] transition-colors group">
+                  <div className="h-10 w-10 rounded-lg border border-[#333] bg-[#1A1A1A] flex items-center justify-center group-hover:bg-[#222] transition-colors">
+                    <Icon className="h-5 w-5 text-[#E5E7EB]" />
                   </div>
-                  <h3 className="text-sm font-bold">{feat.title}</h3>
-                  <p className="text-xs text-[#6B7280] leading-relaxed">{feat.desc}</p>
+                  <h3 className="text-lg font-bold text-[#E5E7EB]">{feat.title}</h3>
+                  <p className="text-sm text-[#A1A1AA] leading-relaxed">{feat.desc}</p>
                 </div>
               );
             })}
@@ -179,101 +127,142 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* How it works */}
-      <section className="max-w-7xl mx-auto px-6 md:px-12 py-20 space-y-12">
-        <div className="text-center max-w-xl mx-auto">
-          <h2 className="text-2xl md:text-3xl font-black tracking-tight">Seamless Onboarding Flow</h2>
-          <p className="text-sm text-[#6B7280] mt-3">Five steps to unlock global corporate invoice settlements.</p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-          {[
-            { step: "01", title: "Create Account", text: "Submit corporate email and verify credentials." },
-            { step: "02", title: "KYB Document Upload", text: "Provide company registry certificates and representative IDs." },
-            { step: "03", title: "Unlock Invoices", text: "Automatic sync of active Adidas supplier invoices." },
-            { step: "04", title: "Pay with AgncyPay", text: "Settle invoices using secure ACH corporate lines." },
-            { step: "05", title: "Bookkeeping Audit", text: "Generate receipts and sync transaction history." },
-          ].map((item, i) => (
-            <div key={i} className="rounded-xl border border-[#1F1F1F] bg-[#0D0D0D] p-5 space-y-3">
-              <span className="text-2xl font-black text-[#2A2A2A]">{item.step}</span>
-              <h4 className="font-bold text-sm">{item.title}</h4>
-              <p className="text-xs text-[#6B7280] leading-relaxed">{item.text}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* Security stats */}
-      <section className="border-y border-[#1F1F1F] bg-[#0D0D0D] py-20">
-        <div className="max-w-7xl mx-auto px-6 md:px-12 grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-          <div className="space-y-6">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-[#1F1F1F] bg-[#111] text-[#6B7280] text-xs font-semibold">
-              <Lock className="h-3 w-3" /> Military Grade Security
-            </div>
-            <h2 className="text-3xl font-black tracking-tight">Compliance-First Treasury Security</h2>
-            <p className="text-sm text-[#6B7280] leading-relaxed">
-              We process secure corporate payments under KYC/KYB regulatory requirements. Your details are encrypted end-to-end and stored in offline vaults.
-            </p>
-            <div className="space-y-3 text-sm text-[#6B7280]">
-              {[
-                "256-bit AES database encryption at rest",
-                "Official email domains validated via security codes",
-                "Manual review steps for enterprise corporate registries",
-                "Automated transaction receipts for auditing records",
-              ].map((item) => (
-                <div key={item} className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-[#22C55E] shrink-0" />
-                  <span>{item}</span>
-                </div>
-              ))}
-            </div>
+      {/* Workflow Section */}
+      <section className="w-full px-6 md:px-12 py-24 bg-[#0A0A0A]">
+        <div className="max-w-6xl mx-auto space-y-16">
+          <div className="text-center space-y-4">
+            <p className="text-xs font-semibold tracking-widest text-[#6B7280] uppercase">How It Works</p>
+            <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Streamlined Payment Operations</h2>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             {[
-              { label: "Verified Accounts", value: "100%" },
-              { label: "Encrypted Storage", value: "256-bit" },
-              { label: "Manual Auditing", value: "100%" },
-              { label: "ACH Matching", value: "Instant" },
-            ].map((s) => (
-              <div key={s.label} className="rounded-xl border border-[#1F1F1F] bg-[#0A0A0A] p-5 text-center">
-                <p className="text-2xl font-black text-white">{s.value}</p>
-                <p className="text-xs text-[#4B5563] mt-1 font-semibold uppercase tracking-wider">{s.label}</p>
+              { num: "01", title: "CRM Integration", desc: "Invoice data flows automatically from your existing systems." },
+              { num: "02", title: "Review & Approve", desc: "Finance teams review and approve invoices in one platform." },
+              { num: "03", title: "Fund & Execute", desc: "Review, allocate funds and execute approved payments." },
+              { num: "04", title: "Track & Audit", desc: "Monitor settlements with complete audit trails." },
+            ].map((step, i) => (
+              <div key={i} className="space-y-4">
+                <div className="text-4xl font-light text-[#333]">{step.num}</div>
+                <h4 className="text-lg font-bold text-[#E5E7EB]">{step.title}</h4>
+                <p className="text-sm text-[#A1A1AA] leading-relaxed">{step.desc}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
+      {/* Security Section */}
+      <section className="w-full px-6 md:px-12 py-24 bg-[#0D0D0D] border-t border-[#1F1F1F]">
+        <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+          <div className="space-y-8">
+            <div className="space-y-4">
+              <p className="text-xs font-semibold tracking-widest text-[#6B7280] uppercase">Built for Enterprise</p>
+              <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Enterprise-Grade Protection</h2>
+              <p className="text-[#A1A1AA] leading-relaxed max-w-md">
+                Built on bank-grade infrastructure with comprehensive security controls, compliance certifications, and audit capabilities.
+              </p>
+            </div>
+
+            <div className="space-y-4 text-sm text-[#A1A1AA]">
+              {[
+                "SOC 2 Type II Certified",
+                "End-to-end encryption (AES-256)",
+                "Multi-factor authentication",
+                "Role-based access control",
+                "Complete audit trails",
+                "PCI DSS compliant infrastructure"
+              ].map((item, i) => (
+                <div key={i} className="flex items-center gap-3">
+                  <CheckCircle2 className="h-4 w-4 text-[#A1A1AA] shrink-0" />
+                  <span>{item}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="relative aspect-square md:aspect-video lg:aspect-square bg-[#111] rounded-2xl border border-[#1F1F1F] flex items-center justify-center">
+            <Lock className="h-24 w-24 text-[#333]" strokeWidth={1} />
+          </div>
+        </div>
+      </section>
+
       {/* CTA */}
-      <section className="max-w-7xl mx-auto px-6 md:px-12 py-24">
-        <div className="rounded-2xl border border-[#1F1F1F] bg-[#0D0D0D] p-10 md:p-16 text-center space-y-6 max-w-3xl mx-auto">
-          <h2 className="text-3xl md:text-4xl font-black tracking-tight">
-            Start verifying your business with AgncyPay
+      <section className="w-full px-6 md:px-12 py-32 bg-[#0A0A0A] border-t border-[#1F1F1F]">
+        <div className="max-w-3xl mx-auto text-center space-y-8">
+          <h2 className="text-4xl md:text-5xl font-bold tracking-tight leading-tight">
+            Ready to Transform<br />Your Payment Operations?
           </h2>
-          <p className="text-[#6B7280] max-w-md mx-auto leading-relaxed">
-            Verify corporate identity and settle vendor invoices in compliance-backed rails.
+          <p className="text-[#A1A1AA] text-lg">
+            Join enterprise brands using AgencyPay for payment orchestration.
           </p>
-          <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
+          <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
             <Link
               href="/auth/register"
-              className="flex items-center justify-center gap-2 px-6 py-3 bg-white text-black text-sm font-bold rounded-lg hover:bg-[#E5E7EB] transition-colors"
+              className="flex items-center justify-center gap-2 px-8 py-3 bg-white text-black text-sm font-bold rounded-md hover:bg-[#E5E7EB] transition-colors"
             >
-              Register Account <ArrowRight className="h-4 w-4" />
+              Get Started Now <ArrowRight className="h-4 w-4" />
             </Link>
             <Link
-              href="/dashboard"
-              className="flex items-center justify-center gap-2 px-6 py-3 border border-[#1F1F1F] text-sm font-semibold rounded-lg text-[#9CA3AF] hover:bg-[#111] hover:text-white transition-colors"
+              href="/contact"
+              className="flex items-center justify-center px-8 py-3 border border-[#333] text-sm font-semibold rounded-md text-white hover:bg-[#1A1A1A] transition-colors"
             >
-              View Live Demo
+              Schedule Demo
             </Link>
           </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-[#1F1F1F] py-8 text-center text-xs text-[#4B5563]">
-        © {new Date().getFullYear()} AgncyPay Solutions, Inc. All rights reserved. 256-bit AES compliance certified.
+      <footer className="w-full bg-[#000] border-t border-[#1F1F1F] pt-16 pb-8 px-6 md:px-12">
+        <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
+          <div className="space-y-4">
+            <img src="/agncypayLogo.png" alt="Agncy" className="h-12 md:h-16 w-auto object-contain opacity-80 mix-blend-lighten" />
+            <p className="text-[#6B7280] text-xs leading-relaxed max-w-xs">
+              Enterprise payment infrastructure for the modern agency stack.
+            </p>
+          </div>
+          
+          <div>
+            <h4 className="text-[#E5E7EB] text-xs font-bold tracking-wider uppercase mb-4">Product</h4>
+            <ul className="space-y-3 text-[#6B7280] text-sm">
+              <li><Link href="#" className="hover:text-white transition-colors">Features</Link></li>
+              <li><Link href="#" className="hover:text-white transition-colors">Security</Link></li>
+              <li><Link href="#" className="hover:text-white transition-colors">Pricing</Link></li>
+              <li><Link href="#" className="hover:text-white transition-colors">Integrations</Link></li>
+            </ul>
+          </div>
+
+          <div>
+            <h4 className="text-[#E5E7EB] text-xs font-bold tracking-wider uppercase mb-4">Company</h4>
+            <ul className="space-y-3 text-[#6B7280] text-sm">
+              <li><Link href="#" className="hover:text-white transition-colors">About</Link></li>
+              <li><Link href="#" className="hover:text-white transition-colors">Careers</Link></li>
+              <li><Link href="#" className="hover:text-white transition-colors">Contact</Link></li>
+              <li><Link href="#" className="hover:text-white transition-colors">Legal</Link></li>
+            </ul>
+          </div>
+
+          <div>
+            <h4 className="text-[#E5E7EB] text-xs font-bold tracking-wider uppercase mb-4">Resources</h4>
+            <ul className="space-y-3 text-[#6B7280] text-sm">
+              <li><Link href="#" className="hover:text-white transition-colors">Documentation</Link></li>
+              <li><Link href="#" className="hover:text-white transition-colors">API Reference</Link></li>
+              <li><Link href="#" className="hover:text-white transition-colors">Support</Link></li>
+              <li><Link href="#" className="hover:text-white transition-colors">Status</Link></li>
+            </ul>
+          </div>
+        </div>
+
+        <div className="max-w-6xl mx-auto pt-8 border-t border-[#1F1F1F] flex flex-col md:flex-row items-center justify-between gap-4">
+          <p className="text-[#6B7280] text-xs">
+            © {new Date().getFullYear()} AgencyPay. All rights reserved.
+          </p>
+          <div className="flex gap-6 text-xs text-[#6B7280]">
+            <Link href="#" className="hover:text-white transition-colors">Privacy Policy</Link>
+            <Link href="#" className="hover:text-white transition-colors">Terms of Service</Link>
+          </div>
+        </div>
       </footer>
     </div>
   );

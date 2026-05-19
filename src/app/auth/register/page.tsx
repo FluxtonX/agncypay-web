@@ -56,7 +56,7 @@ export default function RegisterPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validate()) return;
+    // if (!validate()) return;
 
     setIsLoading(true);
     setTimeout(() => {

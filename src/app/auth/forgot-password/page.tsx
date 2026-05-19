@@ -17,10 +17,10 @@ export default function ForgotPasswordPage() {
     e.preventDefault();
     setError("");
 
-    if (!email) {
-      setError("Email is required");
-      return;
-    }
+    // if (!email) {
+    //   setError("Email is required");
+    //   return;
+    // }
 
     setIsLoading(true);
     setTimeout(() => {
