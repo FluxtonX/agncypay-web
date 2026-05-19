@@ -1,26 +1,160 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #0A0A0A;
+  --foreground: #f8fafc;
+  
+  --color-brand-deep: #0A0A0A;
+  --color-brand-mid: #0D0D0D;
+  --color-brand-light: #1A1A1A;
+  
+  --color-primary: #10B981;
+  --color-primary-hover: #059669;
+  --color-secondary: #22C55E;
+  --color-success: #10B981;
+  --color-warning: #f59e0b;
+  --color-error: #ef4444;
+  
+  --text-primary: #f8fafc;
+  --text-secondary: #6B7280;
 }
 
-@theme inline {
+@theme {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  
+  --color-brand-deep: var(--color-brand-deep);
+  --color-brand-mid: var(--color-brand-mid);
+  --color-brand-light: var(--color-brand-light);
+  
+  --color-accent-primary: var(--color-primary);
+  --color-accent-secondary: var(--color-secondary);
+  
+  --font-sans: var(--font-geist-sans), Inter, system-ui, -apple-system, sans-serif;
+  --font-mono: var(--font-geist-mono), monospace;
 }
 
 body {
-  background: var(--background);
+  background-color: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  overflow-x: hidden;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #050816;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Glassmorphism primitives */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.glass-panel-hover {
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.glass-panel-hover:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 12px 40px -10px rgba(0, 0, 0, 0.5);
+  transform: translateY(-2px);
+}
+
+/* Shimmer Loading Animations */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.02) 25%,
+    rgba(255, 255, 255, 0.06) 50%,
+    rgba(255, 255, 255, 0.02) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* Custom Gradients */
+.bg-radial-gradient {
+  background: radial-gradient(circle at 50% 50%, rgba(16, 185, 129, 0.08) 0%, transparent 60%);
+}
+
+.bg-radial-cyan {
+  background: radial-gradient(circle at 50% 50%, rgba(16, 185, 129, 0.05) 0%, transparent 65%);
+}
+
+/* Success Checkmark Animate Draw */
+@keyframes draw-check {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+.check-draw {
+  stroke-dasharray: 48;
+  stroke-dashoffset: 48;
+  animation: draw-check 0.6s cubic-bezier(0.65, 0, 0.45, 1) forwards;
+}
+
+/* Text glow */
+.glow-text-cyan {
+  text-shadow: 0 0 10px rgba(16, 185, 129, 0.3);
+}
+
+.glow-text-primary {
+  text-shadow: 0 0 10px rgba(16, 185, 129, 0.3);
+}
+
+/* KYB Onboarding Form Borders Visibility Enhancements */
+.max-w-2xl .glass-panel {
+  border: 1px solid #222 !important;
+  background: #0D0D0D !important;
+  box-shadow: none !important;
+}
+
+.max-w-2xl input,
+.max-w-2xl select,
+.max-w-2xl textarea {
+  border: 1px solid #2A2A2A !important;
+  background: #111 !important;
+  color: #F8FAFC !important;
+}
+
+.max-w-2xl input:focus,
+.max-w-2xl select:focus,
+.max-w-2xl textarea:focus {
+  border-color: #fff !important;
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.1) !important;
+  outline: none !important;
+}
+
+/* File upload container borders */
+.max-w-2xl .border-dashed {
+  border-color: #2A2A2A !important;
+  border-width: 1px !important;
+}
+
+.max-w-2xl .border-dashed:hover {
+  border-color: #444 !important;
 }
