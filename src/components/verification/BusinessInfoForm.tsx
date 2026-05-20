@@ -62,13 +62,6 @@ export function BusinessInfoForm() {
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={() => router.push("/dashboard")}
-          className="h-10 w-[142px] rounded-[7px] bg-white text-[15px] font-semibold text-black transition-colors hover:bg-[#EDEDED] sm:mt-[-5px] sm:h-11 sm:w-[150px] sm:text-[16px]"
-        >
-          Skip For Now
-        </button>
       </div>
 
       <div className="rounded-[8px] border border-[#565656] bg-black px-5 py-6 shadow-[0_18px_60px_rgba(0,0,0,0.28)] sm:px-8 sm:py-8 lg:px-10">
@@ -81,6 +74,7 @@ export function BusinessInfoForm() {
               name="legalName"
               value={formData.legalName}
               onChange={handleChange}
+              required
               placeholder="Acme Corporation Inc."
               className="h-11 w-full rounded-[6px] border border-[#727272] bg-[#0A0A0A] px-[14px] text-[16px] font-normal text-white outline-none transition-colors placeholder:text-[#A8A8A8] focus:border-white sm:text-[18px]"
             />
@@ -108,6 +102,7 @@ export function BusinessInfoForm() {
                 name="taxId"
                 value={formData.taxId}
                 onChange={handleChange}
+                required
                 placeholder="XX-XXXXXXX"
                 className="h-11 w-full rounded-[6px] border border-[#727272] bg-[#0A0A0A] px-[14px] text-[16px] font-normal text-white outline-none transition-colors placeholder:text-[#A8A8A8] focus:border-white sm:text-[18px]"
               />
@@ -122,6 +117,7 @@ export function BusinessInfoForm() {
                   name="businessType"
                   value={formData.businessType}
                   onChange={handleChange}
+                  required
                   className="h-11 w-full appearance-none rounded-[6px] border border-[#727272] bg-[#0A0A0A] px-[14px] pr-11 text-[16px] font-normal text-[#A8A8A8] outline-none transition-colors focus:border-white sm:text-[18px]"
                 >
                   <option value="">Select type</option>
@@ -156,6 +152,7 @@ export function BusinessInfoForm() {
               name="website"
               value={formData.website}
               onChange={handleChange}
+              required
               placeholder="https://acme.com"
               className="h-11 w-full rounded-[6px] border border-[#727272] bg-[#0A0A0A] px-[14px] text-[16px] font-normal text-white outline-none transition-colors placeholder:text-[#A8A8A8] focus:border-white sm:text-[18px]"
             />
