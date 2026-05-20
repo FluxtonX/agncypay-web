@@ -2,324 +2,216 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ShieldAlert, ArrowLeft, Plus, Trash2, Mail, User } from "lucide-react";
+import { ArrowLeft, ArrowRight, Shield } from "lucide-react";
 import { useApp } from "../../context/AppContext";
-import { Button } from "../ui/Button";
-import { Card } from "../ui/Card";
-import { Input } from "../ui/Input";
-import { FileUpload } from "../ui/FileUpload";
-import { cn } from "../../lib/utils";
+
+const STATES = ["California", "Delaware", "Florida", "New York", "Texas"];
+const EMPLOYEE_RANGES = ["1-10", "11-50", "51-200", "201-500", "500+"];
+const PAYMENT_RANGES = [
+  "$0 - $10,000",
+  "$10,000 - $50,000",
+  "$50,000 - $250,000",
+  "$250,000 - $1,000,000",
+  "$1,000,000+",
+];
 
 export function AuthorizationForm() {
   const router = useRouter();
   const { state, updateAuthorization } = useApp();
+  const hasSavedKyb = Boolean(
+    state.authorization.formationDate ||
+      state.authorization.incorporationState ||
+      state.authorization.employeeRange ||
+      state.authorization.monthlyPaymentVolume
+  );
+
   const [formData, setFormData] = useState({
-    isOwner: state.authorization.isOwner,
-    owns25Percent: state.authorization.owns25Percent,
-    isAuthorizedForPayments: state.authorization.isAuthorizedForPayments,
-    authLetterUploaded: state.authorization.authLetterUploaded,
-    powerOfAttorneyUploaded: state.authorization.powerOfAttorneyUploaded,
-    signatoryName: state.authorization.signatoryName || "",
-    signatoryEmail: state.authorization.signatoryEmail || "",
-    roleInCompany: state.authorization.roleInCompany || "",
-    owners: state.authorization.owners || [],
+    formationDate: hasSavedKyb ? state.authorization.formationDate || "" : "",
+    incorporationState: hasSavedKyb
+      ? state.authorization.incorporationState || ""
+      : "",
+    employeeRange: hasSavedKyb ? state.authorization.employeeRange || "" : "",
+    monthlyPaymentVolume: hasSavedKyb
+      ? state.authorization.monthlyPaymentVolume || ""
+      : "",
   });
-  const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const handleSelection = (field: "isOwner" | "owns25Percent" | "isAuthorizedForPayments", value: boolean) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-    updateAuthorization({ [field]: value });
-  };
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-    updateAuthorization({ [name]: value });
-  };
-
-  const handleUploadSuccess = (field: "authLetterUploaded" | "powerOfAttorneyUploaded") => {
-    setFormData((prev) => ({ ...prev, [field]: true }));
-    updateAuthorization({ [field]: true });
-  };
-
-  const handleDelete = (field: "authLetterUploaded" | "powerOfAttorneyUploaded") => {
-    setFormData((prev) => ({ ...prev, [field]: false }));
-    updateAuthorization({ [field]: false });
-  };
-
-  const validate = () => {
-    const newErrors: Record<string, string> = {};
-    if (formData.isOwner === null) newErrors.isOwner = "Please select whether you are the business owner";
-    if (formData.owns25Percent === null) newErrors.owns25Percent = "Please select your ownership statement";
-    if (formData.isAuthorizedForPayments === null) newErrors.isAuthorizedForPayments = "Please select payment authorization statement";
-    
-    // If not owner, they MUST upload authorization letters or power of attorney
-    if (formData.isOwner === false) {
-      if (!formData.authLetterUploaded && !formData.powerOfAttorneyUploaded) {
-        newErrors.documents = "Please upload an Authorization Letter or Power of Attorney document";
-      }
-      if (!formData.signatoryName) newErrors.signatoryName = "Authorized Signatory Name is required";
-      if (!formData.signatoryEmail) {
-        newErrors.signatoryEmail = "Authorized Signatory Email is required";
-      } else if (!/\S+@\S+\.\S+/.test(formData.signatoryEmail)) {
-        newErrors.signatoryEmail = "Invalid email format";
-      }
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     updateAuthorization({
       ...formData,
-      isOwner: formData.isOwner ?? true,
-      owns25Percent: formData.owns25Percent ?? false,
-      isAuthorizedForPayments: formData.isAuthorizedForPayments ?? true,
-      signatoryName: formData.signatoryName || "Demo Approver",
-      signatoryEmail: formData.signatoryEmail || "demo@gmail.com",
-      roleInCompany: formData.roleInCompany || "Authorized Representative",
+      isOwner: state.authorization.isOwner ?? true,
+      owns25Percent: state.authorization.owns25Percent ?? false,
+      isAuthorizedForPayments:
+        state.authorization.isAuthorizedForPayments ?? true,
     });
-    setErrors({});
     router.push("/verification/documents");
   };
 
+  const selectClass =
+    "h-11 w-full appearance-none rounded-[6px] border border-[#727272] bg-[#0A0A0A] px-[14px] pr-11 text-[16px] font-normal text-[#A8A8A8] outline-none transition-colors focus:border-white sm:text-[18px]";
+  const labelClass =
+    "mb-[9px] block text-[16px] font-semibold leading-none tracking-normal text-[#F4F4F4]";
+  const inputClass =
+    "h-11 w-full rounded-[6px] border border-[#727272] bg-[#0A0A0A] px-[14px] text-[16px] font-normal text-white outline-none transition-colors placeholder:text-[#A8A8A8] focus:border-white sm:text-[18px]";
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-xl font-bold text-white flex items-center gap-2">
-          <ShieldAlert className="h-5 w-5 text-[#10B981]" />
-          Ownership & Authorization
-        </h1>
-        <p className="text-xs text-[#6B7280] leading-relaxed">
-          For global brands like Adidas, we verify your corporate permission structure to process compliance audits.
-        </p>
+    <form
+      onSubmit={handleSubmit}
+      className="mx-auto w-full max-w-[858px] pb-12 pt-8 sm:pb-14 sm:pt-10 lg:pb-16 lg:pt-12 xl:pt-[52px]"
+    >
+      <div className="mb-8 flex flex-col items-start justify-between gap-5 sm:mb-10 sm:flex-row sm:gap-8">
+        <div>
+          <h1 className="text-[28px] font-bold leading-[1.08] tracking-normal text-white sm:text-[32px] lg:text-[34px]">
+            KYB Verification
+          </h1>
+          <p className="mt-3 text-[17px] font-normal leading-snug text-[#A0A0A0] sm:mt-[15px] sm:text-[20px] lg:text-[21px]">
+            Verify your business identity for compliance
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => router.push("/dashboard")}
+          className="h-10 w-[142px] rounded-[7px] bg-white text-[15px] font-semibold text-black transition-colors hover:bg-[#EDEDED] sm:mt-[-5px] sm:h-11 sm:w-[150px] sm:text-[16px]"
+        >
+          Skip For Now
+        </button>
       </div>
 
-      <Card className="space-y-6 border-[#1F1F1F] bg-[#0D0D0D]">
-        {/* Questionnaire */}
-        <div className="space-y-4">
-          {/* Q1 */}
-          <div className="flex flex-col gap-2">
-            <label className="text-xs font-semibold text-white uppercase tracking-wider">
-              Are you the direct business owner / major shareholder?
-            </label>
-            <div className="flex gap-4">
-              <button
-                type="button"
-                onClick={() => handleSelection("isOwner", true)}
-                className={cn(
-                  "flex-1 py-3 px-4 rounded-lg border text-sm font-semibold text-center cursor-pointer transition-all",
-                  formData.isOwner === true
-                    ? "bg-[#10B981]/15 border-[#10B981] text-white"
-                    : "border-[#1F1F1F] text-[#6B7280] hover:bg-white/5"
-                )}
-              >
-                Yes, I am
-              </button>
-              <button
-                type="button"
-                onClick={() => handleSelection("isOwner", false)}
-                className={cn(
-                  "flex-1 py-3 px-4 rounded-lg border text-sm font-semibold text-center cursor-pointer transition-all",
-                  formData.isOwner === false
-                    ? "bg-[#10B981]/15 border-[#10B981] text-white"
-                    : "border-[#1F1F1F] text-[#6B7280] hover:bg-white/5"
-                )}
-              >
-                No, I am an authorized employee
-              </button>
-            </div>
-            {errors.isOwner && <span className="text-xs text-[#EF4444]">{errors.isOwner}</span>}
-          </div>
-
-          {/* Q2 */}
-          <div className="flex flex-col gap-2">
-            <label className="text-xs font-semibold text-white uppercase tracking-wider">
-              Do you own 25% or more of this company?
-            </label>
-            <div className="flex gap-4">
-              <button
-                type="button"
-                onClick={() => handleSelection("owns25Percent", true)}
-                className={cn(
-                  "flex-1 py-3 px-4 rounded-lg border text-sm font-semibold text-center cursor-pointer transition-all",
-                  formData.owns25Percent === true
-                    ? "bg-[#10B981]/15 border-[#10B981] text-white"
-                    : "border-[#1F1F1F] text-[#6B7280] hover:bg-white/5"
-                )}
-              >
-                Yes (25%+ owner)
-              </button>
-              <button
-                type="button"
-                onClick={() => handleSelection("owns25Percent", false)}
-                className={cn(
-                  "flex-1 py-3 px-4 rounded-lg border text-sm font-semibold text-center cursor-pointer transition-all",
-                  formData.owns25Percent === false
-                    ? "bg-[#10B981]/15 border-[#10B981] text-white"
-                    : "border-[#1F1F1F] text-[#6B7280] hover:bg-white/5"
-                )}
-              >
-                No (Under 25% ownership)
-              </button>
-            </div>
-            {errors.owns25Percent && <span className="text-xs text-[#EF4444]">{errors.owns25Percent}</span>}
-          </div>
-
-          {/* Q3 */}
-          <div className="flex flex-col gap-2">
-            <label className="text-xs font-semibold text-white uppercase tracking-wider">
-              Are you legally authorized to manage payments on behalf of this brand?
-            </label>
-            <div className="flex gap-4">
-              <button
-                type="button"
-                onClick={() => handleSelection("isAuthorizedForPayments", true)}
-                className={cn(
-                  "flex-1 py-3 px-4 rounded-lg border text-sm font-semibold text-center cursor-pointer transition-all",
-                  formData.isAuthorizedForPayments === true
-                    ? "bg-[#10B981]/15 border-[#10B981] text-white"
-                    : "border-[#1F1F1F] text-[#6B7280] hover:bg-white/5"
-                )}
-              >
-                Yes, authorized
-              </button>
-              <button
-                type="button"
-                onClick={() => handleSelection("isAuthorizedForPayments", false)}
-                className={cn(
-                  "flex-1 py-3 px-4 rounded-lg border text-sm font-semibold text-center cursor-pointer transition-all",
-                  formData.isAuthorizedForPayments === false
-                    ? "bg-[#10B981]/15 border-[#10B981] text-white"
-                    : "border-[#1F1F1F] text-[#6B7280] hover:bg-white/5"
-                )}
-              >
-                No / Pending delegation
-              </button>
-            </div>
-            {errors.isAuthorizedForPayments && (
-              <span className="text-xs text-[#EF4444]">{errors.isAuthorizedForPayments}</span>
-            )}
+      <section className="rounded-[8px] border border-[#565656] bg-black px-5 py-6 shadow-[0_18px_60px_rgba(0,0,0,0.28)] sm:px-8 sm:py-[31px]">
+        <div className="flex items-start gap-[22px]">
+          <Shield
+            className="mt-[1px] h-[32px] w-[32px] shrink-0 text-[#B8B8B8] sm:h-[34px] sm:w-[34px]"
+            strokeWidth={1.7}
+          />
+          <div>
+            <h2 className="text-[24px] font-bold leading-tight text-white sm:text-[31px]">
+              Why We Need This Information
+            </h2>
+            <p className="mt-[14px] max-w-[760px] text-[15px] font-normal leading-[1.55] text-[#9B9B9B] sm:text-[17px]">
+              Federal regulations require us to verify your business identity.
+              This helps prevent fraud and ensures a secure payment ecosystem
+              for all users.
+            </p>
           </div>
         </div>
+      </section>
 
-        {/* If employee: Show authorization document uploads and signatory details */}
-        {formData.isOwner === false && (
-          <div className="border-t border-[#1F1F1F] pt-5 space-y-5 animate-fadeIn">
-            <div className="bg-[#10B981]/5 border border-[#10B981]/15 rounded-xl p-4 space-y-1">
-              <h4 className="text-xs font-bold text-white uppercase tracking-wider">
-                Corporate representative requirement
-              </h4>
-              <p className="text-xs text-[#6B7280] leading-relaxed">
-                As a corporate representative, please upload a signed board authorization letter or Power of Attorney (POA) stating you are authorized to manage payments.
-              </p>
+      <section className="mt-10 rounded-[8px] border border-[#565656] bg-black px-5 py-6 shadow-[0_18px_60px_rgba(0,0,0,0.28)] sm:px-8 sm:py-[38px] lg:px-10">
+        <div className="space-y-[22px]">
+          <label className="block">
+            <span className={labelClass}>Business Formation Date</span>
+            <input
+              name="formationDate"
+              value={formData.formationDate}
+              onChange={handleChange}
+              placeholder="12/06/2002"
+              className={inputClass}
+            />
+          </label>
+
+          <label className="block">
+            <span className={labelClass}>State of Incorporation</span>
+            <div className="relative">
+              <select
+                name="incorporationState"
+                value={formData.incorporationState}
+                onChange={handleChange}
+                className={selectClass}
+              >
+                <option value="">Select state</option>
+                {STATES.map((stateName) => (
+                  <option key={stateName} value={stateName} className="bg-black text-white">
+                    {stateName}
+                  </option>
+                ))}
+              </select>
+              <SelectChevron />
             </div>
+          </label>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-[#6B7280]">
-                  Signed Brand Authorization Letter
-                </label>
-                <FileUpload
-                  title="Authorization_Letter"
-                  status={formData.authLetterUploaded ? "uploaded" : "not_uploaded"}
-                  onUploadSuccess={() => handleUploadSuccess("authLetterUploaded")}
-                  onDelete={() => handleDelete("authLetterUploaded")}
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-[#6B7280]">
-                  Power of Attorney / Resolution
-                </label>
-                <FileUpload
-                  title="Power_of_Attorney"
-                  status={formData.powerOfAttorneyUploaded ? "uploaded" : "not_uploaded"}
-                  onUploadSuccess={() => handleUploadSuccess("powerOfAttorneyUploaded")}
-                  onDelete={() => handleDelete("powerOfAttorneyUploaded")}
-                />
-              </div>
+          <label className="block">
+            <span className={labelClass}>Number of Employees</span>
+            <div className="relative">
+              <select
+                name="employeeRange"
+                value={formData.employeeRange}
+                onChange={handleChange}
+                className={selectClass}
+              >
+                <option value="">Select range</option>
+                {EMPLOYEE_RANGES.map((range) => (
+                  <option key={range} value={range} className="bg-black text-white">
+                    {range}
+                  </option>
+                ))}
+              </select>
+              <SelectChevron />
             </div>
-            {errors.documents && <span className="text-xs text-[#EF4444] block">{errors.documents}</span>}
+          </label>
 
-            <div className="space-y-4 pt-2">
-              <h4 className="text-xs font-bold text-white uppercase tracking-wider">
-                Authorized Signatory Approver Details
-              </h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Input
-                  id="signatoryName"
-                  name="signatoryName"
-                  label="Signatory Approver Name"
-                  value={formData.signatoryName}
-                  onChange={handleInputChange}
-                  error={errors.signatoryName}
-                  leftIcon={<User className="h-4 w-4" />}
-                  placeholder="e.g. Bjørn Gulden"
-                />
-                <Input
-                  id="signatoryEmail"
-                  name="signatoryEmail"
-                  label="Signatory Corporate Email"
-                  value={formData.signatoryEmail}
-                  onChange={handleInputChange}
-                  error={errors.signatoryEmail}
-                  leftIcon={<Mail className="h-4 w-4" />}
-                  placeholder="e.g. CEO@adidas-group.com"
-                />
-              </div>
-              <Input
-                id="roleInCompany"
-                name="roleInCompany"
-                label="Signatory Job Title"
-                value={formData.roleInCompany}
-                onChange={handleInputChange}
-                placeholder="e.g. Chief Executive Officer (CEO)"
-              />
+          <label className="block">
+            <span className={labelClass}>Expected Monthly Payment Volume</span>
+            <div className="relative">
+              <select
+                name="monthlyPaymentVolume"
+                value={formData.monthlyPaymentVolume}
+                onChange={handleChange}
+                className={selectClass}
+              >
+                <option value="">Select range</option>
+                {PAYMENT_RANGES.map((range) => (
+                  <option key={range} value={range} className="bg-black text-white">
+                    {range}
+                  </option>
+                ))}
+              </select>
+              <SelectChevron />
             </div>
-          </div>
-        )}
-
-        {/* UBO list preview */}
-        <div className="border-t border-[#1F1F1F] pt-5 space-y-3">
-          <h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center justify-between">
-            <span>Ultimate Beneficial Owners (UBOs)</span>
-            <span className="text-[10px] text-[#10B981] font-semibold">1 Owner Registered</span>
-          </h4>
-
-          <div className="space-y-2">
-            {formData.owners.map((owner: any, idx: number) => (
-              <div key={idx} className="glass-panel border-[#1F1F1F] bg-[#0A0A0A] p-3 rounded-lg flex items-center justify-between text-xs">
-                <div className="space-y-1">
-                  <p className="font-semibold text-white">{owner.fullName}</p>
-                  <p className="text-[#6B7280]">{owner.role} &bull; {owner.ownership}% shares &bull; {owner.country}</p>
-                </div>
-                <div className="text-right">
-                  <span className="text-[10px] bg-[#10B981]/10 border border-[#10B981]/25 px-2 py-0.5 rounded text-[#10B981] font-bold">
-                    ID Verified
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
+          </label>
         </div>
-      </Card>
+      </section>
 
-      {/* Button panel */}
-      <div className="flex justify-between items-center pt-2">
-        <Button
+      <div className="mt-8 flex items-center justify-between gap-4 sm:mt-10">
+        <button
           type="button"
-          variant="outline"
-          leftIcon={<ArrowLeft className="h-4 w-4" />}
           onClick={() => router.push("/verification/representative")}
+          className="flex h-11 w-[112px] items-center justify-center gap-2 rounded-[7px] border border-[#5E5E5E] bg-black text-[15px] font-semibold text-[#8C8C8C] transition-colors hover:border-[#8A8A8A] hover:text-white sm:w-[120px] sm:gap-[13px] sm:text-[16px]"
         >
+          <ArrowLeft className="h-5 w-5" strokeWidth={2} />
           Back
-        </Button>
-        <Button type="submit" variant="primary">
-          Save & Continue
-        </Button>
+        </button>
+
+        <button
+          type="submit"
+          className="flex h-11 w-[170px] items-center justify-center gap-3 rounded-[7px] bg-white text-[15px] font-semibold text-black transition-colors hover:bg-[#EDEDED] sm:w-[200px] sm:gap-[17px] sm:text-[16px]"
+        >
+          Continue
+          <ArrowRight className="h-5 w-5" strokeWidth={2.25} />
+        </button>
       </div>
     </form>
+  );
+}
+
+function SelectChevron() {
+  return (
+    <svg
+      className="pointer-events-none absolute right-[15px] top-1/2 h-4 w-4 -translate-y-1/2 text-[#7A7A7A]"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
+      <path strokeLinecap="round" strokeLinejoin="round" d="m6 9 6 6 6-6" />
+    </svg>
   );
 }

@@ -8,17 +8,13 @@ interface DashboardShellProps {
 
 export function DashboardShell({ children }: DashboardShellProps) {
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-[#0A0A0A]">
-      {/* Sidebar Navigation */}
+    <div className="flex h-screen w-screen overflow-hidden bg-black">
       <DashboardSidebar />
 
-      {/* Main Panel Content Area */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
-        {/* Dynamic header */}
+      <div className="relative flex min-w-0 flex-1 flex-col overflow-hidden">
         <DashboardHeader />
 
-        {/* Inner Content scroll body */}
-        <main className="flex-1 overflow-y-auto p-6 md:p-8 bg-[#0A0A0A]">
+        <main className="flex-1 overflow-y-auto bg-black px-5 pb-10 pt-10 md:px-10 md:pt-[44px]">
           {children}
         </main>
       </div>

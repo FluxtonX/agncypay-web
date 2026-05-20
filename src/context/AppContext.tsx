@@ -20,6 +20,11 @@ interface AppState {
   } | null;
   businessSetup: Partial<BusinessProfile> & {
     industry?: string;
+    address?: string;
+    city?: string;
+    businessState?: string;
+    zipCode?: string;
+    companyDescription?: string;
   };
   representative: {
     fullName: string;
@@ -44,6 +49,10 @@ interface AppState {
     signatoryName: string;
     signatoryEmail: string;
     roleInCompany: string;
+    formationDate: string;
+    incorporationState: string;
+    employeeRange: string;
+    monthlyPaymentVolume: string;
     owners: {
       fullName: string;
       role: string;
@@ -119,6 +128,10 @@ const DEFAULT_STATE: AppState = {
     signatoryName: "",
     signatoryEmail: "",
     roleInCompany: "",
+    formationDate: "",
+    incorporationState: "",
+    employeeRange: "",
+    monthlyPaymentVolume: "",
     owners: [
       {
         fullName: "Bjørn Gulden",

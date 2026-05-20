@@ -2,244 +2,203 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { CreditCard, ArrowLeft, AlertTriangle, Building } from "lucide-react";
+import { ArrowLeft, ArrowRight, CreditCard } from "lucide-react";
 import { useApp } from "../../context/AppContext";
-import { Input } from "../ui/Input";
-import { Select } from "../ui/Select";
-import { Button } from "../ui/Button";
-import { Card } from "../ui/Card";
-import { FileUpload } from "../ui/FileUpload";
+
+const ACCOUNT_TYPES = ["Checking", "Savings", "Business Checking", "Treasury"];
 
 export function BankDetailsForm() {
   const router = useRouter();
   const { state, updateBankDetails } = useApp();
+  const hasSavedBank =
+    state.bankDetails.accountHolderName &&
+    state.bankDetails.accountHolderName !== "Adidas AG";
 
   const [formData, setFormData] = useState({
-    accountHolderName: state.bankDetails.accountHolderName || "",
-    bankName: state.bankDetails.bankName || "",
-    country: state.bankDetails.country || "Germany",
-    currency: state.bankDetails.currency || "USD",
-    accountNumber: state.bankDetails.accountNumber || "",
-    routingNumber: state.bankDetails.routingNumber || "",
-    bankAddress: state.bankDetails.bankAddress || "",
-    statementUploaded: state.bankDetails.statementUploaded || false,
+    accountHolderName: hasSavedBank ? state.bankDetails.accountHolderName || "" : "",
+    bankName: hasSavedBank ? state.bankDetails.bankName || "" : "",
+    routingNumber: hasSavedBank ? state.bankDetails.routingNumber || "" : "",
+    accountNumber: hasSavedBank ? state.bankDetails.accountNumber || "" : "",
+    accountType: "",
   });
-  const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-    updateBankDetails({ [name]: value });
-  };
-
-  const handleUploadSuccess = () => {
-    setFormData((prev) => ({ ...prev, statementUploaded: true }));
-    updateBankDetails({ statementUploaded: true });
-  };
-
-  const handleDelete = () => {
-    setFormData((prev) => ({ ...prev, statementUploaded: false }));
-    updateBankDetails({ statementUploaded: false });
-  };
-
-  const validate = () => {
-    const newErrors: Record<string, string> = {};
-    if (!formData.accountHolderName) newErrors.accountHolderName = "Account holder name is required";
-    if (!formData.bankName) newErrors.bankName = "Bank name is required";
-    if (!formData.accountNumber) newErrors.accountNumber = "Account number / IBAN is required";
-    if (!formData.routingNumber) newErrors.routingNumber = "Routing number / SWIFT code is required";
-    if (!formData.statementUploaded) newErrors.statement = "Bank statement upload is required for verification";
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const demoBank = {
-      accountHolderName: formData.accountHolderName || "Adidas AG",
-      bankName: formData.bankName || "Deutsche Bank AG",
-      country: formData.country || "Germany",
-      currency: formData.currency || "USD",
-      accountNumber: formData.accountNumber || "DE89 3704 0044 0532 9400 12",
-      routingNumber: formData.routingNumber || "DEUTDEDDFXX",
-      bankAddress: formData.bankAddress || "Taunusanlage 12, 60325 Frankfurt am Main, Germany",
+    updateBankDetails({
+      accountHolderName: formData.accountHolderName,
+      bankName: formData.bankName,
+      routingNumber: formData.routingNumber,
+      accountNumber: formData.accountNumber,
       statementUploaded: true,
-    };
-    updateBankDetails(demoBank);
-    setFormData(demoBank);
-    setErrors({});
-    router.push("/verification/review");
+    });
+    router.push("/verification/brand");
   };
 
-  const handlePrefill = () => {
-    const mockBank = {
-      accountHolderName: "Adidas AG",
-      bankName: "Deutsche Bank AG",
-      country: "Germany",
-      currency: "USD",
-      accountNumber: "DE89 3704 0044 0532 9400 12",
-      routingNumber: "DEUTDEDDFXX",
-      bankAddress: "Taunusanlage 12, 60325 Frankfurt am Main, Germany",
-      statementUploaded: true,
-    };
-    setFormData(mockBank);
-    updateBankDetails(mockBank);
-  };
-
-  // Warning check if Account Holder Name != Business Legal Name
-  const legalName = state.businessSetup.legalName || "Adidas AG";
-  const holderMismatch = 
-    formData.accountHolderName.trim().toLowerCase() !== legalName.trim().toLowerCase() &&
-    formData.accountHolderName.trim() !== "";
+  const labelClass =
+    "mb-[9px] block text-[16px] font-semibold leading-none tracking-normal text-[#F4F4F4]";
+  const inputClass =
+    "h-11 w-full rounded-[6px] border border-[#727272] bg-[#0A0A0A] px-[14px] text-[16px] font-normal text-white outline-none transition-colors placeholder:text-[#A8A8A8] focus:border-white sm:text-[18px]";
+  const selectClass =
+    "h-11 w-full appearance-none rounded-[6px] border border-[#727272] bg-[#0A0A0A] px-[14px] pr-11 text-[16px] font-normal text-[#A8A8A8] outline-none transition-colors focus:border-white sm:text-[18px]";
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="flex justify-between items-start">
-        <div className="space-y-1">
-          <h1 className="text-xl font-bold text-white flex items-center gap-2">
-            <CreditCard className="h-5 w-5 text-[#10B981]" />
-            Bank & Payout Setup
+    <form
+      onSubmit={handleSubmit}
+      className="mx-auto w-full max-w-[858px] pb-12 pt-8 sm:pb-14 sm:pt-10 lg:pb-16 lg:pt-12 xl:pt-[52px]"
+    >
+      <div className="mb-8 flex flex-col items-start justify-between gap-5 sm:mb-10 sm:flex-row sm:gap-8">
+        <div>
+          <h1 className="text-[28px] font-bold leading-[1.08] tracking-normal text-white sm:text-[32px] lg:text-[34px]">
+            Bank Account
           </h1>
-          <p className="text-xs text-[#6B7280] leading-relaxed">
-            Link the corporate bank account for payment settlements. Account holder must match your legal business name.
+          <p className="mt-3 text-[17px] font-normal leading-snug text-[#A0A0A0] sm:mt-[15px] sm:text-[20px] lg:text-[21px]">
+            Connect your primary bank account for settlements
           </p>
         </div>
 
         <button
           type="button"
-          onClick={handlePrefill}
-          className="flex items-center gap-1 px-2.5 py-1 text-[11px] font-bold text-[#10B981] bg-[#10B981]/10 border border-[#10B981]/20 rounded-md hover:bg-[#10B981]/20 transition-all cursor-pointer"
+          onClick={() => router.push("/dashboard")}
+          className="h-10 w-[142px] rounded-[7px] bg-white text-[15px] font-semibold text-black transition-colors hover:bg-[#EDEDED] sm:mt-[-5px] sm:h-11 sm:w-[150px] sm:text-[16px]"
         >
-          Prefill Bank
+          Skip For Now
         </button>
       </div>
 
-      <Card className="space-y-5 border-[#1F1F1F] bg-[#0D0D0D]">
-        <div className="space-y-4">
-          <Input
-            id="accountHolderName"
-            name="accountHolderName"
-            label="Bank Account Holder Name"
-            value={formData.accountHolderName}
-            onChange={handleChange}
-            error={errors.accountHolderName}
-            leftIcon={<Building className="h-4 w-4" />}
-            placeholder="Must match Legal Entity name exactly"
-          />
-
-          {/* Account holder warning */}
-          {holderMismatch && (
-            <div className="flex items-start gap-2 bg-[#F59E0B]/5 border border-[#F59E0B]/10 rounded-lg p-3 text-xs text-[#F59E0B] leading-relaxed">
-              <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
-              <div>
-                <span className="font-semibold">Holder Name Mismatch:</span> Your registered account holder name (<span className="underline">{formData.accountHolderName}</span>) does not match the registered legal business name (<span className="underline">{legalName}</span>). Mismatches will require manual compliance officer review.
-              </div>
+      <section className="rounded-[8px] border border-[#565656] bg-black px-5 py-6 shadow-[0_18px_60px_rgba(0,0,0,0.28)] sm:px-8 sm:py-[39px] lg:px-10">
+        <div className="rounded-[8px] border border-[#747474] bg-[#0A0A0A] px-5 py-[30px] sm:px-[30px] sm:py-[36px]">
+          <div className="flex items-start gap-[22px]">
+            <CreditCard
+              className="mt-[2px] h-[32px] w-[32px] shrink-0 text-[#B8B8B8]"
+              strokeWidth={1.7}
+            />
+            <div>
+              <h2 className="text-[25px] font-bold leading-tight text-white sm:text-[31px]">
+                Secure Bank Connection
+              </h2>
+              <p className="mt-[17px] max-w-[690px] text-[15px] font-normal leading-[1.55] text-[#A4A4A4] sm:text-[17px]">
+                Connect your business bank account for payment settlements. All
+                connections are encrypted and secure.
+              </p>
             </div>
-          )}
+          </div>
+        </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Input
-              id="bankName"
+        <div className="mt-[49px] space-y-[22px]">
+          <label className="block">
+            <span className={labelClass}>Account Holder Name</span>
+            <input
+              name="accountHolderName"
+              value={formData.accountHolderName}
+              onChange={handleChange}
+              placeholder="Acme Corporation Inc."
+              className={inputClass}
+            />
+          </label>
+
+          <label className="block">
+            <span className={labelClass}>Bank Name</span>
+            <input
               name="bankName"
-              label="Bank Name"
               value={formData.bankName}
               onChange={handleChange}
-              error={errors.bankName}
-              placeholder="e.g. Deutsche Bank AG"
+              placeholder="Chase Bank"
+              className={inputClass}
             />
-            <Select
-              id="country"
-              name="country"
-              label="Bank Account Country"
-              value={formData.country}
-              onChange={handleChange}
-              options={[
-                { value: "Germany", label: "Germany" },
-                { value: "United States", label: "United States" },
-                { value: "United Kingdom", label: "United Kingdom" },
-                { value: "France", label: "France" },
-              ]}
-            />
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Input
-              id="accountNumber"
-              name="accountNumber"
-              label="IBAN / Account Number"
-              value={formData.accountNumber}
-              onChange={handleChange}
-              error={errors.accountNumber}
-              placeholder="DE89 3704..."
-            />
-            <Input
-              id="routingNumber"
-              name="routingNumber"
-              label="SWIFT / BIC / Routing"
-              value={formData.routingNumber}
-              onChange={handleChange}
-              error={errors.routingNumber}
-              placeholder="e.g. DEUTDEDDFXX"
-            />
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Select
-              id="currency"
-              name="currency"
-              label="Settlement Currency"
-              value={formData.currency}
-              onChange={handleChange}
-              options={[
-                { value: "USD", label: "USD - US Dollar" },
-                { value: "EUR", label: "EUR - Euro" },
-                { value: "GBP", label: "GBP - British Pound" },
-              ]}
-            />
-            <Input
-              id="bankAddress"
-              name="bankAddress"
-              label="Bank Branch Address"
-              value={formData.bankAddress}
-              onChange={handleChange}
-              placeholder="e.g. Taunusanlage 12, Frankfurt, Germany"
-            />
-          </div>
-        </div>
-
-        {/* Bank statement upload */}
-        <div className="border-t border-[#1F1F1F] pt-4 space-y-2">
-          <label className="text-xs font-semibold text-white uppercase tracking-wider block">
-            Proof of Account (Bank Statement) *
           </label>
-          <p className="text-[11px] text-[#6B7280] leading-relaxed mb-2">
-            Upload a corporate bank statement or account certificate showing the holder name and account details. Must be dated within the last 3 months.
-          </p>
-          <FileUpload
-            title="Bank_Statement"
-            status={formData.statementUploaded ? "uploaded" : "not_uploaded"}
-            onUploadSuccess={handleUploadSuccess}
-            onDelete={handleDelete}
-            rejectionReason={errors.statement}
-          />
-        </div>
-      </Card>
 
-      {/* Button panel */}
-      <div className="flex justify-between items-center pt-2">
-        <Button
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-[17px]">
+            <label className="block">
+              <span className={labelClass}>Routing Number</span>
+              <input
+                name="routingNumber"
+                value={formData.routingNumber}
+                onChange={handleChange}
+                placeholder="XXXXXXXXX"
+                className={inputClass}
+              />
+            </label>
+
+            <label className="block">
+              <span className={labelClass}>Account Number</span>
+              <input
+                name="accountNumber"
+                value={formData.accountNumber}
+                onChange={handleChange}
+                placeholder="XXXXXXXXXXXX"
+                className={inputClass}
+              />
+            </label>
+          </div>
+
+          <label className="block">
+            <span className={labelClass}>Account Type</span>
+            <div className="relative">
+              <select
+                name="accountType"
+                value={formData.accountType}
+                onChange={handleChange}
+                className={selectClass}
+              >
+                <option value="">Select account type</option>
+                {ACCOUNT_TYPES.map((type) => (
+                  <option key={type} value={type} className="bg-black text-white">
+                    {type}
+                  </option>
+                ))}
+              </select>
+              <SelectChevron />
+            </div>
+          </label>
+
+          <button
+            type="button"
+            className="h-11 w-full rounded-[6px] border border-[#727272] bg-black text-[16px] font-semibold text-white transition-colors hover:border-white"
+          >
+            Or Connect via Plaid
+          </button>
+        </div>
+      </section>
+
+      <div className="mt-8 flex items-center justify-between gap-4 sm:mt-10">
+        <button
           type="button"
-          variant="outline"
-          leftIcon={<ArrowLeft className="h-4 w-4" />}
-          onClick={() => router.push("/verification/brand")}
+          onClick={() => router.push("/verification/documents")}
+          className="flex h-11 w-[112px] items-center justify-center gap-2 rounded-[7px] border border-[#5E5E5E] bg-black text-[15px] font-semibold text-[#8C8C8C] transition-colors hover:border-[#8A8A8A] hover:text-white sm:w-[120px] sm:gap-[13px] sm:text-[16px]"
         >
+          <ArrowLeft className="h-5 w-5" strokeWidth={2} />
           Back
-        </Button>
-        <Button type="submit" variant="primary">
-          Save & Continue
-        </Button>
+        </button>
+
+        <button
+          type="submit"
+          className="flex h-11 w-[170px] items-center justify-center gap-3 rounded-[7px] bg-white text-[15px] font-semibold text-black transition-colors hover:bg-[#EDEDED] sm:w-[200px] sm:gap-[17px] sm:text-[16px]"
+        >
+          Continue
+          <ArrowRight className="h-5 w-5" strokeWidth={2.25} />
+        </button>
       </div>
     </form>
+  );
+}
+
+function SelectChevron() {
+  return (
+    <svg
+      className="pointer-events-none absolute right-[15px] top-1/2 h-4 w-4 -translate-y-1/2 text-[#7A7A7A]"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
+      <path strokeLinecap="round" strokeLinejoin="round" d="m6 9 6 6 6-6" />
+    </svg>
   );
 }

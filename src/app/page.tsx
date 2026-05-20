@@ -2,268 +2,482 @@
 
 import React from "react";
 import Link from "next/link";
+import { motion } from "framer-motion";
 import {
-  ShieldCheck,
-  CheckCircle2,
-  Lock,
   ArrowRight,
-  Zap,
   BarChart3,
+  BriefcaseBusiness,
+  CheckCircle2,
+  Globe2,
+  Lock,
+  Shield,
+  ShieldCheck,
   Users,
-  Network
+  Zap,
 } from "lucide-react";
+
+const capabilityCards = [
+  {
+    icon: Zap,
+    title: "Instant Settlements",
+    desc: "Real-time payment processing with transparent settlement tracking across your entire payment network.",
+  },
+  {
+    icon: BarChart3,
+    title: "Operational Analytics",
+    desc: "Executive-grade dashboards with deep visibility into payment flows, spend allocation, and metrics.",
+  },
+  {
+    icon: Users,
+    title: "Multi-Agency Management",
+    desc: "Centralized platform to manage relationships, invoices, and payments across all your agency partners.",
+  },
+  {
+    icon: Shield,
+    title: "Compliance First",
+    desc: "Enterprise KYB/KYC verification, audit trails, and compliance controls built into every transaction.",
+  },
+  {
+    icon: BriefcaseBusiness,
+    title: "Bank-Grade Security",
+    desc: "End-to-end encryption, MFA, role-based access, and SOC 2 Type II certified infrastructure.",
+  },
+  {
+    icon: Globe2,
+    title: "CRM Integration",
+    desc: "Seamless integration with your existing systems. Invoice data flows automatically into AgencyPay.",
+  },
+];
+
+const workflow = [
+  {
+    number: "01",
+    title: "CRM Integration",
+    desc: "Invoice data flows automatically from your CRM systems",
+  },
+  {
+    number: "02",
+    title: "Review & Approve",
+    desc: "Finance teams review and approve invoices in one platform",
+  },
+  {
+    number: "03",
+    title: "Fund & Execute",
+    desc: "Connect bank accounts and execute approved payments",
+  },
+  {
+    number: "04",
+    title: "Track & Audit",
+    desc: "Monitor settlements with complete audit trails",
+  },
+];
+
+const securityItems = [
+  "SOC 2 Type II Certified",
+  "End-to-end encryption (AES-256)",
+  "Multi-factor authentication",
+  "Role-based access control",
+  "Complete audit trails",
+  "PCI DSS compliant infrastructure",
+];
+
+const cardDirections: RevealDirection[] = ["left", "up", "right", "left", "up", "right"];
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-[#0A0A0A] text-white flex flex-col font-sans">
-      {/* Header */}
-      <header className="h-20 border-b border-[#1F1F1F] px-6 md:px-12 flex items-center justify-between w-full">
-        <Link href="/" className="flex items-center cursor-pointer">
-          <img src="/agncypayLogo.png" alt="Agncy" className="h-16 md:h-20 w-auto object-contain mix-blend-lighten" />
-        </Link>
-
-        <nav className="hidden md:flex items-center gap-8 text-sm text-[#A1A1AA] font-medium">
-          <span className="hover:text-white transition-colors cursor-pointer">Product</span>
-          <span className="hover:text-white transition-colors cursor-pointer">Security</span>
-          <span className="hover:text-white transition-colors cursor-pointer">Pricing</span>
-        </nav>
-
-        <div className="flex items-center gap-4">
-          <Link href="/auth/login" className="text-sm font-medium text-[#A1A1AA] hover:text-white transition-colors">
-            Log in
+    <div className="min-h-screen bg-black text-white">
+      <motion.header
+        initial={{ opacity: 0, y: -18 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.65, ease: [0.16, 1, 0.3, 1] }}
+        className="fixed inset-x-0 top-0 z-50 h-[82px] border-b border-white/[0.08] bg-black/95 backdrop-blur"
+      >
+        <div className="mx-auto flex h-full max-w-[1440px] items-center justify-between px-7 lg:px-12">
+          <Link href="/" className="flex items-center" aria-label="AgncyPay home">
+            <img
+              src="/agncypayLogo.png"
+              alt="AgncyPay"
+              className="h-[58px] w-[230px] object-contain object-left sm:h-[66px] sm:w-[260px]"
+            />
           </Link>
-          <Link
-            href="/auth/register"
-            className="px-4 py-2 text-sm font-bold bg-white text-black rounded-md hover:bg-[#E5E7EB] transition-colors"
-          >
-            Get started
-          </Link>
-        </div>
-      </header>
 
-      {/* Hero */}
-      <section className="w-full px-6 md:px-12 pt-24 pb-32 flex flex-col items-center text-center relative overflow-hidden">
-        {/* Background decorative elements */}
-        <div className="absolute inset-0 z-0 pointer-events-none flex justify-center items-center opacity-30">
-           <div className="w-[800px] h-[500px] border border-[#333] rounded-3xl transform rotate-12 absolute blur-[2px]"></div>
-           <div className="w-[800px] h-[500px] border border-[#444] rounded-3xl transform -rotate-6 absolute blur-[1px]"></div>
-           <div className="w-[600px] h-[350px] bg-gradient-to-r from-[#FFD700]/20 to-[#FFA500]/20 rounded-3xl transform rotate-3 absolute blur-xl"></div>
-        </div>
+          <nav className="hidden items-center gap-[46px] text-[13px] font-semibold text-[#767676] md:flex">
+            <a href="#features" className="transition-colors hover:text-white">
+              Features
+            </a>
+            <a href="#security" className="transition-colors hover:text-white">
+              Security
+            </a>
+            <a href="#pricing" className="transition-colors hover:text-white">
+              Pricing
+            </a>
+          </nav>
 
-        <div className="relative z-10 max-w-4xl mx-auto space-y-8 flex flex-col items-center">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-[#333] bg-[#111] text-[#A1A1AA] text-xs font-semibold tracking-wider">
-            ENTERPRISE PAYMENTS FOR BRANDS
-          </div>
-
-          <h1 className="text-5xl md:text-7xl font-bold tracking-tight leading-tight text-white">
-            Payment<br />Orchestration<br />Reimagined
-          </h1>
-
-          <p className="text-[#A1A1AA] text-lg leading-relaxed max-w-2xl mx-auto">
-            Enterprise-grade payment infrastructure for brands managing agency workflows. Streamline invoice approval, track payments, and track settlements in real-time.
-          </p>
-
-          <div className="flex flex-col sm:flex-row gap-4 pt-4">
+          <div className="flex items-center gap-6">
+            <Link
+              href="/auth/login"
+              className="hidden text-[13px] font-bold text-[#A3A3A3] transition-colors hover:text-white sm:inline"
+            >
+              Log In
+            </Link>
             <Link
               href="/auth/register"
-              className="flex items-center justify-center gap-2 px-6 py-3 bg-white text-black text-sm font-bold rounded-md hover:bg-[#E5E7EB] transition-colors"
+              className="inline-flex h-[38px] items-center justify-center rounded-[5px] bg-white px-[22px] text-[13px] font-bold text-black transition-colors hover:bg-[#E9E9E9]"
             >
-              Get Started Now <ArrowRight className="h-4 w-4" />
-            </Link>
-            <Link
-              href="/contact"
-              className="flex items-center justify-center gap-2 px-6 py-3 border border-[#333] text-sm font-semibold rounded-md text-white hover:bg-[#1A1A1A] transition-colors"
-            >
-              Contact Sales
+              Get Started
             </Link>
           </div>
+        </div>
+      </motion.header>
 
-          {/* Trust badges */}
-          <div className="flex items-center justify-center gap-6 pt-12 text-sm text-[#A1A1AA]">
-            {[
-              { icon: ShieldCheck, text: "SOC 2 Compliant" },
-              { icon: CheckCircle2, text: "Audit-ready" },
-              { icon: Lock, text: "Bank-level security" }
-            ].map((badge, i) => (
-              <span key={i} className="flex items-center gap-2 font-medium">
-                <badge.icon className="h-4 w-4 text-[#A1A1AA]" />
-                {badge.text}
+      <main className="pt-[82px]">
+        <section className="relative min-h-[710px] overflow-hidden border-b border-white/[0.08] bg-black">
+          <HeroVisual />
+          <div className="relative z-10 mx-auto flex min-h-[710px] max-w-[1010px] flex-col items-center justify-center px-6 pb-[72px] pt-16 text-center">
+            <motion.div
+              initial={{ opacity: 0, y: 24, scale: 0.94 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ duration: 0.75, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
+              className="mb-[53px] rounded-full border border-white/[0.16] bg-[#111111]/80 px-[19px] py-[8px] text-[11px] font-bold uppercase tracking-[0.13em] text-[#9A9A9A] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]"
+            >
+              Enterprise Payment Infrastructure
+            </motion.div>
+
+            <motion.h1
+              initial={{ opacity: 0, y: 38, scale: 0.92 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ duration: 0.95, delay: 0.28, ease: [0.16, 1, 0.3, 1] }}
+              className="max-w-[780px] text-[58px] font-bold leading-[0.98] tracking-[-0.055em] text-white sm:text-[82px] lg:text-[104px]"
+            >
+              Payment Orchestration Reimagined
+            </motion.h1>
+
+            <motion.p
+              initial={{ opacity: 0, y: 28 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.45, ease: [0.16, 1, 0.3, 1] }}
+              className="mt-[52px] max-w-[720px] text-[18px] font-medium leading-[1.55] text-[#858585]"
+            >
+              Enterprise-grade payment infrastructure for brands managing agency
+              workflows. Streamline invoice approval, fund payments, and track
+              settlements in real-time.
+            </motion.p>
+
+            <motion.div
+              initial={{ opacity: 0, y: 28, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ duration: 0.75, delay: 0.58, ease: [0.16, 1, 0.3, 1] }}
+              className="mt-[35px] flex flex-col items-center gap-[15px] sm:flex-row"
+            >
+              <Link
+                href="/auth/register"
+                className="inline-flex h-[44px] w-[202px] items-center justify-center gap-[13px] rounded-[6px] bg-white text-[13px] font-bold text-black transition-colors hover:bg-[#E9E9E9]"
+              >
+                Start Now
+                <ArrowRight className="h-[15px] w-[15px]" />
+              </Link>
+              <Link
+                href="/auth/login"
+                className="inline-flex h-[44px] w-[202px] items-center justify-center rounded-[6px] border border-white/[0.32] bg-black/35 text-[13px] font-bold text-white transition-colors hover:bg-white/[0.06]"
+              >
+                Contact Sales
+              </Link>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 18 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.7, delay: 0.72, ease: [0.16, 1, 0.3, 1] }}
+              className="mt-[40px] flex flex-wrap items-center justify-center gap-x-[45px] gap-y-4 text-[12px] font-semibold text-[#717171]"
+            >
+              <span className="flex items-center gap-2">
+                <ShieldCheck className="h-[14px] w-[14px]" />
+                SOC 2 Compliant
               </span>
-            ))}
+              <span className="flex items-center gap-2">
+                <Lock className="h-[14px] w-[14px]" />
+                Bank Level Security
+              </span>
+              <span className="flex items-center gap-2">
+                <Globe2 className="h-[14px] w-[14px]" />
+                Global Infrastructure
+              </span>
+            </motion.div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Platform Capabilities */}
-      <section className="w-full px-6 md:px-12 py-24 bg-[#0D0D0D] border-t border-[#1F1F1F]">
-        <div className="max-w-6xl mx-auto space-y-16">
-          <div className="text-center space-y-4">
-            <p className="text-xs font-semibold tracking-widest text-[#6B7280] uppercase">Platform Capabilities</p>
-            <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Built for Finance Teams</h2>
-            <p className="text-[#A1A1AA]">Every feature designed for operational excellence and financial control.</p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[
-              { icon: Zap, title: "Instant Settlements", desc: "Real-time payment processing and management settlement tracking across your entire payment network." },
-              { icon: BarChart3, title: "Operational Analytics", desc: "Executive-grade dashboards with deep visibility into payment flows, spend allocation, and metrics." },
-              { icon: Users, title: "Multi-Agency Management", desc: "Centralized platform to manage relationships, invoices, and payments across all your agency partners." },
-              { icon: ShieldCheck, title: "Compliance First", desc: "Built-in KYC/AML and FinCEN screening to ensure complete compliance for every transaction." },
-              { icon: Lock, title: "Bank-Grade Security", desc: "End-to-end encryption, role-based access control, and SOC 2 Type II certified infrastructure." },
-              { icon: Network, title: "CRM Integration", desc: "Seamless integration with your existing systems, trackers, and flows automatically into AgencyPay." },
-            ].map((feat, i) => {
-              const Icon = feat.icon;
-              return (
-                <div key={i} className="rounded-xl border border-[#1F1F1F] bg-[#111] p-8 space-y-4 hover:border-[#333] transition-colors group">
-                  <div className="h-10 w-10 rounded-lg border border-[#333] bg-[#1A1A1A] flex items-center justify-center group-hover:bg-[#222] transition-colors">
-                    <Icon className="h-5 w-5 text-[#E5E7EB]" />
-                  </div>
-                  <h3 className="text-lg font-bold text-[#E5E7EB]">{feat.title}</h3>
-                  <p className="text-sm text-[#A1A1AA] leading-relaxed">{feat.desc}</p>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* Workflow Section */}
-      <section className="w-full px-6 md:px-12 py-24 bg-[#0A0A0A]">
-        <div className="max-w-6xl mx-auto space-y-16">
-          <div className="text-center space-y-4">
-            <p className="text-xs font-semibold tracking-widest text-[#6B7280] uppercase">How It Works</p>
-            <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Streamlined Payment Operations</h2>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            {[
-              { num: "01", title: "CRM Integration", desc: "Invoice data flows automatically from your existing systems." },
-              { num: "02", title: "Review & Approve", desc: "Finance teams review and approve invoices in one platform." },
-              { num: "03", title: "Fund & Execute", desc: "Review, allocate funds and execute approved payments." },
-              { num: "04", title: "Track & Audit", desc: "Monitor settlements with complete audit trails." },
-            ].map((step, i) => (
-              <div key={i} className="space-y-4">
-                <div className="text-4xl font-light text-[#333]">{step.num}</div>
-                <h4 className="text-lg font-bold text-[#E5E7EB]">{step.title}</h4>
-                <p className="text-sm text-[#A1A1AA] leading-relaxed">{step.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Security Section */}
-      <section className="w-full px-6 md:px-12 py-24 bg-[#0D0D0D] border-t border-[#1F1F1F]">
-        <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-          <div className="space-y-8">
-            <div className="space-y-4">
-              <p className="text-xs font-semibold tracking-widest text-[#6B7280] uppercase">Built for Enterprise</p>
-              <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Enterprise-Grade Protection</h2>
-              <p className="text-[#A1A1AA] leading-relaxed max-w-md">
-                Built on bank-grade infrastructure with comprehensive security controls, compliance certifications, and audit capabilities.
+        <section id="features" className="relative overflow-hidden border-b border-white/[0.08] bg-black px-6 py-[105px]">
+          <CapabilityBackdrop />
+          <div className="relative z-10 mx-auto max-w-[1380px]">
+            <Reveal direction="zoom" className="mb-[64px] text-center">
+              <p className="mb-[17px] text-[10px] font-bold uppercase tracking-[0.14em] text-[#575757]">
+                Platform Capabilities
               </p>
-            </div>
+              <h2 className="text-[39px] font-bold leading-tight tracking-[-0.045em] text-white sm:text-[52px]">
+                Built for Finance Teams
+              </h2>
+              <p className="mt-[20px] text-[16px] font-medium text-[#747474] sm:text-[18px]">
+                Every feature designed for operational excellence and financial control
+              </p>
+            </Reveal>
 
-            <div className="space-y-4 text-sm text-[#A1A1AA]">
-              {[
-                "SOC 2 Type II Certified",
-                "End-to-end encryption (AES-256)",
-                "Multi-factor authentication",
-                "Role-based access control",
-                "Complete audit trails",
-                "PCI DSS compliant infrastructure"
-              ].map((item, i) => (
-                <div key={i} className="flex items-center gap-3">
-                  <CheckCircle2 className="h-4 w-4 text-[#A1A1AA] shrink-0" />
-                  <span>{item}</span>
-                </div>
+            <div className="grid grid-cols-1 gap-[38px] md:grid-cols-2 lg:grid-cols-3">
+              {capabilityCards.map((card, index) => {
+                const Icon = card.icon;
+                return (
+                  <Reveal
+                    key={card.title}
+                    direction={cardDirections[index]}
+                    delay={(index % 3) * 0.08}
+                  >
+                  <article
+                    className="min-h-[212px] rounded-[6px] border border-white/[0.26] bg-white/[0.12] p-[38px] shadow-[inset_0_1px_0_rgba(255,255,255,0.18),inset_0_-1px_0_rgba(255,255,255,0.05),0_24px_90px_rgba(0,0,0,0.42)] backdrop-blur-[22px] transition-colors hover:border-white/[0.45] hover:bg-white/[0.16]"
+                  >
+                    <div className="mb-[45px] flex h-[48px] w-[48px] items-center justify-center rounded-[5px] border border-white/[0.08] bg-white/[0.16] text-[#D2D2D2] shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]">
+                      <Icon className="h-[22px] w-[22px]" />
+                    </div>
+                    <h3 className="mb-[17px] text-[17px] font-bold text-white">
+                      {card.title}
+                    </h3>
+                    <p className="text-[14px] font-medium leading-[1.55] text-[#969696]">
+                      {card.desc}
+                    </p>
+                  </article>
+                  </Reveal>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
+        <section className="bg-[#111111] px-6 py-[118px]">
+          <div className="mx-auto max-w-[1380px]">
+            <Reveal direction="up" className="mb-[88px] text-center">
+              <p className="mb-[20px] text-[10px] font-bold uppercase tracking-[0.14em] text-[#555555]">
+                Workflow
+              </p>
+              <h2 className="text-[38px] font-bold leading-tight tracking-[-0.045em] text-white sm:text-[52px]">
+                Streamlined Payment Operations
+              </h2>
+            </Reveal>
+
+            <div className="grid grid-cols-1 gap-10 md:grid-cols-4 md:gap-[72px]">
+              {workflow.map((item, index) => (
+                <Reveal key={item.number} direction={index % 2 === 0 ? "left" : "right"} delay={index * 0.07}>
+                <article>
+                  <div className="mb-[26px] text-[50px] font-bold leading-none tracking-[-0.035em] text-[#515151] sm:text-[68px]">
+                    {item.number}
+                  </div>
+                  <h3 className="mb-[15px] text-[17px] font-bold text-white">
+                    {item.title}
+                  </h3>
+                  <p className="text-[14px] font-semibold leading-[1.55] text-[#7D7D7D]">
+                    {item.desc}
+                  </p>
+                </article>
+                </Reveal>
               ))}
             </div>
           </div>
+        </section>
 
-          <div className="relative aspect-square md:aspect-video lg:aspect-square bg-[#111] rounded-2xl border border-[#1F1F1F] flex items-center justify-center">
-            <Lock className="h-24 w-24 text-[#333]" strokeWidth={1} />
+        <section id="security" className="border-b border-white/[0.08] bg-black px-6 py-[118px]">
+          <div className="mx-auto grid max-w-[1380px] grid-cols-1 items-center gap-16 lg:grid-cols-[1fr_650px]">
+            <Reveal direction="left">
+            <div>
+              <p className="mb-[38px] text-[10px] font-bold uppercase tracking-[0.14em] text-[#626262]">
+                Security & Compliance
+              </p>
+              <h2 className="max-w-[550px] text-[43px] font-bold leading-[0.98] tracking-[-0.045em] text-white sm:text-[58px]">
+                Enterprise-Grade Protection
+              </h2>
+              <p className="mt-[22px] max-w-[580px] text-[17px] font-medium leading-[1.5] text-[#777777]">
+                Built on bank-level infrastructure with comprehensive security
+                controls, compliance certifications, and audit capabilities.
+              </p>
+
+              <div className="mt-[36px] space-y-[18px]">
+                {securityItems.map((item) => (
+                  <div key={item} className="flex items-center gap-[13px] text-[14px] font-semibold text-[#A7A7A7]">
+                    <CheckCircle2 className="h-[17px] w-[17px] text-[#9D9D9D]" />
+                    {item}
+                  </div>
+                ))}
+              </div>
+            </div>
+            </Reveal>
+
+            <Reveal direction="right" delay={0.08}>
+            <div className="flex aspect-[1.05] items-center justify-center rounded-[5px] border border-white/[0.18] bg-[#373737]">
+              <Lock className="h-[142px] w-[142px] text-[#AFAFAF]" strokeWidth={1.55} />
+            </div>
+            </Reveal>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* CTA */}
-      <section className="w-full px-6 md:px-12 py-32 bg-[#0A0A0A] border-t border-[#1F1F1F]">
-        <div className="max-w-3xl mx-auto text-center space-y-8">
-          <h2 className="text-4xl md:text-5xl font-bold tracking-tight leading-tight">
-            Ready to Transform<br />Your Payment Operations?
-          </h2>
-          <p className="text-[#A1A1AA] text-lg">
-            Join enterprise brands using AgencyPay for payment orchestration.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
-            <Link
-              href="/auth/register"
-              className="flex items-center justify-center gap-2 px-8 py-3 bg-white text-black text-sm font-bold rounded-md hover:bg-[#E5E7EB] transition-colors"
-            >
-              Get Started Now <ArrowRight className="h-4 w-4" />
-            </Link>
-            <Link
-              href="/contact"
-              className="flex items-center justify-center px-8 py-3 border border-[#333] text-sm font-semibold rounded-md text-white hover:bg-[#1A1A1A] transition-colors"
-            >
-              Schedule Demo
-            </Link>
-          </div>
-        </div>
-      </section>
+        <section id="pricing" className="border-b border-white/[0.08] bg-black px-6 py-[121px] text-center">
+          <Reveal direction="zoom" className="mx-auto max-w-[850px]">
+            <h2 className="text-[47px] font-bold leading-[1.04] tracking-[0.015em] text-white sm:text-[66px]">
+              Ready to Transform Your Payment Operations?
+            </h2>
+            <p className="mt-[36px] text-[18px] font-medium text-[#777777]">
+              Join enterprise brands using AgencyPay for payment orchestration
+            </p>
+            <div className="mt-[80px] flex flex-col justify-center gap-[17px] sm:flex-row">
+              <Link
+                href="/auth/register"
+                className="inline-flex h-[44px] w-[244px] items-center justify-center gap-[12px] rounded-[6px] bg-white text-[13px] font-bold text-black transition-colors hover:bg-[#E9E9E9]"
+              >
+                GET Start Now
+                <ArrowRight className="h-[15px] w-[15px]" />
+              </Link>
+              <Link
+                href="/auth/login"
+                className="inline-flex h-[44px] w-[244px] items-center justify-center rounded-[6px] border border-white/[0.35] text-[13px] font-bold text-white transition-colors hover:bg-white/[0.06]"
+              >
+                Schedule Demo
+              </Link>
+            </div>
+          </Reveal>
+        </section>
+      </main>
 
-      {/* Footer */}
-      <footer className="w-full bg-[#000] border-t border-[#1F1F1F] pt-16 pb-8 px-6 md:px-12">
-        <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
-          <div className="space-y-4">
-            <img src="/agncypayLogo.png" alt="Agncy" className="h-12 md:h-16 w-auto object-contain opacity-80 mix-blend-lighten" />
-            <p className="text-[#6B7280] text-xs leading-relaxed max-w-xs">
-              Enterprise payment infrastructure for the modern agency stack.
+      <Footer />
+    </div>
+  );
+}
+
+function FullLogo() {
+  return (
+    <Link href="/" className="inline-flex items-center" aria-label="AgncyPay home">
+      <img
+        src="/agncypayLogo.png"
+        alt="AgncyPay"
+        className="h-[58px] w-[230px] object-contain object-left sm:h-[66px] sm:w-[260px]"
+      />
+    </Link>
+  );
+}
+
+type RevealDirection = "up" | "down" | "left" | "right" | "zoom";
+
+function Reveal({
+  children,
+  className,
+  direction = "up",
+  delay = 0,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  direction?: RevealDirection;
+  delay?: number;
+}) {
+  const offsets: Record<RevealDirection, { x: number; y: number; scale: number }> = {
+    up: { x: 0, y: 56, scale: 0.98 },
+    down: { x: 0, y: -46, scale: 0.98 },
+    left: { x: -72, y: 18, scale: 0.97 },
+    right: { x: 72, y: 18, scale: 0.97 },
+    zoom: { x: 0, y: 30, scale: 0.9 },
+  };
+  const start = offsets[direction];
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: start.x, y: start.y, scale: start.scale }}
+      whileInView={{ opacity: 1, x: 0, y: 0, scale: 1 }}
+      viewport={{ once: true, amount: 0.22 }}
+      transition={{ duration: 0.78, delay, ease: [0.16, 1, 0.3, 1] }}
+      className={className}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+function HeroVisual() {
+  return (
+    <div aria-hidden className="absolute inset-0 z-0">
+      <img
+        src="/heroimage.png"
+        alt=""
+        className="absolute inset-0 h-full w-full object-cover object-center opacity-100"
+      />
+      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.18)_0%,rgba(0,0,0,0.04)_32%,rgba(0,0,0,0.06)_62%,rgba(0,0,0,0.48)_100%)]" />
+      <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(0,0,0,0.34)_0%,rgba(0,0,0,0.08)_28%,rgba(0,0,0,0.04)_50%,rgba(0,0,0,0.1)_72%,rgba(0,0,0,0.34)_100%)]" />
+    </div>
+  );
+}
+
+function CapabilityBackdrop() {
+  return (
+    <div aria-hidden className="pointer-events-none absolute inset-0 flex items-center justify-center opacity-70">
+      <div className="relative h-[760px] w-[760px] rotate-45 rounded-[42px] border border-white/[0.07] bg-[#101010]">
+        <div className="absolute left-[160px] top-[160px] h-[440px] w-[440px] rounded-[34px] bg-[#A87019]/55 blur-[1px]" />
+        <div className="absolute inset-[70px] rounded-[42px] border border-white/[0.09]" />
+        <div className="absolute left-[-40px] top-[235px] h-[70px] w-[540px] rounded-full bg-white/[0.09]" />
+        <div className="absolute bottom-[120px] right-[30px] h-[160px] w-[160px] rounded-[24px] border border-white/[0.08] bg-white/[0.03]" />
+      </div>
+    </div>
+  );
+}
+
+function Footer() {
+  return (
+    <footer className="bg-black px-6 pb-[30px] pt-[78px]">
+      <div className="mx-auto max-w-[1380px]">
+        <div className="grid grid-cols-1 gap-12 border-b border-white/[0.08] pb-[62px] md:grid-cols-[1.15fr_1fr_1fr_1fr]">
+          <div>
+            <FullLogo />
+            <p className="mt-[27px] max-w-[265px] text-[13px] font-medium leading-[1.55] text-[#797979]">
+              Enterprise payment infrastructure for the agency ecosystem
             </p>
           </div>
-          
-          <div>
-            <h4 className="text-[#E5E7EB] text-xs font-bold tracking-wider uppercase mb-4">Product</h4>
-            <ul className="space-y-3 text-[#6B7280] text-sm">
-              <li><Link href="#" className="hover:text-white transition-colors">Features</Link></li>
-              <li><Link href="#" className="hover:text-white transition-colors">Security</Link></li>
-              <li><Link href="#" className="hover:text-white transition-colors">Pricing</Link></li>
-              <li><Link href="#" className="hover:text-white transition-colors">Integrations</Link></li>
-            </ul>
-          </div>
 
-          <div>
-            <h4 className="text-[#E5E7EB] text-xs font-bold tracking-wider uppercase mb-4">Company</h4>
-            <ul className="space-y-3 text-[#6B7280] text-sm">
-              <li><Link href="#" className="hover:text-white transition-colors">About</Link></li>
-              <li><Link href="#" className="hover:text-white transition-colors">Careers</Link></li>
-              <li><Link href="#" className="hover:text-white transition-colors">Contact</Link></li>
-              <li><Link href="#" className="hover:text-white transition-colors">Legal</Link></li>
-            </ul>
-          </div>
-
-          <div>
-            <h4 className="text-[#E5E7EB] text-xs font-bold tracking-wider uppercase mb-4">Resources</h4>
-            <ul className="space-y-3 text-[#6B7280] text-sm">
-              <li><Link href="#" className="hover:text-white transition-colors">Documentation</Link></li>
-              <li><Link href="#" className="hover:text-white transition-colors">API Reference</Link></li>
-              <li><Link href="#" className="hover:text-white transition-colors">Support</Link></li>
-              <li><Link href="#" className="hover:text-white transition-colors">Status</Link></li>
-            </ul>
-          </div>
+          <FooterColumn
+            title="Product"
+            links={["Features", "Security", "Pricing", "Integrations"]}
+          />
+          <FooterColumn
+            title="Company"
+            links={["About", "Careers", "Contact", "Legal"]}
+          />
+          <FooterColumn
+            title="Resources"
+            links={["Documentation", "API Reference", "Support", "Status"]}
+          />
         </div>
 
-        <div className="max-w-6xl mx-auto pt-8 border-t border-[#1F1F1F] flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="text-[#6B7280] text-xs">
-            © {new Date().getFullYear()} AgencyPay. All rights reserved.
-          </p>
-          <div className="flex gap-6 text-xs text-[#6B7280]">
-            <Link href="#" className="hover:text-white transition-colors">Privacy Policy</Link>
-            <Link href="#" className="hover:text-white transition-colors">Terms of Service</Link>
+        <div className="flex flex-col justify-between gap-5 pt-[31px] text-[12px] font-medium text-[#696969] md:flex-row">
+          <p>Copyright 2026 AgncyPay. All rights reserved.</p>
+          <div className="flex gap-[45px]">
+            <Link href="#" className="hover:text-white">
+              Privacy Policy
+            </Link>
+            <Link href="#" className="hover:text-white">
+              Terms of Service
+            </Link>
           </div>
         </div>
-      </footer>
+      </div>
+    </footer>
+  );
+}
+
+function FooterColumn({ title, links }: { title: string; links: string[] }) {
+  return (
+    <div>
+      <h3 className="mb-[24px] text-[12px] font-bold uppercase tracking-[0.05em] text-[#B4B4B4]">
+        {title}
+      </h3>
+      <ul className="space-y-[13px] text-[13px] font-medium text-[#777777]">
+        {links.map((link) => (
+          <li key={link}>
+            <Link href="#" className="transition-colors hover:text-white">
+              {link}
+            </Link>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

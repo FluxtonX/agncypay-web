@@ -1,29 +1,31 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import { useRouter } from "next/navigation";
-import { ShieldCheck, Edit, ArrowLeft, Check, AlertCircle } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle2 } from "lucide-react";
 import { useApp } from "../../context/AppContext";
-import { Card } from "../ui/Card";
-import { Button } from "../ui/Button";
-import { Badge } from "../ui/Badge";
+
+const REVIEW_ITEMS = [
+  { label: "Company Information", status: "Complete" },
+  { label: "Business Details", status: "Complete" },
+  { label: "Authorized Representative", status: "Complete" },
+  { label: "KYB Verification", status: "Complete" },
+  { label: "Documents Uploaded", status: "4 of 4 files" },
+  { label: "Bank Account", status: "Connected" },
+  { label: "Team Members", status: "2 invited" },
+  { label: "Payment Preferences", status: "Configured" },
+];
+
+const NEXT_STEPS = [
+  "Our compliance team reviews your application",
+  "We'll verify your business and documents",
+  "You'll receive approval within 24-48 hours",
+  "Your account will be activated and ready to use",
+];
 
 export function ReviewSection() {
   const router = useRouter();
-  const { state, submitForVerification } = useApp();
-
-  const [consents, setConsents] = useState({
-    accurate: true,
-    authorized: true,
-    verifyConsent: true,
-    suspensionWarning: true,
-  });
-
-  const handleCheckboxChange = (field: keyof typeof consents) => {
-    setConsents((prev) => ({ ...prev, [field]: !prev[field] }));
-  };
-
-  const allChecked = Object.values(consents).every(Boolean);
+  const { submitForVerification } = useApp();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,281 +33,92 @@ export function ReviewSection() {
     router.push("/verification/status");
   };
 
-  // Check section completeness helper
-  const checkStatus = (stepId: number) => {
-    if (stepId === 1) {
-      const { legalName, country, website, email } = state.businessSetup;
-      return legalName && country && website && email ? "complete" : "incomplete";
-    }
-    if (stepId === 2) {
-      const { fullName, email, idFrontUploaded, selfieUploaded } = state.representative;
-      return fullName && email && idFrontUploaded && selfieUploaded ? "complete" : "incomplete";
-    }
-    if (stepId === 3) {
-      return state.authorization.isOwner !== null ? "complete" : "incomplete";
-    }
-    if (stepId === 4) {
-      const uploaded = state.documents.filter(d => d.status === "uploaded" || d.status === "processing" || d.status === "approved").length;
-      return uploaded >= 4 ? "complete" : "incomplete";
-    }
-    if (stepId === 5) {
-      return "complete";
-    }
-    if (stepId === 6) {
-      return "complete";
-    }
-    return "incomplete";
-  };
-
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-xl font-bold text-white flex items-center gap-2">
-          <ShieldCheck className="h-5 w-5 text-[#10B981]" />
-          Review & Submit KYB Profile
-        </h1>
-        <p className="text-xs text-[#6B7280] leading-relaxed">
-          Verify all information before sending details to our compliance auditing department.
-        </p>
+    <form
+      onSubmit={handleSubmit}
+      className="mx-auto w-full max-w-[858px] pb-12 pt-8 sm:pb-14 sm:pt-10 lg:pb-16 lg:pt-12 xl:pt-[52px]"
+    >
+      <div className="mb-8 flex flex-col items-start justify-between gap-5 sm:mb-10 sm:flex-row sm:gap-8">
+        <div>
+          <h1 className="text-[28px] font-bold leading-[1.08] tracking-normal text-white sm:text-[32px] lg:text-[34px]">
+            Review & Submit
+          </h1>
+          <p className="mt-3 text-[17px] font-normal leading-snug text-[#A0A0A0] sm:mt-[15px] sm:text-[20px] lg:text-[21px]">
+            Review your information before submitting
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => router.push("/dashboard")}
+          className="h-10 w-[142px] rounded-[7px] bg-white text-[15px] font-semibold text-black transition-colors hover:bg-[#EDEDED] sm:mt-[-5px] sm:h-11 sm:w-[150px] sm:text-[16px]"
+        >
+          Skip For Now
+        </button>
       </div>
 
-      <Card className="space-y-5 border-white/[0.06] divide-y divide-white/[0.04]">
-        {/* Section 1 */}
-        <div className="pt-0 pb-4 flex justify-between items-start gap-4">
-          <div className="space-y-1 text-xs">
-            <h4 className="font-bold text-white uppercase tracking-wider">
-              1. Business Profile
-            </h4>
-            <div className="text-[#6B7280]/80 space-y-0.5 mt-2">
-              <p><span className="font-semibold text-white">Legal Name:</span> {state.businessSetup.legalName || "Not set"}</p>
-              <p><span className="font-semibold text-white">Trading Name:</span> {state.businessSetup.brandName || "Not set"}</p>
-              <p><span className="font-semibold text-white">Tax ID:</span> {state.businessSetup.taxId || "Not set"}</p>
-              <p><span className="font-semibold text-white">Website:</span> {state.businessSetup.website || "Not set"}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Badge variant={checkStatus(1) === "complete" ? "success" : "error"}>
-              {checkStatus(1) === "complete" ? "Ready" : "Incomplete"}
-            </Badge>
-            <button
-              type="button"
-              onClick={() => router.push("/verification/business-info")}
-              className="text-[#6B7280] hover:text-[#10B981] p-1 rounded-lg hover:bg-white/5 transition-colors cursor-pointer"
+      <section className="rounded-[8px] border border-[#565656] bg-black px-5 py-6 shadow-[0_18px_60px_rgba(0,0,0,0.28)] sm:px-8 sm:py-[39px] lg:px-10">
+        <div className="rounded-[8px] border border-[#747474] bg-[#0A0A0A] px-5 py-[30px] sm:px-[30px] sm:py-[36px]">
+          <h2 className="text-[25px] font-bold leading-tight text-white sm:text-[30px]">
+            Review Your Information
+          </h2>
+          <p className="mt-[17px] max-w-[695px] text-[15px] font-normal leading-[1.55] text-[#A4A4A4] sm:text-[17px]">
+            Please review all the information you've provided before submitting.
+            Our compliance team will review your application within 24-48 hours.
+          </p>
+        </div>
+
+        <div className="mt-[48px] space-y-5">
+          {REVIEW_ITEMS.map((item) => (
+            <div
+              key={item.label}
+              className="flex min-h-[70px] items-center justify-between gap-4 rounded-[7px] border border-[#727272] bg-black px-5 sm:px-[21px]"
             >
-              <Edit className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-
-        {/* Section 2 */}
-        <div className="pt-4 pb-4 flex justify-between items-start gap-4">
-          <div className="space-y-1 text-xs">
-            <h4 className="font-bold text-white uppercase tracking-wider">
-              2. Representative KYC
-            </h4>
-            <div className="text-[#6B7280]/80 space-y-0.5 mt-2">
-              <p><span className="font-semibold text-white">Representative:</span> {state.representative.fullName || "Not set"}</p>
-              <p><span className="font-semibold text-white">Job Title:</span> {state.representative.jobTitle || "Not set"}</p>
-              <p><span className="font-semibold text-white">ID Verification:</span> {state.representative.idFrontUploaded ? "Uploaded Front" : "ID Missing"}</p>
-              <p><span className="font-semibold text-white">Liveness Selfie:</span> {state.representative.selfieUploaded ? "Selfie Uploaded" : "Selfie Missing"}</p>
+              <span className="text-[18px] font-normal leading-tight text-[#C8C8C8] sm:text-[21px]">
+                {item.label}
+              </span>
+              <span className="flex shrink-0 items-center gap-[12px] text-[15px] font-normal text-[#A7A7A7] sm:text-[17px]">
+                <CheckCircle2 className="h-[18px] w-[18px]" strokeWidth={2} />
+                {item.status}
+              </span>
             </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Badge variant={checkStatus(2) === "complete" ? "success" : "error"}>
-              {checkStatus(2) === "complete" ? "Ready" : "Incomplete"}
-            </Badge>
-            <button
-              type="button"
-              onClick={() => router.push("/verification/representative")}
-              className="text-[#6B7280] hover:text-[#10B981] p-1 rounded-lg hover:bg-white/5 transition-colors cursor-pointer"
-            >
-              <Edit className="h-4 w-4" />
-            </button>
-          </div>
+          ))}
         </div>
 
-        {/* Section 3 */}
-        <div className="pt-4 pb-4 flex justify-between items-start gap-4">
-          <div className="space-y-1 text-xs">
-            <h4 className="font-bold text-white uppercase tracking-wider">
-              3. Payment Ownership & Authorization
-            </h4>
-            <div className="text-[#6B7280]/80 space-y-0.5 mt-2">
-              <p><span className="font-semibold text-white">Direct Owner:</span> {state.authorization.isOwner === null ? "Not set" : state.authorization.isOwner ? "Yes" : "No (Corporate Representative)"}</p>
-              {state.authorization.isOwner === false && (
-                <>
-                  <p><span className="font-semibold text-white">Signatory Approver:</span> {state.authorization.signatoryName || "Not set"}</p>
-                  <p><span className="font-semibold text-white">Auth Documents:</span> {state.authorization.authLetterUploaded ? "Letter Attached" : "None"}</p>
-                </>
-              )}
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Badge variant={checkStatus(3) === "complete" ? "success" : "error"}>
-              {checkStatus(3) === "complete" ? "Ready" : "Incomplete"}
-            </Badge>
-            <button
-              type="button"
-              onClick={() => router.push("/verification/authorization")}
-              className="text-[#6B7280] hover:text-[#10B981] p-1 rounded-lg hover:bg-white/5 transition-colors cursor-pointer"
-            >
-              <Edit className="h-4 w-4" />
-            </button>
-          </div>
+        <div className="my-[49px] border-t border-[#6A6A6A]" />
+
+        <div className="rounded-[8px] border border-[#747474] bg-black px-5 py-[31px] sm:px-[30px] sm:py-[36px]">
+          <h2 className="text-[25px] font-bold leading-tight text-white sm:text-[30px]">
+            What Happens Next?
+          </h2>
+          <ol className="mt-[22px] space-y-[16px] text-[15px] font-normal text-[#A4A4A4] sm:text-[17px]">
+            {NEXT_STEPS.map((step, index) => (
+              <li key={step} className="flex gap-[14px]">
+                <span>{index + 1}.</span>
+                <span>{step}</span>
+              </li>
+            ))}
+          </ol>
         </div>
+      </section>
 
-        {/* Section 4 */}
-        <div className="pt-4 pb-4 flex justify-between items-start gap-4">
-          <div className="space-y-1 text-xs">
-            <h4 className="font-bold text-white uppercase tracking-wider">
-              4. Company Registry Certificates
-            </h4>
-            <div className="text-[#6B7280]/80 space-y-0.5 mt-2">
-              {state.documents.map((doc) => (
-                <p key={doc.id} className="flex items-center gap-1.5">
-                  <span className={doc.status === "uploaded" || doc.status === "approved" || doc.status === "processing" ? "text-[#22C55E]" : "text-[#EF4444]"}>
-                    &bull;
-                  </span>
-                  <span>{doc.title}:</span>
-                  <span className="font-semibold text-white">{doc.status === "uploaded" || doc.status === "approved" || doc.status === "processing" ? "Uploaded" : "Missing"}</span>
-                </p>
-              ))}
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Badge variant={checkStatus(4) === "complete" ? "success" : "error"}>
-              {checkStatus(4) === "complete" ? "Ready" : "Incomplete"}
-            </Badge>
-            <button
-              type="button"
-              onClick={() => router.push("/verification/documents")}
-              className="text-[#6B7280] hover:text-[#10B981] p-1 rounded-lg hover:bg-white/5 transition-colors cursor-pointer"
-            >
-              <Edit className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-
-        {/* Section 5 */}
-        <div className="pt-4 pb-4 flex justify-between items-start gap-4">
-          <div className="space-y-1 text-xs">
-            <h4 className="font-bold text-white uppercase tracking-wider">
-              5. Brand Domain & Trademark
-            </h4>
-            <div className="text-[#6B7280]/80 space-y-0.5 mt-2">
-              <p><span className="font-semibold text-white">Brand Name:</span> {state.brand.brandName || "Not set"}</p>
-              <p><span className="font-semibold text-white">Trademark:</span> {state.brand.trademarkNumber || "Not set"}</p>
-              <p><span className="font-semibold text-white">Brand Email Check:</span> Accepted for demo flow</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Badge variant={checkStatus(5) === "complete" ? "success" : "error"}>
-              {checkStatus(5) === "complete" ? "Ready" : "Incomplete"}
-            </Badge>
-            <button
-              type="button"
-              onClick={() => router.push("/verification/brand")}
-              className="text-[#6B7280] hover:text-[#10B981] p-1 rounded-lg hover:bg-white/5 transition-colors cursor-pointer"
-            >
-              <Edit className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-
-        {/* Section 6 */}
-        <div className="pt-4 pb-0 flex justify-between items-start gap-4">
-          <div className="space-y-1 text-xs">
-            <h4 className="font-bold text-white uppercase tracking-wider">
-              6. Bank & Payout Details
-            </h4>
-            <div className="text-[#6B7280]/80 space-y-0.5 mt-2">
-              <p><span className="font-semibold text-white">Bank Name:</span> {state.bankDetails.bankName || "Not set"}</p>
-              <p><span className="font-semibold text-white">IBAN:</span> {state.bankDetails.accountNumber || "Not set"}</p>
-              <p><span className="font-semibold text-white">Statement Proof:</span> {state.bankDetails.statementUploaded ? "Uploaded" : "Missing"}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Badge variant={checkStatus(6) === "complete" ? "success" : "error"}>
-              {checkStatus(6) === "complete" ? "Ready" : "Incomplete"}
-            </Badge>
-            <button
-              type="button"
-              onClick={() => router.push("/verification/bank-details")}
-              className="text-[#6B7280] hover:text-[#10B981] p-1 rounded-lg hover:bg-white/5 transition-colors cursor-pointer"
-            >
-              <Edit className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-      </Card>
-
-      {/* Disclaimers / Checkbox Panel */}
-      <Card className="space-y-3.5 border-white/[0.06] bg-[#0D0D0D]/40">
-        <h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
-          <AlertCircle className="h-4 w-4 text-[#F59E0B]" />
-          Consent Declarations
-        </h4>
-
-        <div className="space-y-3">
-          {/* Box 1 */}
-          <label className="flex items-start gap-3 text-xs text-[#6B7280] cursor-pointer hover:text-white transition-colors">
-            <input
-              type="checkbox"
-              checked={consents.accurate}
-              onChange={() => handleCheckboxChange("accurate")}
-              className="mt-0.5 h-3.5 w-3.5 border-white/10 rounded accent-[#10B981] focus:ring-0 focus:outline-none cursor-pointer"
-            />
-            <span>I confirm that all registration, TAX, and entity details provided are accurate and match official registers.</span>
-          </label>
-
-          {/* Box 2 */}
-          <label className="flex items-start gap-3 text-xs text-[#6B7280] cursor-pointer hover:text-white transition-colors">
-            <input
-              type="checkbox"
-              checked={consents.authorized}
-              onChange={() => handleCheckboxChange("authorized")}
-              className="mt-0.5 h-3.5 w-3.5 border-white/10 rounded accent-[#10B981] focus:ring-0 focus:outline-none cursor-pointer"
-            />
-            <span>I am legally authorized to act on behalf of this business and manage payouts.</span>
-          </label>
-
-          {/* Box 3 */}
-          <label className="flex items-start gap-3 text-xs text-[#6B7280] cursor-pointer hover:text-white transition-colors">
-            <input
-              type="checkbox"
-              checked={consents.verifyConsent}
-              onChange={() => handleCheckboxChange("verifyConsent")}
-              className="mt-0.5 h-3.5 w-3.5 border-white/10 rounded accent-[#10B981] focus:ring-0 focus:outline-none cursor-pointer"
-            />
-            <span>I agree that AgncyPay may verify this information through public databases or external compliance entities.</span>
-          </label>
-
-          {/* Box 4 */}
-          <label className="flex items-start gap-3 text-xs text-[#6B7280] cursor-pointer hover:text-white transition-colors">
-            <input
-              type="checkbox"
-              checked={consents.suspensionWarning}
-              onChange={() => handleCheckboxChange("suspensionWarning")}
-              className="mt-0.5 h-3.5 w-3.5 border-white/10 rounded accent-[#10B981] focus:ring-0 focus:outline-none cursor-pointer"
-            />
-            <span>I understand that false brand claims (specifically relating to brand representations like Adidas) will result in immediate account suspension and notification of authorities.</span>
-          </label>
-        </div>
-      </Card>
-
-      {/* Button panel */}
-      <div className="flex justify-between items-center pt-2">
-        <Button
+      <div className="mt-8 flex items-center justify-between gap-4 sm:mt-10">
+        <button
           type="button"
-          variant="outline"
-          leftIcon={<ArrowLeft className="h-4 w-4" />}
-          onClick={() => router.push("/verification/bank-details")}
+          onClick={() => router.push("/verification/payment-preferences")}
+          className="flex h-11 w-[112px] items-center justify-center gap-2 rounded-[7px] border border-[#5E5E5E] bg-black text-[15px] font-semibold text-[#8C8C8C] transition-colors hover:border-[#8A8A8A] hover:text-white sm:w-[120px] sm:gap-[13px] sm:text-[16px]"
         >
+          <ArrowLeft className="h-5 w-5" strokeWidth={2} />
           Back
-        </Button>
-        <Button type="submit" variant="primary" className="w-48 shadow-[0_0_20px_rgba(139,92,246,0.3)]">
-          Submit Profile
-        </Button>
+        </button>
+
+        <button
+          type="submit"
+          className="flex h-11 w-[200px] items-center justify-center gap-3 rounded-[7px] bg-white text-[15px] font-semibold text-black transition-colors hover:bg-[#EDEDED] sm:w-[200px] sm:gap-[17px] sm:text-[16px]"
+        >
+          Complete Setup
+          <ArrowRight className="h-5 w-5" strokeWidth={2.25} />
+        </button>
       </div>
     </form>
   );

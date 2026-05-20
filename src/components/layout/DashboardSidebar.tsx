@@ -1,121 +1,135 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import {
-  LayoutDashboard,
-  FileText,
+  Activity,
+  BarChart3,
+  ChevronDown,
   CreditCard,
-  History,
-  ShieldCheck,
-  FolderLock,
+  FileText,
+  HelpCircle,
+  LayoutGrid,
   Settings,
-  LogOut,
-  ChevronRight,
+  Users,
+  WalletCards,
 } from "lucide-react";
-import { useApp } from "../../context/AppContext";
 import { cn } from "../../lib/utils";
 
-const NAV_ITEMS = [
-  { label: "Overview", path: "/dashboard", icon: LayoutDashboard },
-  { label: "Invoices", path: "/dashboard/invoices", icon: FileText },
-  { label: "Payments", path: "/dashboard/payments", icon: CreditCard },
-  { label: "Transactions", path: "/dashboard/transactions", icon: History },
-  { label: "Verification", path: "/dashboard/verification", icon: ShieldCheck },
-  { label: "Document Vault", path: "/dashboard/documents", icon: FolderLock },
-  { label: "Settings", path: "/dashboard/settings", icon: Settings },
+const primaryNav = [
+  { label: "Dashboard", path: "/dashboard", activePath: "/dashboard", icon: LayoutGrid },
+  { label: "Invoices", path: "/dashboard/invoices", activePath: "/dashboard/invoices", icon: FileText },
+  { label: "Payments", path: "/dashboard/payments", activePath: "/dashboard/payments", icon: CreditCard },
+  { label: "Agencies", path: "/dashboard", icon: Users },
+  { label: "Wallet", path: "/dashboard/payments", icon: WalletCards },
+  { label: "Activity", path: "/dashboard/transactions", activePath: "/dashboard/transactions", icon: Activity },
+  { label: "Reports", path: "/dashboard/documents", activePath: "/dashboard/documents", icon: BarChart3 },
+];
+
+const secondaryNav = [
+  { label: "Settings", path: "/dashboard/settings", activePath: "/dashboard/settings", icon: Settings },
+  { label: "Help & Support", path: "/dashboard/verification", activePath: "/dashboard/verification", icon: HelpCircle },
 ];
 
 export function DashboardSidebar() {
   const pathname = usePathname();
-  const router = useRouter();
-  const { state, resetState } = useApp();
 
-  const handleLogout = () => {
-    resetState();
-    router.push("/");
+  const renderItem = (item: (typeof primaryNav)[number]) => {
+    const Icon = item.icon;
+    const isActive = item.activePath
+      ? item.activePath === "/dashboard"
+        ? pathname === item.activePath
+        : pathname === item.activePath || pathname.startsWith(`${item.activePath}/`)
+      : false;
+
+    return (
+      <Link
+        key={item.label}
+        href={item.path}
+        className={cn(
+          "flex h-12 items-center gap-4 rounded-[7px] px-4 text-[17px] font-semibold transition-colors",
+          isActive
+            ? "bg-white text-black"
+            : "text-[#9c9c9c] hover:bg-[#0d0d0d] hover:text-white"
+        )}
+      >
+        <Icon
+          className={cn(
+            "h-[22px] w-[22px] shrink-0 stroke-[2]",
+            isActive ? "text-black" : "text-[#9c9c9c]"
+          )}
+        />
+        {item.label}
+      </Link>
+    );
   };
 
   return (
-    <aside className="w-60 bg-[#0A0A0A] border-r border-[#1F1F1F] flex flex-col h-full z-20 shrink-0">
-      {/* Brand */}
-      <div className="h-24 px-6 border-b border-[#1F1F1F] flex items-center justify-center">
-        <Link href="/" className="flex items-center justify-center cursor-pointer w-full">
-          <img src="/agncypayLogo.png" alt="AgncyPay" className="h-20 w-auto object-contain" />
+    <aside className="hidden h-screen w-[312px] shrink-0 border-r border-[#171717] bg-black lg:flex lg:flex-col">
+      <div className="flex h-[78px] items-center border-b border-[#111] px-[26px]">
+        <Link href="/dashboard" aria-label="AgncyPay dashboard" className="flex items-center">
+          <Image
+            src="/agncypayLogo.png"
+            alt="AgncyPay"
+            width={260}
+            height={66}
+            priority
+            className="h-[58px] w-[230px] object-contain object-left sm:h-[66px] sm:w-[260px]"
+          />
         </Link>
       </div>
 
-      {/* Active Workspace */}
-      <div className="px-3 py-3 border-b border-[#1F1F1F]">
-        <div className="flex items-center gap-2.5 px-2 py-2 rounded-lg bg-[#111] border border-[#1F1F1F]">
-          <div className="h-7 w-7 rounded bg-[#1A1A1A] border border-[#2A2A2A] flex items-center justify-center font-bold text-[10px] text-white shrink-0">
-            三
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-[10px] text-[#6B7280] font-medium uppercase tracking-wider">Workspace</p>
-            <p className="text-xs font-bold text-white truncate">Adidas AG</p>
-          </div>
-        </div>
-      </div>
+      <nav className="flex-1 px-[15px] pt-[30px]">
+        <div className="space-y-[1px]">{primaryNav.map(renderItem)}</div>
 
-      {/* Nav */}
-      <nav className="flex-1 px-3 py-3 space-y-0.5 overflow-y-auto">
-        {NAV_ITEMS.map((item) => {
-          const Icon = item.icon;
-          const isActive =
-            pathname === item.path ||
-            (item.path !== "/dashboard" && pathname.startsWith(item.path));
+        <div className="mt-[58px] space-y-[1px]">
+          {secondaryNav.map((item) => {
+            const Icon = item.icon;
+            const isActive =
+              pathname === item.activePath || pathname.startsWith(`${item.activePath}/`);
 
-          return (
-            <Link
-              key={item.path}
-              href={item.path}
-              className={cn(
-                "group flex items-center justify-between px-2.5 py-2 rounded-lg text-sm transition-all cursor-pointer",
-                isActive
-                  ? "bg-white text-black font-semibold"
-                  : "text-[#6B7280] hover:text-white hover:bg-[#111]"
-              )}
-            >
-              <div className="flex items-center gap-2.5">
+            return (
+              <Link
+                key={item.label}
+                href={item.path}
+                className={cn(
+                  "flex h-12 items-center gap-4 rounded-[7px] px-4 text-[17px] font-semibold transition-colors",
+                  isActive
+                    ? "bg-white text-black"
+                    : "text-[#9c9c9c] hover:bg-[#0d0d0d] hover:text-white"
+                )}
+              >
                 <Icon
                   className={cn(
-                    "h-4 w-4 shrink-0",
-                    isActive ? "text-black" : "text-[#4B5563] group-hover:text-white"
+                    "h-[22px] w-[22px] shrink-0 stroke-[2]",
+                    isActive ? "text-black" : "text-[#9c9c9c]"
                   )}
                 />
-                <span className="text-[13px]">{item.label}</span>
-              </div>
-              {isActive && <ChevronRight className="h-3 w-3 text-black/50" />}
-            </Link>
-          );
-        })}
+                {item.label}
+              </Link>
+            );
+          })}
+        </div>
       </nav>
 
-      {/* Footer user */}
-      <div className="p-3 border-t border-[#1F1F1F]">
-        <div className="flex items-center justify-between px-2 py-2">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="h-7 w-7 rounded-full bg-[#1F1F1F] border border-[#2A2A2A] flex items-center justify-center text-white font-bold text-[10px] uppercase shrink-0">
-              {state.user?.fullName ? state.user.fullName.substring(0, 2) : "AD"}
+      <div className="border-t border-[#171717] px-8 py-[32px]">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-[15px]">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#4a4a4a] bg-[#2d2d2f] text-[15px] font-medium text-white">
+              AC
             </div>
             <div className="min-w-0">
-              <p className="text-xs font-semibold text-white truncate">
-                {state.user?.fullName || "Adidas Rep"}
+              <p className="truncate text-[17px] font-semibold leading-5 text-white">
+                Acme Corp
               </p>
-              <p className="text-[10px] text-[#4B5563] truncate">
-                {state.user?.email || "m@example.com"}
+              <p className="mt-1 truncate text-[15px] leading-4 text-[#888]">
+                john@acme.com
               </p>
             </div>
           </div>
-          <button
-            onClick={handleLogout}
-            title="Log Out"
-            className="text-[#4B5563] hover:text-[#EF4444] p-1.5 rounded-lg hover:bg-[#111] transition-colors cursor-pointer shrink-0"
-          >
-            <LogOut className="h-4 w-4" />
-          </button>
+          <ChevronDown className="h-5 w-5 shrink-0 text-[#8a8a8a]" />
         </div>
       </div>
     </aside>

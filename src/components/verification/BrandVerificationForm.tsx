@@ -2,341 +2,161 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ShieldCheck, ArrowLeft, Send, Check } from "lucide-react";
-import { useApp } from "../../context/AppContext";
-import { Input } from "../ui/Input";
-import { Select } from "../ui/Select";
-import { Button } from "../ui/Button";
-import { Card } from "../ui/Card";
-import { FileUpload } from "../ui/FileUpload";
+import { ArrowLeft, ArrowRight } from "lucide-react";
+
+const ROLES = ["Admin", "Approver", "Finance", "Viewer"];
+
+interface TeamMember {
+  email: string;
+  fullName: string;
+  role: string;
+}
 
 export function BrandVerificationForm() {
   const router = useRouter();
-  const { state, updateBrand, sendBrandDomainCode, verifyBrandDomainCode } = useApp();
+  const [members, setMembers] = useState<TeamMember[]>([
+    { email: "", fullName: "", role: "" },
+    { email: "", fullName: "", role: "" },
+  ]);
 
-  const [formData, setFormData] = useState({
-    brandName: state.brand.brandName || "Adidas",
-    officialWebsite: state.brand.officialWebsite || "https://www.adidas.com",
-    officialEmail: state.brand.officialEmail || "",
-    trademarkNumber: state.brand.trademarkNumber || "",
-    brandCategory: state.brand.brandCategory || "Sportswear & Footwear",
-    logoUploaded: state.brand.logoUploaded || false,
-    brandProofUploaded: state.brand.brandProofUploaded || false,
-    trademarkCertUploaded: state.brand.trademarkCertUploaded || false,
-    distributorContractUploaded: state.brand.distributorContractUploaded || false,
-    authLetterUploaded: state.brand.authLetterUploaded || false,
-  });
-
-  const [emailInput, setEmailInput] = useState(state.brand.officialEmail || "");
-  const [codeInput, setCodeInput] = useState("");
-  const [emailError, setEmailError] = useState("");
-  const [codeError, setCodeError] = useState("");
-  const [isSendingCode, setIsSendingCode] = useState(false);
-  const [isVerifyingCode, setIsVerifyingCode] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    updateBrand({ [name]: value });
+  const updateMember = (index: number, field: keyof TeamMember, value: string) => {
+    setMembers((prev) =>
+      prev.map((member, memberIndex) =>
+        memberIndex === index ? { ...member, [field]: value } : member
+      )
+    );
   };
 
-  const handleUploadSuccess = (field: string) => {
-    setFormData((prev) => ({ ...prev, [field]: true }));
-    updateBrand({ [field]: true });
-  };
-
-  const handleDelete = (field: string) => {
-    setFormData((prev) => ({ ...prev, [field]: false }));
-    updateBrand({ [field]: false });
-  };
-
-  const handleSendCode = () => {
-    setEmailError("");
-    if (!/\S+@\S+\.\S+/.test(emailInput)) {
-      setEmailError("Invalid email format");
-      return;
-    }
-
-    setIsSendingCode(true);
-    setTimeout(() => {
-      sendBrandDomainCode(emailInput);
-      updateBrand({
-        officialEmail: emailInput,
-        domainVerified: true,
-        status: "approved",
-      });
-      setIsSendingCode(false);
-    }, 1200);
-  };
-
-  const handleVerifyCode = () => {
-    setCodeError("");
-    if (codeInput.length !== 6) {
-      setCodeError("Code must be exactly 6 digits");
-      return;
-    }
-
-    setIsVerifyingCode(true);
-    setTimeout(() => {
-      const verified = verifyBrandDomainCode(codeInput) || true;
-      updateBrand({ domainVerified: true, status: "approved" });
-      setIsVerifyingCode(false);
-      if (!verified) {
-        setCodeError("Invalid code entered (Use '123456' for simulation)");
-      }
-    }, 1200);
-  };
-
-  // Prefill valid email for testing
-  const handlePrefillAdidas = () => {
-    setEmailInput("demo@gmail.com");
-    setEmailError("");
-  };
-
-  const validate = () => {
-    const newErrors: Record<string, string> = {};
-    if (!formData.brandName) newErrors.brandName = "Brand Name is required";
-    if (!formData.officialWebsite) newErrors.officialWebsite = "Official brand website is required";
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+  const addMember = () => {
+    setMembers((prev) => [...prev, { email: "", fullName: "", role: "" }]);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (validate()) {
-      updateBrand({
-        ...formData,
-        officialEmail: emailInput || "demo@gmail.com",
-        domainVerified: true,
-        domainCodeSent: true,
-        status: "approved",
-        trademarkCertUploaded: true,
-        logoUploaded: true,
-        brandProofUploaded: true,
-        authLetterUploaded: true,
-      });
-      router.push("/verification/bank-details");
-    }
+    router.push("/verification/payment-preferences");
   };
 
+  const inputClass =
+    "h-11 w-full rounded-[6px] border border-[#727272] bg-[#0A0A0A] px-[14px] text-[16px] font-normal text-white outline-none transition-colors placeholder:text-[#A8A8A8] focus:border-white sm:text-[18px]";
+  const selectClass =
+    "h-11 w-full appearance-none rounded-[6px] border border-[#727272] bg-[#0A0A0A] px-[14px] pr-11 text-[16px] font-normal text-[#A8A8A8] outline-none transition-colors focus:border-white sm:text-[18px]";
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-xl font-bold text-white flex items-center gap-2">
-          <ShieldCheck className="h-5 w-5 text-[#10B981]" />
-          Brand Authorization Verification
-        </h1>
-        <p className="text-xs text-[#6B7280] leading-relaxed">
-          Demo mode accepts any email and marks brand authorization ready for review.
-        </p>
+    <form
+      onSubmit={handleSubmit}
+      className="mx-auto w-full max-w-[858px] pb-12 pt-8 sm:pb-14 sm:pt-10 lg:pb-16 lg:pt-12 xl:pt-[52px]"
+    >
+      <div className="mb-8 flex flex-col items-start justify-between gap-5 sm:mb-10 sm:flex-row sm:gap-8">
+        <div>
+          <h1 className="text-[28px] font-bold leading-[1.08] tracking-normal text-white sm:text-[32px] lg:text-[34px]">
+            Team Setup
+          </h1>
+          <p className="mt-3 text-[17px] font-normal leading-snug text-[#A0A0A0] sm:mt-[15px] sm:text-[20px] lg:text-[21px]">
+            Invite team members and set permissions
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => router.push("/dashboard")}
+          className="h-10 w-[142px] rounded-[7px] bg-white text-[15px] font-semibold text-black transition-colors hover:bg-[#EDEDED] sm:mt-[-5px] sm:h-11 sm:w-[150px] sm:text-[16px]"
+        >
+          Skip For Now
+        </button>
       </div>
 
-      <Card className="space-y-6 border-[#1F1F1F] bg-[#0D0D0D]">
-        {/* Domain Verification Module */}
-        <div className="space-y-3">
-          <h4 className="text-xs font-bold text-white uppercase tracking-wider">
-            Brand Email Domain Verification
-          </h4>
+      <section className="rounded-[8px] border border-[#565656] bg-black px-5 py-7 shadow-[0_18px_60px_rgba(0,0,0,0.28)] sm:px-8 sm:py-[48px] lg:px-10">
+        <h2 className="text-[25px] font-bold leading-tight text-white sm:text-[30px]">
+          Invite Team Members
+        </h2>
+        <p className="mt-[28px] text-[15px] font-normal leading-snug text-[#A0A0A0] sm:text-[17px]">
+          Add colleagues who will help manage payments and approvals
+        </p>
 
-          <div className="glass-panel bg-[#0A0A0A] border-[#1F1F1F] p-4 rounded-xl space-y-4">
-            <div className="flex flex-col sm:flex-row gap-3 items-end">
-              <div className="flex-1 w-full">
-                <Input
-                  id="emailInput"
-                  label="Official Brand Work Email"
-                  value={emailInput}
-                  onChange={(e) => setEmailInput(e.target.value)}
-                  disabled={state.brand.domainVerified}
-                  error={emailError}
-                  placeholder="e.g. name@gmail.com"
-                  rightIcon={
-                    state.brand.domainVerified && (
-                      <Check className="h-4 w-4 text-[#22C55E]" />
-                    )
-                  }
-                />
-              </div>
-              {!state.brand.domainVerified && (
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={handlePrefillAdidas}
-                    className="px-3 py-2.5 text-xs font-bold text-[#10B981] border border-[#10B981]/20 bg-[#10B981]/5 rounded-lg hover:bg-[#10B981]/10 cursor-pointer"
-                  >
-                    Use Gmail
-                  </button>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={handleSendCode}
-                    isLoading={isSendingCode}
-                    leftIcon={<Send className="h-3 w-3" />}
-                  >
-                    {state.brand.domainCodeSent ? "Resend" : "Send Code"}
-                  </Button>
-                </div>
-              )}
-            </div>
-
-            {/* If code sent and not verified yet, show verification input */}
-            {state.brand.domainCodeSent && !state.brand.domainVerified && (
-              <div className="pt-3 border-t border-[#1F1F1F] flex flex-col sm:flex-row gap-3 items-end animate-fadeIn">
-                <div className="flex-1 w-full">
-                  <Input
-                    id="codeInput"
-                    label="Enter 6-Digit Code"
-                    value={codeInput}
-                    onChange={(e) => setCodeInput(e.target.value)}
-                    error={codeError}
-                    maxLength={6}
-                    placeholder="Enter 123456"
-                  />
-                </div>
-                <Button
-                  type="button"
-                  variant="primary"
-                  onClick={handleVerifyCode}
-                  isLoading={isVerifyingCode}
+        <div className="mt-[29px] space-y-5">
+          {members.map((member, index) => (
+            <div
+              key={index}
+              className="grid grid-cols-1 gap-5 md:grid-cols-[1fr_1fr_1fr] md:gap-[19px]"
+            >
+              <input
+                value={member.email}
+                onChange={(e) => updateMember(index, "email", e.target.value)}
+                placeholder="Email address"
+                className={inputClass}
+              />
+              <input
+                value={member.fullName}
+                onChange={(e) => updateMember(index, "fullName", e.target.value)}
+                placeholder="Full name"
+                className={inputClass}
+              />
+              <div className="relative">
+                <select
+                  value={member.role}
+                  onChange={(e) => updateMember(index, "role", e.target.value)}
+                  className={selectClass}
                 >
-                  Verify Code
-                </Button>
+                  <option value="">Role</option>
+                  {ROLES.map((role) => (
+                    <option key={role} value={role} className="bg-black text-white">
+                      {role}
+                    </option>
+                  ))}
+                </select>
+                <SelectChevron />
               </div>
-            )}
-
-            {/* Success State */}
-            {state.brand.domainVerified && (
-              <div className="flex items-center gap-2 text-[#22C55E] bg-[#22C55E]/5 border border-[#22C55E]/10 rounded-lg p-3 text-xs">
-                <ShieldCheck className="h-4.5 w-4.5 shrink-0" />
-                <div>
-                  <span className="font-bold">Brand Email Accepted:</span> Demo authorization is active for <span className="underline">{state.brand.officialEmail || emailInput || "demo@gmail.com"}</span>.
-                </div>
-              </div>
-            )}
-          </div>
+            </div>
+          ))}
         </div>
 
-        {/* Form Details */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Input
-            id="brandName"
-            name="brandName"
-            label="Brand / Trademark Name"
-            value={formData.brandName}
-            onChange={handleInputChange}
-            error={errors.brandName}
-            placeholder="e.g. Adidas"
-          />
-          <Input
-            id="officialWebsite"
-            name="officialWebsite"
-            label="Official Brand Website"
-            value={formData.officialWebsite}
-            onChange={handleInputChange}
-            error={errors.officialWebsite}
-            placeholder="https://www.adidas.com"
-          />
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Input
-            id="trademarkNumber"
-            name="trademarkNumber"
-            label="Trademark Number (Optional)"
-            value={formData.trademarkNumber}
-            onChange={handleInputChange}
-            placeholder="e.g. US-TM-89429402"
-          />
-          <Select
-            id="brandCategory"
-            name="brandCategory"
-            label="Brand Category"
-            value={formData.brandCategory}
-            onChange={handleInputChange}
-            options={[
-              { value: "Sportswear & Footwear", label: "Sportswear & Footwear" },
-              { value: "Creative Agency", label: "Creative Agency" },
-              { value: "Technology", label: "Technology & Software" },
-              { value: "Electronics", label: "Consumer Electronics" },
-            ]}
-          />
-        </div>
-
-        {/* Brand Documents */}
-        <div className="border-t border-[#1F1F1F] pt-5 space-y-4">
-          <h4 className="text-xs font-bold text-white uppercase tracking-wider">
-            Brand Authenticity Uploads
-          </h4>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-[#6B7280]">
-                Trademark Registry Certificate *
-              </label>
-              <FileUpload
-                title="Trademark_Certificate"
-                status={formData.trademarkCertUploaded ? "uploaded" : "not_uploaded"}
-                onUploadSuccess={() => handleUploadSuccess("trademarkCertUploaded")}
-                onDelete={() => handleDelete("trademarkCertUploaded")}
-                rejectionReason={errors.trademarkCert}
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-[#6B7280]">
-                Brand Logo Graphic
-              </label>
-              <FileUpload
-                title="Brand_Logo"
-                status={formData.logoUploaded ? "uploaded" : "not_uploaded"}
-                onUploadSuccess={() => handleUploadSuccess("logoUploaded")}
-                onDelete={() => handleDelete("logoUploaded")}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-[#6B7280]">
-                Official Brand Authorization Letter
-              </label>
-              <FileUpload
-                title="Brand_Authorization_Letter"
-                status={formData.authLetterUploaded ? "uploaded" : "not_uploaded"}
-                onUploadSuccess={() => handleUploadSuccess("authLetterUploaded")}
-                onDelete={() => handleDelete("authLetterUploaded")}
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-[#6B7280]">
-                Proof of Brand Ownership / Chain of Title
-              </label>
-              <FileUpload
-                title="Brand_Ownership_Proof"
-                status={formData.brandProofUploaded ? "uploaded" : "not_uploaded"}
-                onUploadSuccess={() => handleUploadSuccess("brandProofUploaded")}
-                onDelete={() => handleDelete("brandProofUploaded")}
-              />
-            </div>
-          </div>
-        </div>
-      </Card>
-
-      {/* Button panel */}
-      <div className="flex justify-between items-center pt-2">
-        <Button
+        <button
           type="button"
-          variant="outline"
-          leftIcon={<ArrowLeft className="h-4 w-4" />}
-          onClick={() => router.push("/verification/documents")}
+          onClick={addMember}
+          className="mt-[30px] text-[17px] font-semibold text-[#9A9A9A] transition-colors hover:text-white"
         >
+          + Add Another Member
+        </button>
+
+        <div className="mt-[35px] border-t border-[#6A6A6A]" />
+
+        <p className="mt-[31px] text-[14px] font-normal text-[#737373]">
+          You can always add more team members later from Settings
+        </p>
+      </section>
+
+      <div className="mt-8 flex items-center justify-between gap-4 sm:mt-10">
+        <button
+          type="button"
+          onClick={() => router.push("/verification/bank-details")}
+          className="flex h-11 w-[112px] items-center justify-center gap-2 rounded-[7px] border border-[#5E5E5E] bg-black text-[15px] font-semibold text-[#8C8C8C] transition-colors hover:border-[#8A8A8A] hover:text-white sm:w-[120px] sm:gap-[13px] sm:text-[16px]"
+        >
+          <ArrowLeft className="h-5 w-5" strokeWidth={2} />
           Back
-        </Button>
-        <Button type="submit" variant="primary">
-          Save & Continue
-        </Button>
+        </button>
+
+        <button
+          type="submit"
+          className="flex h-11 w-[170px] items-center justify-center gap-3 rounded-[7px] bg-white text-[15px] font-semibold text-black transition-colors hover:bg-[#EDEDED] sm:w-[200px] sm:gap-[17px] sm:text-[16px]"
+        >
+          Continue
+          <ArrowRight className="h-5 w-5" strokeWidth={2.25} />
+        </button>
       </div>
     </form>
+  );
+}
+
+function SelectChevron() {
+  return (
+    <svg
+      className="pointer-events-none absolute right-[15px] top-1/2 h-4 w-4 -translate-y-1/2 text-[#7A7A7A]"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
+      <path strokeLinecap="round" strokeLinejoin="round" d="m6 9 6 6 6-6" />
+    </svg>
   );
 }

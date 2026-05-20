@@ -2,299 +2,183 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { UserCheck, ArrowLeft, Mail, Phone, Calendar, Globe, MapPin } from "lucide-react";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 import { useApp } from "../../context/AppContext";
-import { Input } from "../ui/Input";
-import { Select } from "../ui/Select";
-import { Button } from "../ui/Button";
-import { Card } from "../ui/Card";
-import { FileUpload } from "../ui/FileUpload";
 
 export function RepresentativeForm() {
   const router = useRouter();
   const { state, updateRepresentative } = useApp();
-  const [formData, setFormData] = useState({
-    fullName: state.representative.fullName || "",
-    jobTitle: state.representative.jobTitle || "",
-    dob: state.representative.dob || "",
-    nationality: state.representative.nationality || "Germany",
-    email: state.representative.email || state.user?.email || "",
-    phone: state.representative.phone || "",
-    address: state.representative.address || "",
-    idType: state.representative.idType || "Passport",
-    idFrontUploaded: state.representative.idFrontUploaded || false,
-    idBackUploaded: state.representative.idBackUploaded || false,
-    selfieUploaded: state.representative.selfieUploaded || false,
-  });
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [firstName, lastName] = (state.representative.fullName || "")
+    .split(" ")
+    .filter(Boolean);
+  const hasSavedRepresentative = Boolean(state.representative.fullName);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const [formData, setFormData] = useState({
+    firstName: hasSavedRepresentative ? firstName || "" : "",
+    lastName: hasSavedRepresentative ? lastName || "" : "",
+    jobTitle: hasSavedRepresentative ? state.representative.jobTitle || "" : "",
+    email: hasSavedRepresentative ? state.representative.email || "" : "",
+    phone: hasSavedRepresentative ? state.representative.phone || "" : "",
+    dob: hasSavedRepresentative ? state.representative.dob || "" : "",
+    ssnLast4: "",
+  });
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-    if (errors[name]) {
-      setErrors((prev) => {
-        const copy = { ...prev };
-        delete copy[name];
-        return copy;
-      });
-    }
-  };
-
-  const handleUploadSuccess = (field: "idFrontUploaded" | "idBackUploaded" | "selfieUploaded") => {
-    setFormData((prev) => ({ ...prev, [field]: true }));
-    updateRepresentative({ [field]: true });
-  };
-
-  const handleDelete = (field: "idFrontUploaded" | "idBackUploaded" | "selfieUploaded") => {
-    setFormData((prev) => ({ ...prev, [field]: false }));
-    updateRepresentative({ [field]: false });
-  };
-
-  const validate = () => {
-    const newErrors: Record<string, string> = {};
-    if (!formData.fullName) newErrors.fullName = "Full Legal Name is required";
-    if (!formData.jobTitle) newErrors.jobTitle = "Job title is required";
-    if (!formData.dob) newErrors.dob = "Date of Birth is required";
-    if (!formData.address) newErrors.address = "Residential address is required";
-    if (!formData.email) {
-      newErrors.email = "Email is required";
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = "Invalid email format";
-    }
-    if (!formData.idFrontUploaded) newErrors.idUpload = "Please upload the front of your government ID";
-    if (formData.idType !== "Passport" && !formData.idBackUploaded) {
-      newErrors.idBackUpload = "Please upload the back of your government ID";
-    }
-    if (!formData.selfieUploaded) newErrors.selfieUpload = "Please upload a selfie for liveness verification";
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (validate()) {
-      updateRepresentative(formData);
-      router.push("/verification/authorization");
-    }
-  };
-
-  // Prefill helper for testing/demo
-  const handlePrefill = () => {
-    const mockRep = {
-      fullName: "Martin Safi",
-      jobTitle: "Corporate Treasury Manager",
-      dob: "1988-08-14",
-      nationality: "Germany",
-      email: "martin.safi@adidas-group.com",
-      phone: "+49 176 1234567",
-      address: "Adi-Dassler-Strasse 1, 91074 Herzogenaurach, Germany",
-      idType: "Passport",
-      idFrontUploaded: true,
-      selfieUploaded: true,
-    };
-    setFormData((prev) => ({ ...prev, ...mockRep }));
-    updateRepresentative(mockRep);
+    const fullName = [formData.firstName, formData.lastName].filter(Boolean).join(" ");
+    updateRepresentative({
+      fullName,
+      jobTitle: formData.jobTitle,
+      email: formData.email,
+      phone: formData.phone,
+      dob: formData.dob,
+    });
+    router.push("/verification/authorization");
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="flex justify-between items-start">
-        <div className="space-y-1">
-          <h1 className="text-xl font-bold text-white flex items-center gap-2">
-            <UserCheck className="h-5 w-5 text-[#10B981]" />
-            Legal Representative KYC
+    <form
+      onSubmit={handleSubmit}
+      className="mx-auto w-full max-w-[858px] pb-12 pt-8 sm:pb-14 sm:pt-10 lg:pb-16 lg:pt-12 xl:pt-[52px]"
+    >
+      <div className="mb-8 flex flex-col items-start justify-between gap-5 sm:mb-10 sm:flex-row sm:gap-8">
+        <div>
+          <h1 className="text-[28px] font-bold leading-[1.08] tracking-normal text-white sm:text-[32px] lg:text-[34px]">
+            Authorized Representative
           </h1>
-          <p className="text-xs text-[#6B7280] leading-relaxed">
-            Verify the identity of the executive authorized to manage payments and sign documents for this company.
+          <p className="mt-3 text-[17px] font-normal leading-snug text-[#A0A0A0] sm:mt-[15px] sm:text-[20px] lg:text-[21px]">
+            Designate an authorized representative for your account
           </p>
         </div>
 
         <button
           type="button"
-          onClick={handlePrefill}
-          className="flex items-center gap-1 px-2.5 py-1 text-[11px] font-bold text-[#10B981] bg-[#10B981]/10 border border-[#10B981]/20 rounded-md hover:bg-[#10B981]/20 transition-all cursor-pointer"
+          onClick={() => router.push("/dashboard")}
+          className="h-10 w-[142px] rounded-[7px] bg-white text-[15px] font-semibold text-black transition-colors hover:bg-[#EDEDED] sm:mt-[-5px] sm:h-11 sm:w-[150px] sm:text-[16px]"
         >
-          Prefill Rep
+          Skip For Now
         </button>
       </div>
 
-      <Card className="space-y-5 border-[#1F1F1F] bg-[#0D0D0D]">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Input
-            id="fullName"
-            name="fullName"
-            label="Full Legal Name (Matching ID)"
-            value={formData.fullName}
-            onChange={handleChange}
-            error={errors.fullName}
-            placeholder="e.g. Martin Safi"
-          />
-          <Input
-            id="jobTitle"
-            name="jobTitle"
-            label="Job Title / Role"
-            value={formData.jobTitle}
-            onChange={handleChange}
-            error={errors.jobTitle}
-            placeholder="e.g. Corporate Treasury Manager"
-          />
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Input
-            id="dob"
-            name="dob"
-            type="date"
-            label="Date of Birth"
-            value={formData.dob}
-            onChange={handleChange}
-            error={errors.dob}
-            leftIcon={<Calendar className="h-4 w-4" />}
-          />
-          <Select
-            id="nationality"
-            name="nationality"
-            label="Nationality"
-            value={formData.nationality}
-            onChange={handleChange}
-            options={[
-              { value: "Germany", label: "Germany" },
-              { value: "United States", label: "United States" },
-              { value: "United Kingdom", label: "United Kingdom" },
-              { value: "France", label: "France" },
-              { value: "Canada", label: "Canada" },
-            ]}
-          />
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Input
-            id="email"
-            name="email"
-            label="Representative Work Email"
-            value={formData.email}
-            onChange={handleChange}
-            error={errors.email}
-            leftIcon={<Mail className="h-4 w-4" />}
-            placeholder="name@adidas-group.com"
-          />
-          <Input
-            id="phone"
-            name="phone"
-            label="Mobile Number"
-            value={formData.phone}
-            onChange={handleChange}
-            leftIcon={<Phone className="h-4 w-4" />}
-            placeholder="+49 176 1234567"
-          />
-        </div>
-
-        <Input
-          id="address"
-          name="address"
-          label="Residential Address"
-          value={formData.address}
-          onChange={handleChange}
-          error={errors.address}
-          leftIcon={<MapPin className="h-4 w-4" />}
-          placeholder="Street, City, Postcode, Country"
-        />
-
-        <div className="border-t border-[#1F1F1F] my-4 pt-4 space-y-4">
-          <h3 className="text-xs font-semibold text-white uppercase tracking-wider">
-            Identity Verification Documents
-          </h3>
-          <Select
-            id="idType"
-            name="idType"
-            label="Government ID Type"
-            value={formData.idType}
-            onChange={handleChange}
-            options={[
-              { value: "Passport", label: "Passport" },
-              { value: "National ID", label: "National Identity Card" },
-              { value: "Driver License", label: "Driver's License" },
-            ]}
-          />
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* Front ID Upload */}
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-[#6B7280]">
-                ID Front Upload ({formData.idType})
-              </label>
-              <FileUpload
-                title="ID_Front"
-                status={formData.idFrontUploaded ? "uploaded" : "not_uploaded"}
-                onUploadSuccess={() => handleUploadSuccess("idFrontUploaded")}
-                onDelete={() => handleDelete("idFrontUploaded")}
-                rejectionReason={errors.idUpload}
+      <div className="rounded-[8px] border border-[#565656] bg-black px-5 py-6 shadow-[0_18px_60px_rgba(0,0,0,0.28)] sm:px-8 sm:py-8 lg:px-10">
+        <div className="space-y-5 sm:space-y-[22px]">
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-[17px]">
+            <label className="block">
+              <span className="mb-[9px] block text-[16px] font-semibold leading-none tracking-normal text-[#F4F4F4]">
+                First Name
+              </span>
+              <input
+                name="firstName"
+                value={formData.firstName}
+                onChange={handleChange}
+                placeholder="Abc"
+                className="h-11 w-full rounded-[6px] border border-[#727272] bg-[#0A0A0A] px-[14px] text-[16px] font-normal text-white outline-none transition-colors placeholder:text-[#A8A8A8] focus:border-white sm:text-[18px]"
               />
-            </div>
+            </label>
 
-            {/* Back ID Upload (Only if not passport) */}
-            {formData.idType !== "Passport" ? (
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-[#6B7280]">
-                  ID Back Upload ({formData.idType})
-                </label>
-                <FileUpload
-                  title="ID_Back"
-                  status={formData.idBackUploaded ? "uploaded" : "not_uploaded"}
-                  onUploadSuccess={() => handleUploadSuccess("idBackUploaded")}
-                  onDelete={() => handleDelete("idBackUploaded")}
-                  rejectionReason={errors.idBackUpload}
-                />
-              </div>
-            ) : (
-              /* Selfie Upload if passport */
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-[#6B7280]">
-                  Liveness Selfie
-                </label>
-                <FileUpload
-                  title="Selfie"
-                  status={formData.selfieUploaded ? "uploaded" : "not_uploaded"}
-                  onUploadSuccess={() => handleUploadSuccess("selfieUploaded")}
-                  onDelete={() => handleDelete("selfieUploaded")}
-                  rejectionReason={errors.selfieUpload}
-                />
-              </div>
-            )}
+            <label className="block">
+              <span className="mb-[9px] block text-[16px] font-semibold leading-none tracking-normal text-[#F4F4F4]">
+                Last Name
+              </span>
+              <input
+                name="lastName"
+                value={formData.lastName}
+                onChange={handleChange}
+                placeholder="Xyz"
+                className="h-11 w-full rounded-[6px] border border-[#727272] bg-[#0A0A0A] px-[14px] text-[16px] font-normal text-white outline-none transition-colors placeholder:text-[#A8A8A8] focus:border-white sm:text-[18px]"
+              />
+            </label>
           </div>
 
-          {/* Double display for selfie if back ID was active */}
-          {formData.idType !== "Passport" && (
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-[#6B7280]">
-                Liveness Selfie
-              </label>
-              <FileUpload
-                title="Selfie"
-                status={formData.selfieUploaded ? "uploaded" : "not_uploaded"}
-                onUploadSuccess={() => handleUploadSuccess("selfieUploaded")}
-                onDelete={() => handleDelete("selfieUploaded")}
-                rejectionReason={errors.selfieUpload}
-              />
-            </div>
-          )}
-        </div>
-      </Card>
+          <label className="block">
+            <span className="mb-[9px] block text-[16px] font-semibold leading-none tracking-normal text-[#F4F4F4]">
+              Job Title
+            </span>
+            <input
+              name="jobTitle"
+              value={formData.jobTitle}
+              onChange={handleChange}
+              placeholder="Chief Financial Officer"
+              className="h-11 w-full rounded-[6px] border border-[#727272] bg-[#0A0A0A] px-[14px] text-[16px] font-normal text-white outline-none transition-colors placeholder:text-[#A8A8A8] focus:border-white sm:text-[18px]"
+            />
+          </label>
 
-      {/* Button panel */}
-      <div className="flex justify-between items-center pt-2">
-        <Button
+          <label className="block">
+            <span className="mb-[9px] block text-[16px] font-semibold leading-none tracking-normal text-[#F4F4F4]">
+              Email Address
+            </span>
+            <input
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              placeholder="abc.xyz@acme.com"
+              className="h-11 w-full rounded-[6px] border border-[#727272] bg-[#0A0A0A] px-[14px] text-[16px] font-normal text-white outline-none transition-colors placeholder:text-[#A8A8A8] focus:border-white sm:text-[18px]"
+            />
+          </label>
+
+          <label className="block">
+            <span className="mb-[9px] block text-[16px] font-semibold leading-none tracking-normal text-[#F4F4F4]">
+              Phone Number
+            </span>
+            <input
+              name="phone"
+              value={formData.phone}
+              onChange={handleChange}
+              placeholder="+1 (555) 123-4567"
+              className="h-11 w-full rounded-[6px] border border-[#727272] bg-[#0A0A0A] px-[14px] text-[16px] font-normal text-white outline-none transition-colors placeholder:text-[#A8A8A8] focus:border-white sm:text-[18px]"
+            />
+          </label>
+
+          <label className="block">
+            <span className="mb-[9px] block text-[16px] font-semibold leading-none tracking-normal text-[#F4F4F4]">
+              Date of Birth
+            </span>
+            <input
+              name="dob"
+              value={formData.dob}
+              onChange={handleChange}
+              placeholder="06/12/1984"
+              className="h-11 w-full rounded-[6px] border border-[#727272] bg-[#0A0A0A] px-[14px] text-[16px] font-normal text-white outline-none transition-colors placeholder:text-[#A8A8A8] focus:border-white sm:text-[18px]"
+            />
+          </label>
+
+          <label className="block">
+            <span className="mb-[9px] block text-[16px] font-semibold leading-none tracking-normal text-[#F4F4F4]">
+              SSN (Last 4 digits)
+            </span>
+            <input
+              name="ssnLast4"
+              value={formData.ssnLast4}
+              onChange={handleChange}
+              placeholder="XXXX"
+              className="h-11 w-full rounded-[6px] border border-[#727272] bg-[#0A0A0A] px-[14px] text-[16px] font-normal text-white outline-none transition-colors placeholder:text-[#A8A8A8] focus:border-white sm:text-[18px]"
+            />
+          </label>
+        </div>
+      </div>
+
+      <div className="mt-8 flex items-center justify-between gap-4 sm:mt-10">
+        <button
           type="button"
-          variant="outline"
-          leftIcon={<ArrowLeft className="h-4 w-4" />}
-          onClick={() => router.push("/verification/business-info")}
+          onClick={() => router.push("/verification/business-details")}
+          className="flex h-11 w-[112px] items-center justify-center gap-2 rounded-[7px] border border-[#5E5E5E] bg-black text-[15px] font-semibold text-[#8C8C8C] transition-colors hover:border-[#8A8A8A] hover:text-white sm:w-[120px] sm:gap-[13px] sm:text-[16px]"
         >
+          <ArrowLeft className="h-5 w-5" strokeWidth={2} />
           Back
-        </Button>
-        <Button type="submit" variant="primary">
-          Save & Continue
-        </Button>
+        </button>
+
+        <button
+          type="submit"
+          className="flex h-11 w-[170px] items-center justify-center gap-3 rounded-[7px] bg-white text-[15px] font-semibold text-black transition-colors hover:bg-[#EDEDED] sm:w-[200px] sm:gap-[17px] sm:text-[16px]"
+        >
+          Continue
+          <ArrowRight className="h-5 w-5" strokeWidth={2.25} />
+        </button>
       </div>
     </form>
   );

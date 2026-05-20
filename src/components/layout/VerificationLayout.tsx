@@ -4,176 +4,200 @@ import React from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { CheckCircle2, ChevronRight, Lock, ShieldCheck, ArrowLeft } from "lucide-react";
-import { useApp } from "../../context/AppContext";
-import { VERIFICATION_STEPS } from "../../constants/verificationSteps";
-import { Button } from "../ui/Button";
+import {
+  Building2,
+  Check,
+  ClipboardCheck,
+  CreditCard,
+  FileText,
+  Settings,
+  Shield,
+  Upload,
+  Users,
+  UserRound,
+} from "lucide-react";
 import { cn } from "../../lib/utils";
 
 interface VerificationLayoutProps {
   children: React.ReactNode;
 }
 
+const KYB_STEPS = [
+  {
+    id: 1,
+    label: "Company Information",
+    path: "/verification/business-info",
+    icon: Building2,
+  },
+  {
+    id: 2,
+    label: "Business Details",
+    path: "/verification/business-details",
+    icon: FileText,
+  },
+  {
+    id: 3,
+    label: "Authorized Representative",
+    path: "/verification/representative",
+    icon: UserRound,
+  },
+  {
+    id: 4,
+    label: "KYB Verification",
+    path: "/verification/authorization",
+    icon: Shield,
+  },
+  {
+    id: 5,
+    label: "Document Upload",
+    path: "/verification/documents",
+    icon: Upload,
+  },
+  {
+    id: 6,
+    label: "Bank Account",
+    path: "/verification/bank-details",
+    icon: CreditCard,
+  },
+  {
+    id: 7,
+    label: "Team Setup",
+    path: "/verification/brand",
+    icon: Users,
+  },
+  {
+    id: 8,
+    label: "Payment Preferences",
+    path: "/verification/payment-preferences",
+    icon: Settings,
+  },
+  {
+    id: 9,
+    label: "Review & Submit",
+    path: "/verification/review",
+    icon: ClipboardCheck,
+  },
+];
+
 export function VerificationLayout({ children }: VerificationLayoutProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const { state } = useApp();
+  const stepperRef = React.useRef<HTMLDivElement | null>(null);
+  const activeStepRef = React.useRef<HTMLButtonElement | null>(null);
+  const currentIndex = Math.max(
+    0,
+    KYB_STEPS.findIndex((step) => step.path === pathname)
+  );
+  const currentStep = KYB_STEPS[currentIndex] || KYB_STEPS[0];
 
-  const currentStep = VERIFICATION_STEPS.find((step) => step.path === pathname) || VERIFICATION_STEPS[0];
-  const stepIndex = VERIFICATION_STEPS.findIndex((step) => step.path === pathname);
-  const isDocumentsStep = pathname === "/verification/documents";
+  React.useEffect(() => {
+    const stepper = stepperRef.current;
+    const activeStep = activeStepRef.current;
 
-  // Helper to determine step status
-  const getStepStatus = (stepPath: string, stepId: number) => {
-    const isCurrent = stepPath === pathname;
-    
-    // Check if approved
-    const isApproved = state.verificationStatus === "approved";
-    if (isApproved) return "completed";
+    if (!stepper || !activeStep) return;
 
-    // Determine completion based on appState
-    let isCompleted = false;
-
-    if (stepId === 1) {
-      isCompleted = !!state.businessSetup.legalName && !!state.businessSetup.country;
-    } else if (stepId === 2) {
-      isCompleted = !!state.representative.fullName && state.representative.idFrontUploaded;
-    } else if (stepId === 3) {
-      isCompleted = state.authorization.isOwner !== null;
-    } else if (stepId === 4) {
-      const uploadedCount = state.documents.filter(d => d.status === "uploaded" || d.status === "processing" || d.status === "approved").length;
-      isCompleted = uploadedCount >= 4; // at least 4 corporate docs uploaded
-    } else if (stepId === 5) {
-      isCompleted = state.brand.domainVerified && !!state.brand.officialEmail;
-    } else if (stepId === 6) {
-      isCompleted = !!state.bankDetails.accountNumber && state.bankDetails.statementUploaded;
-    } else if (stepId === 7) {
-      isCompleted = state.verificationStatus === "submitted" || state.verificationStatus === "in_review" || state.verificationStatus === "approved";
-    }
-
-    if (isCurrent) return "current";
-    if (isCompleted) return "completed";
-    return "pending";
-  };
-
-  const handleStepClick = (path: string, stepId: number) => {
-    // Let user navigate freely in draft state, or lock steps if they are submitted/in-review
-    if (state.verificationStatus === "submitted" || state.verificationStatus === "in_review") {
-      router.push("/verification/status");
-      return;
-    }
-    router.push(path);
-  };
+    const targetLeft = Math.max(activeStep.offsetLeft - 28, 0);
+    stepper.scrollTo({
+      left: targetLeft,
+      behavior: "smooth",
+    });
+  }, [pathname, currentStep.id]);
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#0A0A0A] text-[#F8FAFC]">
-      {/* Header Bar */}
-      <header className="h-20 border-b border-[#1F1F1F] bg-[#0A0A0A] px-6 md:px-10 flex items-center justify-between shrink-0">
-        <Link href="/" className="flex items-center cursor-pointer">
-          <img src="/agncypayLogo.png" alt="AgncyPay" className="h-[4.5rem] w-auto object-contain" />
-        </Link>
-
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-1.5 text-xs text-[#6B7280]">
-            <ShieldCheck className="h-3.5 w-3.5 text-[#22C55E]" />
-            <span>256-bit Encrypted</span>
-          </div>
-          <Link href="/dashboard" className="text-xs text-[#6B7280] hover:text-white transition-colors">
-            Go to Dashboard
+    <div className="min-h-screen overflow-hidden bg-black text-white">
+      <header className="relative h-[76px] bg-black px-5 sm:px-8 lg:px-10">
+        <div className="flex h-[71px] items-center justify-between">
+          <Link href="/" className="flex items-center" aria-label="AgncyPay home">
+            <span className="relative block h-[34px] w-[37px] overflow-hidden sm:h-[36px] sm:w-[39px]">
+              <img
+                src="/agncypayLogo.png"
+                alt=""
+                className="absolute h-[104px] w-[162px] max-w-none object-contain sm:h-[110px] sm:w-[171px]"
+                style={{ left: "-8px", top: "-31px" }}
+              />
+            </span>
+            <span className="ml-1 text-[26px] font-bold leading-none tracking-normal text-white sm:text-[28px]">
+              pay
+            </span>
           </Link>
+
+          <div className="text-[13px] font-medium leading-none text-[#8B8B8B] sm:text-[15px]">
+            Step {currentStep.id} of 9
+          </div>
+        </div>
+
+        <div className="absolute bottom-0 left-5 right-5 h-1 bg-[#242424] sm:left-8 sm:right-8 lg:left-10 lg:right-10">
+          <div
+            className="h-full bg-white transition-[width] duration-300"
+            style={{ width: `${((currentStep.id - 1) / 9) * 100 + 11.1}%` }}
+          />
         </div>
       </header>
 
-      {/* Main Stepper Grid */}
-      <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
-        {/* Left Sidebar Stepper */}
-        <aside className="w-full md:w-72 border-b md:border-b-0 md:border-r border-[#1F1F1F] bg-[#0A0A0A] p-5 overflow-y-auto md:max-h-[calc(100vh-3.5rem)]">
-          <div className="mb-5">
-            <h2 className="text-sm font-bold text-white">Corporate Onboarding</h2>
-            <p className="text-xs text-[#6B7280] mt-1">Complete your KYB profile.</p>
+      <nav
+        ref={stepperRef}
+        className="h-[78px] overflow-x-auto overflow-y-hidden border-b border-[#171717] bg-black px-5 sm:h-[86px] sm:px-8 lg:px-10 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      >
+        <div className="flex h-full w-max min-w-full items-center gap-2 pr-8 sm:gap-[10px] sm:pr-12">
+          {KYB_STEPS.map((step, index) => {
+            const Icon = step.icon;
+            const isActive = step.id === currentStep.id;
+            const isPast = step.id < currentStep.id;
+            const StepIcon = isPast ? Check : Icon;
 
-            {/* Progress Bar */}
-            <div className="mt-4 flex items-center justify-between text-xs mb-1.5">
-              <span className="text-[#4B5563]">Progress</span>
-              <span className="font-bold text-white">{Math.round(((stepIndex) / 8) * 100)}%</span>
-            </div>
-            <div className="w-full bg-[#1F1F1F] h-1 rounded-full overflow-hidden">
-              <div
-                className="h-1 bg-white rounded-full transition-all duration-300"
-                style={{ width: `${Math.max(8, ((stepIndex) / 8) * 100)}%` }}
-              />
-            </div>
-          </div>
-
-          {/* Stepper items */}
-          <div className="space-y-0.5">
-            {VERIFICATION_STEPS.map((step) => {
-              const status = getStepStatus(step.path, step.id);
-              const isActive = pathname === step.path;
-              
-              return (
+            return (
+              <React.Fragment key={`${step.id}-${step.label}`}>
                 <button
-                  key={step.id}
-                  onClick={() => handleStepClick(step.path, step.id)}
-                  disabled={state.verificationStatus === "submitted" || state.verificationStatus === "in_review"}
+                  ref={isActive ? activeStepRef : null}
+                  type="button"
+                  onClick={() => router.push(step.path)}
                   className={cn(
-                    "w-full text-left px-3 py-2.5 rounded-lg flex items-center justify-between gap-3 transition-all cursor-pointer",
-                    isActive
-                      ? "bg-white text-black"
-                      : "text-[#6B7280] hover:bg-[#111] hover:text-white"
+                    "flex shrink-0 items-center gap-2 text-left transition-colors sm:gap-[10px]",
+                    isActive ? "text-white" : "text-[#555555] hover:text-[#8C8C8C]"
                   )}
                 >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <div
-                      className={cn(
-                        "h-5 w-5 rounded-full flex items-center justify-center font-bold text-[10px] shrink-0 transition-all",
-                        status === "completed"
-                          ? "bg-[#22C55E] text-black"
-                          : isActive
-                          ? "bg-black/20 text-black"
-                          : "bg-[#1F1F1F] text-[#4B5563]"
-                      )}
-                    >
-                      {status === "completed" ? "✓" : step.id}
-                    </div>
-                    <div className="min-w-0">
-                      <p className={cn("text-[13px] font-semibold truncate leading-tight", isActive ? "text-black" : "")}>
-                        {step.label}
-                      </p>
-                    </div>
-                  </div>
-                  <ChevronRight className={cn("h-3 w-3 shrink-0", isActive ? "text-black/40" : "text-[#2A2A2A]")} />
+                  <span
+                    className={cn(
+                      "flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full border sm:h-[38px] sm:w-[38px]",
+                      isActive
+                        ? "border-white text-white"
+                        : isPast
+                        ? "border-[#7D7D7D] text-[#9A9A9A]"
+                        : "border-[#555555] text-[#666666]"
+                    )}
+                  >
+                    <StepIcon className="h-4 w-4 sm:h-[17px] sm:w-[17px]" strokeWidth={1.8} />
+                  </span>
+                  <span
+                    className={cn(
+                      "whitespace-nowrap text-[13px] font-semibold leading-none tracking-normal sm:text-[14px]",
+                      isActive ? "text-white" : "text-[#555555]"
+                    )}
+                  >
+                    {step.label}
+                  </span>
                 </button>
-              );
-            })}
-          </div>
-        </aside>
 
-        {/* Right Form Body */}
-        <div className="flex-1 flex flex-col bg-[#0A0A0A] overflow-y-auto max-h-[calc(100vh-3.5rem)] p-6 md:py-8 md:px-10">
-          <div className={cn("mx-auto w-full", isDocumentsStep ? "max-w-5xl" : "max-w-2xl")}>
-            {/* Step indicator */}
-            <div className="mb-5 flex items-center gap-2 text-xs text-[#4B5563] font-semibold tracking-wide">
-              <span className="text-[#6B7280]">STEP {currentStep.id} OF 8</span>
-              <span className="text-[#2A2A2A]">&bull;</span>
-              <span className="text-white font-bold">{currentStep.label}</span>
-            </div>
-
-            {/* Bordered Form Box */}
-            <div className="rounded-xl border border-[#222] bg-[#0D0D0D] p-6 md:p-8">
-              <motion.div
-                key={pathname}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.25, ease: "easeOut" }}
-              >
-                {children}
-              </motion.div>
-            </div>
-          </div>
+                {index < KYB_STEPS.length - 1 && (
+                  <span className="block h-px w-5 shrink-0 bg-[#A7A7A7] sm:w-7" />
+                )}
+              </React.Fragment>
+            );
+          })}
         </div>
-      </div>
+      </nav>
+
+      <main className="h-[calc(100vh-154px)] overflow-y-auto bg-black px-5 sm:h-[calc(100vh-162px)] sm:px-8 lg:px-10">
+        <motion.div
+          key={pathname}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }}
+          transition={{ duration: 0.2, ease: "easeOut" }}
+        >
+          {children}
+        </motion.div>
+      </main>
     </div>
   );
 }
