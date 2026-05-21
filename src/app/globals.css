@@ -85,6 +85,15 @@ body {
   }
 }
 
+@keyframes dashboard-progress {
+  0% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(360%);
+  }
+}
+
 .animate-shimmer {
   background: linear-gradient(
     90deg,

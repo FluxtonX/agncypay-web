@@ -1,6 +1,7 @@
 import React from "react";
 import { DashboardSidebar } from "./DashboardSidebar";
 import { DashboardHeader } from "./DashboardHeader";
+import { DashboardContentFrame } from "./DashboardContentFrame";
 
 interface DashboardShellProps {
   children: React.ReactNode;
@@ -15,7 +16,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
         <DashboardHeader />
 
         <main className="flex-1 overflow-y-auto bg-black px-5 pb-10 pt-10 md:px-10 md:pt-[44px]">
-          {children}
+          <DashboardContentFrame>{children}</DashboardContentFrame>
         </main>
       </div>
     </div>

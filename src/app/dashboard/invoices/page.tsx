@@ -1,19 +1,24 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   ArrowUpRight,
   CalendarDays,
   ChevronDown,
   Clock3,
   Download,
+  Eye,
   FileText,
   Filter,
+  Mail,
   MoreHorizontal,
   Search,
+  Trash2,
   TrendingUp,
 } from "lucide-react";
 import { cn } from "../../../lib/utils";
+import { downloadTableReportPdf } from "../../../lib/pdfExport";
 
 const metricCards = [
   {
@@ -152,8 +157,66 @@ function inputDateToDueDate(value: string) {
   return `${day}/${month}/${year}`;
 }
 
-function csvEscape(value: string) {
-  return `"${value.replace(/"/g, '""')}"`;
+function parseMoney(value: string) {
+  return Number(value.replace(/[$,]/g, "")) || 0;
+}
+
+function formatMoney(value: number) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
+function pdfEscape(value: string) {
+  return value.replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
+}
+
+function buildInvoicePdf(invoice: InvoiceRow) {
+  const lines = [
+    `Invoice ${invoice.id}`,
+    `Agency: ${invoice.agency}`,
+    `Campaign: ${invoice.campaign}`,
+    `Amount: ${invoice.amount}`,
+    `Tax: ${invoice.fees}`,
+    `Grand Total: ${formatMoney(parseMoney(invoice.amount) + parseMoney(invoice.fees))}`,
+    `Status: ${invoice.status}`,
+    `Due Date: ${invoice.due}`,
+  ];
+  const content = [
+    "BT",
+    "/F1 18 Tf",
+    "72 760 Td",
+    `(${pdfEscape(lines[0])}) Tj`,
+    "/F1 11 Tf",
+    ...lines.slice(1).map((line) => `0 -24 Td (${pdfEscape(line)}) Tj`),
+    "ET",
+  ].join("\n");
+  const objects = [
+    "1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj",
+    "2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj",
+    "3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>\nendobj",
+    "4 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj",
+    `5 0 obj\n<< /Length ${content.length} >>\nstream\n${content}\nendstream\nendobj`,
+  ];
+  let pdf = "%PDF-1.4\n";
+  const offsets = [0];
+
+  objects.forEach((object) => {
+    offsets.push(pdf.length);
+    pdf += `${object}\n`;
+  });
+
+  const xrefStart = pdf.length;
+  pdf += `xref\n0 ${objects.length + 1}\n`;
+  pdf += "0000000000 65535 f \n";
+  offsets.slice(1).forEach((offset) => {
+    pdf += `${offset.toString().padStart(10, "0")} 00000 n \n`;
+  });
+  pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefStart}\n%%EOF`;
+
+  return pdf;
 }
 
 function MetricPanel({
@@ -188,12 +251,14 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export default function InvoicesPortalPage() {
+  const router = useRouter();
   const [invoiceRows, setInvoiceRows] = useState<InvoiceRow[]>(initialInvoices);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<InvoiceFilter>("All Invoices");
   const [currentPage, setCurrentPage] = useState(1);
   const [editingDueId, setEditingDueId] = useState<string | null>(null);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const statusCards = useMemo(
     () => [
@@ -256,6 +321,20 @@ export default function InvoicesPortalPage() {
     (safeCurrentPage - 1) * pageSize,
     safeCurrentPage * pageSize
   );
+  const selectedInvoices = invoiceRows.filter((invoice) =>
+    selectedIds.includes(invoice.id)
+  );
+  const selectedTotalAmount = selectedInvoices.reduce(
+    (total, invoice) => total + parseMoney(invoice.amount),
+    0
+  );
+  const selectedTotalTax = selectedInvoices.reduce(
+    (total, invoice) => total + parseMoney(invoice.fees),
+    0
+  );
+  const allPagedSelected =
+    pagedInvoices.length > 0 &&
+    pagedInvoices.every((invoice) => selectedIds.includes(invoice.id));
 
   const updateDueDate = (invoiceId: string, value: string) => {
     if (!value) return;
@@ -269,33 +348,76 @@ export default function InvoicesPortalPage() {
     );
   };
 
-  const updateStatus = (invoiceId: string, status: InvoiceRow["status"]) => {
-    setInvoiceRows((rows) =>
-      rows.map((invoice) =>
-        invoice.id === invoiceId ? { ...invoice, status } : invoice
-      )
+  const toggleInvoiceSelection = (invoiceId: string) => {
+    setSelectedIds((ids) =>
+      ids.includes(invoiceId)
+        ? ids.filter((id) => id !== invoiceId)
+        : [...ids, invoiceId]
     );
+  };
+
+  const toggleVisibleSelection = () => {
+    setSelectedIds((ids) => {
+      const visibleIds = pagedInvoices.map((invoice) => invoice.id);
+
+      return allPagedSelected
+        ? ids.filter((id) => !visibleIds.includes(id))
+        : Array.from(new Set([...ids, ...visibleIds]));
+    });
+  };
+
+  const viewInvoiceDetail = (invoice: InvoiceRow) => {
+    setOpenMenuId(null);
+    router.push(`/dashboard/invoices/${invoice.id}`);
+  };
+
+  const downloadInvoicePdf = (invoice: InvoiceRow) => {
+    const blob = new Blob([buildInvoicePdf(invoice)], { type: "application/pdf" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = `${invoice.id}.pdf`;
+    link.click();
+    URL.revokeObjectURL(url);
     setOpenMenuId(null);
   };
 
-  const duplicateInvoice = (invoiceId: string) => {
-    setInvoiceRows((rows) => {
-      const sourceInvoice = rows.find((invoice) => invoice.id === invoiceId);
-      if (!sourceInvoice) return rows;
+  const sendInvoiceEmail = (invoice: InvoiceRow) => {
+    const subject = encodeURIComponent(`Invoice ${invoice.id}`);
+    const body = encodeURIComponent(
+      [
+        `Invoice ${invoice.id}`,
+        `Agency: ${invoice.agency}`,
+        `Campaign: ${invoice.campaign}`,
+        `Amount: ${invoice.amount}`,
+        `Tax: ${invoice.fees}`,
+        `Grand Total: ${formatMoney(parseMoney(invoice.amount) + parseMoney(invoice.fees))}`,
+        `Due Date: ${invoice.due}`,
+      ].join("\n")
+    );
 
-      const copyCount = rows.filter((invoice) =>
-        invoice.id.startsWith(`${sourceInvoice.id}-COPY`)
-      ).length + 1;
-      const nextInvoice = {
-        ...sourceInvoice,
-        id: `${sourceInvoice.id}-COPY-${copyCount}`,
-        status: "Pending",
-      };
-
-      return [nextInvoice, ...rows];
-    });
+    window.location.href = `mailto:?subject=${subject}&body=${body}`;
     setOpenMenuId(null);
-    setCurrentPage(1);
+  };
+
+  const deleteInvoice = (invoiceId: string) => {
+    setInvoiceRows((rows) => {
+      return rows.filter((invoice) => invoice.id !== invoiceId);
+    });
+    setSelectedIds((ids) => ids.filter((id) => id !== invoiceId));
+    setOpenMenuId(null);
+  };
+
+  const processSelectedInvoices = () => {
+    setInvoiceRows((rows) =>
+      rows.map((invoice) =>
+        selectedIds.includes(invoice.id)
+          ? { ...invoice, status: "Processing" }
+          : invoice
+      )
+    );
+    setSelectedIds([]);
   };
 
   const exportInvoices = () => {
@@ -308,20 +430,25 @@ export default function InvoicesPortalPage() {
       invoice.status,
       invoice.due,
     ]);
-    const csv = [
-      ["Invoice ID", "Agency", "Campaign", "Amount", "Fees", "Status", "Due Date"],
-      ...rows,
-    ]
-      .map((row) => row.map(csvEscape).join(","))
-      .join("\n");
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
 
-    link.href = url;
-    link.download = "agncypay-invoices.csv";
-    link.click();
-    URL.revokeObjectURL(url);
+    downloadTableReportPdf({
+      title: "Invoice Register",
+      subtitle: "Filtered agency invoice export with payment status and due date detail.",
+      filename: "agncypay-invoices.pdf",
+      summary: [
+        { label: "Invoices", value: filteredInvoices.length.toString() },
+        {
+          label: "Total Amount",
+          value: formatMoney(filteredInvoices.reduce((total, invoice) => total + parseMoney(invoice.amount), 0)),
+        },
+        {
+          label: "Total Fees",
+          value: formatMoney(filteredInvoices.reduce((total, invoice) => total + parseMoney(invoice.fees), 0)),
+        },
+      ],
+      columns: ["Invoice", "Agency", "Campaign", "Amount", "Fees", "Status", "Due"],
+      rows,
+    });
   };
 
   const resetFilters = () => {
@@ -444,7 +571,18 @@ export default function InvoicesPortalPage() {
           </colgroup>
           <thead>
             <tr className="h-[49px] border-b border-[#686868] text-[17px] font-semibold leading-none text-[#a2a2a2]">
-              <th className="pl-[10px] pr-4">Invoice ID</th>
+              <th className="pl-[10px] pr-4">
+                <div className="flex items-center gap-[10px]">
+                  <input
+                    type="checkbox"
+                    aria-label="Select visible invoices"
+                    checked={allPagedSelected}
+                    onChange={toggleVisibleSelection}
+                    className="h-[16px] w-[16px] shrink-0 rounded-[4px] border border-[#777] bg-black accent-white"
+                  />
+                  <span>Invoice ID</span>
+                </div>
+              </th>
               <th className="px-0">Agency</th>
               <th className="px-0">Campaign</th>
               <th className="px-0">Amount</th>
@@ -461,7 +599,14 @@ export default function InvoicesPortalPage() {
                 className="h-[64px] border-b border-[#505050] last:border-b-0"
               >
                 <td className="pl-[11px] pr-4">
-                  <div className="flex items-center gap-[11px]">
+                  <div className="flex items-center gap-[9px]">
+                    <input
+                      type="checkbox"
+                      aria-label={`Select ${invoice.id}`}
+                      checked={selectedIds.includes(invoice.id)}
+                      onChange={() => toggleInvoiceSelection(invoice.id)}
+                      className="h-[16px] w-[16px] shrink-0 rounded-[4px] border border-[#777] bg-black accent-white"
+                    />
                     <FileText className="h-[19px] w-[19px] shrink-0 text-[#9a9a9a]" />
                     <span className="font-mono text-[17px] leading-none text-white">
                       {invoice.id}
@@ -530,40 +675,37 @@ export default function InvoicesPortalPage() {
                   </button>
                   {openMenuId === invoice.id && (
                     <div className="absolute right-[20px] top-[48px] z-30 w-[188px] rounded-[7px] border border-[#555] bg-[#0b0b0b] p-2 text-left shadow-xl">
-                      <p className="px-2 pb-2 text-[11px] font-semibold uppercase tracking-wider text-[#777]">
-                        Status
-                      </p>
-                      <select
-                        value={invoice.status}
-                        onChange={(event) =>
-                          updateStatus(invoice.id, event.target.value as InvoiceRow["status"])
-                        }
-                        className="mb-2 h-[32px] w-full rounded-[5px] border border-[#444] bg-black px-2 text-[13px] text-white outline-none"
-                      >
-                        {filterOptions
-                          .filter((option) => option !== "All Invoices")
-                          .map((option) => (
-                            <option key={option} value={option}>
-                              {option}
-                            </option>
-                          ))}
-                      </select>
                       <button
                         type="button"
-                        onClick={() => {
-                          setEditingDueId(invoice.id);
-                          setOpenMenuId(null);
-                        }}
-                        className="block w-full rounded-[5px] px-2 py-2 text-left text-[13px] text-[#d7d7d7] hover:bg-white/[0.06] hover:text-white"
+                        onClick={() => viewInvoiceDetail(invoice)}
+                        className="flex w-full items-center gap-2 rounded-[5px] px-2 py-2 text-left text-[13px] text-[#d7d7d7] hover:bg-white/[0.06] hover:text-white"
                       >
-                        Edit due date
+                        <Eye className="h-4 w-4" />
+                        View Detail
                       </button>
                       <button
                         type="button"
-                        onClick={() => duplicateInvoice(invoice.id)}
-                        className="block w-full rounded-[5px] px-2 py-2 text-left text-[13px] text-[#d7d7d7] hover:bg-white/[0.06] hover:text-white"
+                        onClick={() => downloadInvoicePdf(invoice)}
+                        className="flex w-full items-center gap-2 rounded-[5px] px-2 py-2 text-left text-[13px] text-[#d7d7d7] hover:bg-white/[0.06] hover:text-white"
                       >
-                        Duplicate invoice
+                        <Download className="h-4 w-4" />
+                        Download PDF
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => sendInvoiceEmail(invoice)}
+                        className="flex w-full items-center gap-2 rounded-[5px] px-2 py-2 text-left text-[13px] text-[#d7d7d7] hover:bg-white/[0.06] hover:text-white"
+                      >
+                        <Mail className="h-4 w-4" />
+                        Send Email
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => deleteInvoice(invoice.id)}
+                        className="flex w-full items-center gap-2 rounded-[5px] px-2 py-2 text-left text-[13px] text-[#ff8a8a] hover:bg-[#ff4d4d]/10 hover:text-[#ffb3b3]"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Delete
                       </button>
                     </div>
                   )}
@@ -580,6 +722,54 @@ export default function InvoicesPortalPage() {
           </tbody>
         </table>
       </div>
+
+      {selectedInvoices.length > 0 && (
+        <div className="mt-[29px] flex flex-col gap-4 rounded-[8px] border border-[#686868] bg-black px-[39px] py-[16px] md:flex-row md:items-center md:justify-between">
+          <div className="grid w-full grid-cols-2 gap-5 sm:grid-cols-4 md:max-w-[620px]">
+            <div>
+              <p className="text-[14px] leading-4 text-[#777]">Selected Items</p>
+              <p className="mt-[9px] text-[24px] leading-none text-white">
+                {selectedInvoices.length}
+              </p>
+            </div>
+            <div>
+              <p className="text-[14px] leading-4 text-[#777]">Total Amount</p>
+              <p className="mt-[9px] text-[24px] leading-none text-white">
+                {formatMoney(selectedTotalAmount)}
+              </p>
+            </div>
+            <div>
+              <p className="text-[14px] leading-4 text-[#777]">Total Tax</p>
+              <p className="mt-[9px] text-[24px] leading-none text-white">
+                {formatMoney(selectedTotalTax)}
+              </p>
+            </div>
+            <div>
+              <p className="text-[14px] leading-4 text-[#777]">Grand Total</p>
+              <p className="mt-[9px] text-[24px] leading-none text-white">
+                {formatMoney(selectedTotalAmount + selectedTotalTax)}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex shrink-0 flex-col gap-3 sm:flex-row">
+            <button
+              type="button"
+              onClick={() => setSelectedIds([])}
+              className="h-[42px] rounded-[7px] border border-[#555] bg-[#151515] px-[20px] text-[15px] font-semibold text-white transition-colors hover:border-[#777]"
+            >
+              Clear Selection
+            </button>
+            <button
+              type="button"
+              onClick={processSelectedInvoices}
+              className="h-[42px] rounded-[7px] border border-white bg-white px-[20px] text-[15px] font-semibold text-black transition-colors hover:bg-[#e8e8e8]"
+            >
+              Process Selected
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="mt-[29px] flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
         <p className="text-[17px] leading-none text-[#aaa]">

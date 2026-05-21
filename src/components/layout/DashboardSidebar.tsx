@@ -22,15 +22,15 @@ const primaryNav = [
   { label: "Dashboard", path: "/dashboard", activePath: "/dashboard", icon: LayoutGrid },
   { label: "Invoices", path: "/dashboard/invoices", activePath: "/dashboard/invoices", icon: FileText },
   { label: "Payments", path: "/dashboard/payments", activePath: "/dashboard/payments", icon: CreditCard },
-  { label: "Agencies", path: "/dashboard", icon: Users },
-  { label: "Wallet", path: "/dashboard/payments", icon: WalletCards },
-  { label: "Activity", path: "/dashboard/transactions", activePath: "/dashboard/transactions", icon: Activity },
-  { label: "Reports", path: "/dashboard/documents", activePath: "/dashboard/documents", icon: BarChart3 },
+  { label: "Agencies", path: "/dashboard/agencies", activePath: "/dashboard/agencies", icon: Users },
+  { label: "Wallet", path: "/dashboard/wallet", activePath: "/dashboard/wallet", icon: WalletCards },
+  { label: "Activity", path: "/dashboard/activity", activePath: "/dashboard/activity", icon: Activity },
+  { label: "Reports", path: "/dashboard/reports", activePath: "/dashboard/reports", icon: BarChart3 },
 ];
 
 const secondaryNav = [
   { label: "Settings", path: "/dashboard/settings", activePath: "/dashboard/settings", icon: Settings },
-  { label: "Help & Support", path: "/dashboard/verification", activePath: "/dashboard/verification", icon: HelpCircle },
+  { label: "Help & Support", path: "/dashboard/support", activePath: "/dashboard/support", icon: HelpCircle },
 ];
 
 export function DashboardSidebar() {

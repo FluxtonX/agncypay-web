@@ -7,9 +7,42 @@ import { RecentTransactions } from "../../../components/dashboard/RecentTransact
 import { Card } from "../../../components/ui/Card";
 import { Button } from "../../../components/ui/Button";
 import { Badge } from "../../../components/ui/Badge";
+import { downloadTableReportPdf } from "../../../lib/pdfExport";
+
+function formatCurrency(value: number) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(value);
+}
 
 export default function TransactionsHistoryPage() {
   const { state } = useApp();
+  const exportLedger = () => {
+    downloadTableReportPdf({
+      title: "Transaction Ledger",
+      subtitle: "Audit-ready settlement ledger export with invoice references, payment method, and status.",
+      filename: "agncypay-transaction-ledger.pdf",
+      summary: [
+        { label: "Settlements", value: state.transactions.length.toString() },
+        {
+          label: "Total Amount",
+          value: formatCurrency(state.transactions.reduce((total, transaction) => total + transaction.amount, 0)),
+        },
+        { label: "Currency", value: "USD" },
+      ],
+      columns: ["Transaction", "Invoice", "Amount", "Method", "Status", "Timestamp"],
+      rows: state.transactions.map((transaction) => [
+        transaction.id,
+        transaction.invoiceId,
+        formatCurrency(transaction.amount),
+        transaction.paymentMethod,
+        transaction.status,
+        new Date(transaction.timestamp).toLocaleString(),
+      ]),
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -28,7 +61,7 @@ export default function TransactionsHistoryPage() {
             size="sm"
             variant="secondary"
             leftIcon={<Download className="h-4 w-4" />}
-            onClick={() => alert("Simulation: Excel/CSV export has been compiled and downloaded.")}
+            onClick={exportLedger}
           >
             Export Ledger
           </Button>
