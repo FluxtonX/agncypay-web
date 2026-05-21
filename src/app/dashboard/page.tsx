@@ -1,3 +1,5 @@
+"use client";
+
 import React from "react";
 import Link from "next/link";
 import {
@@ -53,6 +55,63 @@ const recentInvoices = [
   { id: "INV-2842", agency: "Brand Studio", due: "Due 19/05/2026", amount: "$15,800", status: "Paid" },
 ];
 
+const paymentVolumePoints = [
+  { label: "Jan", value: 240000, x: 92, y: 207 },
+  { label: "Feb", value: 320000, x: 156, y: 180 },
+  { label: "Mar", value: 300000, x: 225, y: 187 },
+  { label: "Apr", value: 460000, x: 284, y: 133 },
+  { label: "May", value: 610000, x: 347, y: 82 },
+  { label: "Jun", value: 675000, x: 410, y: 60 },
+];
+
+const invoiceStatusPoints = [
+  { label: "Mon", value: 12, x: 104, y: 180 },
+  { label: "Tue", value: 8, x: 151.5, y: 216 },
+  { label: "Wed", value: 16, x: 199, y: 152 },
+  { label: "Thu", value: 10, x: 246.5, y: 198 },
+  { label: "Fri", value: 19, x: 294, y: 124 },
+  { label: "Sat", value: 5, x: 341.5, y: 242 },
+  { label: "Sun", value: 3, x: 389, y: 262 },
+];
+
+type ChartPoint = {
+  label: string;
+  value: number;
+  x: number;
+  y: number;
+};
+
+function formatChartValue(value: number) {
+  return value >= 1000 ? `$${Math.round(value / 1000)}K` : value.toString();
+}
+
+function getNearestChartPoint(
+  event: React.PointerEvent<SVGSVGElement>,
+  points: ChartPoint[]
+) {
+  const rect = event.currentTarget.getBoundingClientRect();
+  const pointerX = ((event.clientX - rect.left) / rect.width) * 430;
+
+  return points.reduce((nearest, point) =>
+    Math.abs(point.x - pointerX) < Math.abs(nearest.x - pointerX)
+      ? point
+      : nearest
+  );
+}
+
+function dueDisplayToInputDate(due: string) {
+  const match = due.match(/(\d{2})\/(\d{2})\/(\d{4})/);
+  if (!match) return "";
+
+  const [, day, month, year] = match;
+  return `${year}-${month}-${day}`;
+}
+
+function inputDateToDueDisplay(value: string) {
+  const [year, month, day] = value.split("-");
+  return `Due ${day}/${month}/${year}`;
+}
+
 function Panel({
   children,
   className,
@@ -68,8 +127,17 @@ function Panel({
 }
 
 function PaymentTrendChart() {
+  const [activePoint, setActivePoint] = React.useState<ChartPoint | null>(null);
+
   return (
-    <svg className="mt-[34px] h-[310px] w-full" viewBox="0 0 430 310" role="img" aria-label="Payment volume trend chart">
+    <svg
+      className="mt-[34px] h-[310px] w-full"
+      viewBox="0 0 430 310"
+      role="img"
+      aria-label="Payment volume trend chart"
+      onPointerMove={(event) => setActivePoint(getNearestChartPoint(event, paymentVolumePoints))}
+      onPointerLeave={() => setActivePoint(null)}
+    >
       <defs>
         <linearGradient id="volumeFill" x1="0" x2="0" y1="0" y2="1">
           <stop offset="0%" stopColor="#ffffff" stopOpacity="0.18" />
@@ -86,7 +154,7 @@ function PaymentTrendChart() {
         return <line key={`v-${line}`} x1={x} x2={x} y1="18" y2="288" stroke="#151515" strokeDasharray="4 4" />;
       })}
 
-      <line x1="92" x2="410" y1="18" y2="288" stroke="#5d5d5d" />
+      <line x1="92" x2="92" y1="18" y2="288" stroke="#5d5d5d" />
       <line x1="92" x2="410" y1="288" y2="288" stroke="#5d5d5d" />
 
       {[
@@ -108,33 +176,73 @@ function PaymentTrendChart() {
       ))}
 
       <path
-        d="M92 203 C113 191 130 181 156 178 C184 176 205 192 225 182 C247 171 257 148 284 132 C326 106 369 77 410 60 L410 288 L92 288 Z"
+        d="M92 207 C113 194 130 183 156 180 C184 177 205 192 225 187 C247 181 257 149 284 133 C326 107 369 77 410 60 L410 288 L92 288 Z"
         fill="url(#volumeFill)"
       />
       <path
-        d="M92 203 C113 191 130 181 156 178 C184 176 205 192 225 182 C247 171 257 148 284 132 C326 106 369 77 410 60"
+        d="M92 207 C113 194 130 183 156 180 C184 177 205 192 225 187 C247 181 257 149 284 133 C326 107 369 77 410 60"
         fill="none"
         stroke="#f5f5f5"
         strokeLinecap="round"
         strokeWidth="2.7"
       />
+      {paymentVolumePoints.map((point) => (
+        <circle
+          key={point.label}
+          cx={point.x}
+          cy={point.y}
+          r={activePoint?.label === point.label ? 5 : 3}
+          fill="#f5f5f5"
+          opacity={activePoint?.label === point.label ? 1 : 0}
+        />
+      ))}
+      {activePoint && (
+        <g>
+          <line
+            x1={activePoint.x}
+            x2={activePoint.x}
+            y1="18"
+            y2="288"
+            stroke="#8d8d8d"
+            strokeDasharray="4 4"
+          />
+          <circle cx={activePoint.x} cy={activePoint.y} r="5" fill="#f5f5f5" />
+          <g transform={`translate(${Math.min(activePoint.x + 10, 318)} ${Math.max(activePoint.y - 54, 20)})`}>
+            <rect width="96" height="42" rx="6" fill="#0f0f0f" stroke="#4a4a4a" />
+            <text x="10" y="17" fill="#9c9c9c" fontSize="12">
+              {activePoint.label}
+            </text>
+            <text x="10" y="32" fill="#fff" fontSize="14" fontWeight="600">
+              {formatChartValue(activePoint.value)}
+            </text>
+          </g>
+        </g>
+      )}
     </svg>
   );
 }
 
 function InvoiceStatusChart() {
+  const [activePoint, setActivePoint] = React.useState<ChartPoint | null>(null);
   const bars = [
-    { x: 34, h: 108 },
-    { x: 84, h: 72 },
-    { x: 134, h: 136 },
-    { x: 184, h: 90 },
-    { x: 234, h: 164 },
-    { x: 284, h: 46 },
-    { x: 334, h: 26 },
+    { x: 34, h: 108, label: "Mon" },
+    { x: 84, h: 72, label: "Tue" },
+    { x: 134, h: 136, label: "Wed" },
+    { x: 184, h: 90, label: "Thu" },
+    { x: 234, h: 164, label: "Fri" },
+    { x: 284, h: 46, label: "Sat" },
+    { x: 334, h: 26, label: "Sun" },
   ];
 
   return (
-    <svg className="mt-[34px] h-[310px] w-full" viewBox="0 0 430 310" role="img" aria-label="Invoice status overview chart">
+    <svg
+      className="mt-[34px] h-[310px] w-full"
+      viewBox="0 0 430 310"
+      role="img"
+      aria-label="Invoice status overview chart"
+      onPointerMove={(event) => setActivePoint(getNearestChartPoint(event, invoiceStatusPoints))}
+      onPointerLeave={() => setActivePoint(null)}
+    >
       {[0, 1, 2, 3, 4].map((line) => {
         const y = 18 + line * 72;
         return <line key={`h-${line}`} x1="78" x2="410" y1={y} y2={y} stroke="#151515" strokeDasharray="4 4" />;
@@ -144,7 +252,7 @@ function InvoiceStatusChart() {
         return <line key={`v-${line}`} x1={x} x2={x} y1="18" y2="288" stroke="#151515" strokeDasharray="4 4" />;
       })}
 
-      <line x1="78" x2="410" y1="18" y2="288" stroke="#5d5d5d" />
+      <line x1="78" x2="78" y1="18" y2="288" stroke="#5d5d5d" />
       <line x1="78" x2="410" y1="288" y2="288" stroke="#5d5d5d" />
 
       {[
@@ -173,14 +281,51 @@ function InvoiceStatusChart() {
           width="10"
           height={bar.h}
           rx="5"
-          fill="#2b2b2b"
+          fill={activePoint?.label === bar.label ? "#e2e2e2" : "#2b2b2b"}
         />
       ))}
+      {activePoint && (
+        <g>
+          <line
+            x1={activePoint.x}
+            x2={activePoint.x}
+            y1="18"
+            y2="288"
+            stroke="#8d8d8d"
+            strokeDasharray="4 4"
+          />
+          <circle cx={activePoint.x} cy={activePoint.y} r="4.5" fill="#f5f5f5" />
+          <g transform={`translate(${Math.min(activePoint.x + 10, 324)} ${Math.max(activePoint.y - 52, 20)})`}>
+            <rect width="88" height="40" rx="6" fill="#0f0f0f" stroke="#4a4a4a" />
+            <text x="10" y="16" fill="#9c9c9c" fontSize="12">
+              {activePoint.label}
+            </text>
+            <text x="10" y="31" fill="#fff" fontSize="14" fontWeight="600">
+              {activePoint.value} invoices
+            </text>
+          </g>
+        </g>
+      )}
     </svg>
   );
 }
 
 export default function DashboardOverviewPage() {
+  const [dashboardInvoices, setDashboardInvoices] = React.useState(recentInvoices);
+  const [editingDueId, setEditingDueId] = React.useState<string | null>(null);
+
+  const updateRecentInvoiceDueDate = (invoiceId: string, value: string) => {
+    if (!value) return;
+
+    setDashboardInvoices((currentInvoices) =>
+      currentInvoices.map((invoice) =>
+        invoice.id === invoiceId
+          ? { ...invoice, due: inputDateToDueDisplay(value) }
+          : invoice
+      )
+    );
+  };
+
   return (
     <div className="max-w-[1048px]">
       <div>
@@ -293,7 +438,7 @@ export default function DashboardOverviewPage() {
           </div>
 
           <div className="mt-[32px] space-y-[15px]">
-            {recentInvoices.map((invoice) => (
+            {dashboardInvoices.map((invoice) => (
               <div
                 key={invoice.id}
                 className="rounded-[7px] border border-[#666] px-[20px] pb-[19px] pt-[17px]"
@@ -318,7 +463,39 @@ export default function DashboardOverviewPage() {
                 <div className="mt-[18px] flex items-start justify-between gap-4">
                   <div>
                     <p className="text-[17px] leading-5 text-[#a0a0a0]">{invoice.agency}</p>
-                    <p className="mt-[18px] text-[14px] leading-4 text-[#747474]">{invoice.due}</p>
+                    <div className="relative mt-[14px] inline-block">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setEditingDueId((currentId) =>
+                            currentId === invoice.id ? null : invoice.id
+                          )
+                        }
+                        className="rounded-[5px] border border-transparent px-1 py-1 text-[14px] leading-4 text-[#747474] transition-colors hover:border-[#4a4a4a] hover:text-[#b8b8b8]"
+                        aria-label={`Edit due date for ${invoice.id}`}
+                      >
+                        {invoice.due}
+                      </button>
+                      {editingDueId === invoice.id && (
+                        <div className="absolute left-0 top-[30px] z-20 flex items-center gap-2 rounded-[7px] border border-[#555] bg-[#0b0b0b] p-2 shadow-xl">
+                          <input
+                            type="date"
+                            value={dueDisplayToInputDate(invoice.due)}
+                            onChange={(event) =>
+                              updateRecentInvoiceDueDate(invoice.id, event.target.value)
+                            }
+                            className="h-[30px] rounded-[5px] border border-[#444] bg-black px-2 text-[13px] text-white outline-none [color-scheme:dark]"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setEditingDueId(null)}
+                            className="h-[30px] rounded-[5px] border border-[#444] px-2 text-[12px] font-semibold text-white hover:border-[#777]"
+                          >
+                            Done
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
                   <p className="text-[17px] font-semibold leading-5 text-white">{invoice.amount}</p>
                 </div>
@@ -337,7 +514,10 @@ export default function DashboardOverviewPage() {
             </h2>
             <p className="mt-[10px] text-[17px] leading-6 text-[#a1a1a1]">
               You have <span className="font-semibold text-white">23 pending invoices</span> requiring approval totaling{" "}
-              <span className="font-semibold text-white">$487,200</span>. Review now
+              <span className="font-semibold text-white">$487,200</span>.{" "}
+              <Link href="/dashboard/invoices" className="font-semibold text-white underline decoration-[#777] underline-offset-4 hover:decoration-white">
+                Review now
+              </Link>
             </p>
           </div>
         </div>

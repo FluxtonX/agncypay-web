@@ -42,7 +42,7 @@ const metricCards = [
   },
 ];
 
-const invoices = [
+const initialInvoices = [
   {
     id: "INV-2845",
     agency: "Creative Co",
@@ -138,6 +138,23 @@ const invoices = [
 const filterOptions = ["All Invoices", "Pending", "Approved", "Processing", "Paid", "Failed"] as const;
 
 type InvoiceFilter = (typeof filterOptions)[number];
+type InvoiceRow = (typeof initialInvoices)[number];
+
+const pageSize = 6;
+
+function dueDateToInputDate(due: string) {
+  const [day, month, year] = due.split("/");
+  return `${year}-${month}-${day}`;
+}
+
+function inputDateToDueDate(value: string) {
+  const [year, month, day] = value.split("-");
+  return `${day}/${month}/${year}`;
+}
+
+function csvEscape(value: string) {
+  return `"${value.replace(/"/g, '""')}"`;
+}
 
 function MetricPanel({
   children,
@@ -171,39 +188,43 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export default function InvoicesPortalPage() {
+  const [invoiceRows, setInvoiceRows] = useState<InvoiceRow[]>(initialInvoices);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<InvoiceFilter>("All Invoices");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [editingDueId, setEditingDueId] = useState<string | null>(null);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
   const statusCards = useMemo(
     () => [
       {
         label: "Pending Approval",
-        value: invoices.filter((invoice) => invoice.status === "Pending").length.toString(),
+        value: invoiceRows.filter((invoice) => invoice.status === "Pending").length.toString(),
       },
       {
         label: "Approved",
-        value: invoices.filter((invoice) => invoice.status === "Approved").length.toString(),
+        value: invoiceRows.filter((invoice) => invoice.status === "Approved").length.toString(),
       },
       {
         label: "Processing",
-        value: invoices.filter((invoice) => invoice.status === "Processing").length.toString(),
+        value: invoiceRows.filter((invoice) => invoice.status === "Processing").length.toString(),
       },
       {
         label: "Paid",
-        value: invoices.filter((invoice) => invoice.status === "Paid").length.toString(),
+        value: invoiceRows.filter((invoice) => invoice.status === "Paid").length.toString(),
       },
       {
         label: "Failed",
-        value: invoices.filter((invoice) => invoice.status === "Failed").length.toString(),
+        value: invoiceRows.filter((invoice) => invoice.status === "Failed").length.toString(),
       },
     ],
-    []
+    [invoiceRows]
   );
 
   const filteredInvoices = useMemo(() => {
     const query = search.trim().toLowerCase();
 
-    return invoices.filter((invoice) => {
+    return invoiceRows.filter((invoice) => {
       const matchesFilter = filter === "All Invoices" || invoice.status === filter;
       const matchesSearch =
         query.length === 0 ||
@@ -222,12 +243,92 @@ export default function InvoicesPortalPage() {
 
       return matchesFilter && matchesSearch;
     });
-  }, [filter, search]);
+  }, [filter, invoiceRows, search]);
 
   const countForFilter = (option: InvoiceFilter) =>
     option === "All Invoices"
-      ? invoices.length
-      : invoices.filter((invoice) => invoice.status === option).length;
+      ? invoiceRows.length
+      : invoiceRows.filter((invoice) => invoice.status === option).length;
+
+  const pageCount = Math.max(1, Math.ceil(filteredInvoices.length / pageSize));
+  const safeCurrentPage = Math.min(currentPage, pageCount);
+  const pagedInvoices = filteredInvoices.slice(
+    (safeCurrentPage - 1) * pageSize,
+    safeCurrentPage * pageSize
+  );
+
+  const updateDueDate = (invoiceId: string, value: string) => {
+    if (!value) return;
+
+    setInvoiceRows((rows) =>
+      rows.map((invoice) =>
+        invoice.id === invoiceId
+          ? { ...invoice, due: inputDateToDueDate(value) }
+          : invoice
+      )
+    );
+  };
+
+  const updateStatus = (invoiceId: string, status: InvoiceRow["status"]) => {
+    setInvoiceRows((rows) =>
+      rows.map((invoice) =>
+        invoice.id === invoiceId ? { ...invoice, status } : invoice
+      )
+    );
+    setOpenMenuId(null);
+  };
+
+  const duplicateInvoice = (invoiceId: string) => {
+    setInvoiceRows((rows) => {
+      const sourceInvoice = rows.find((invoice) => invoice.id === invoiceId);
+      if (!sourceInvoice) return rows;
+
+      const copyCount = rows.filter((invoice) =>
+        invoice.id.startsWith(`${sourceInvoice.id}-COPY`)
+      ).length + 1;
+      const nextInvoice = {
+        ...sourceInvoice,
+        id: `${sourceInvoice.id}-COPY-${copyCount}`,
+        status: "Pending",
+      };
+
+      return [nextInvoice, ...rows];
+    });
+    setOpenMenuId(null);
+    setCurrentPage(1);
+  };
+
+  const exportInvoices = () => {
+    const rows = filteredInvoices.map((invoice) => [
+      invoice.id,
+      invoice.agency,
+      invoice.campaign,
+      invoice.amount,
+      invoice.fees,
+      invoice.status,
+      invoice.due,
+    ]);
+    const csv = [
+      ["Invoice ID", "Agency", "Campaign", "Amount", "Fees", "Status", "Due Date"],
+      ...rows,
+    ]
+      .map((row) => row.map(csvEscape).join(","))
+      .join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = "agncypay-invoices.csv";
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const resetFilters = () => {
+    setSearch("");
+    setFilter("All Invoices");
+    setCurrentPage(1);
+  };
 
   return (
     <div className="w-full max-w-[1048px]">
@@ -241,7 +342,11 @@ export default function InvoicesPortalPage() {
           </p>
         </div>
 
-        <button className="inline-flex h-[36px] w-full items-center justify-center gap-[12px] rounded-[6px] border border-[#5a5a5a] bg-[#0c0c0c] text-[14px] font-semibold text-white transition-colors hover:border-[#777] md:mt-[21px] md:w-[211px]">
+        <button
+          type="button"
+          onClick={exportInvoices}
+          className="inline-flex h-[36px] w-full items-center justify-center gap-[12px] rounded-[6px] border border-[#5a5a5a] bg-[#0c0c0c] text-[14px] font-semibold text-white transition-colors hover:border-[#777] md:mt-[21px] md:w-[211px]"
+        >
           <Download className="h-4 w-4" />
           Export
         </button>
@@ -253,7 +358,10 @@ export default function InvoicesPortalPage() {
           <input
             aria-label="Search invoices"
             value={search}
-            onChange={(event) => setSearch(event.target.value)}
+            onChange={(event) => {
+              setSearch(event.target.value);
+              setCurrentPage(1);
+            }}
             placeholder="Search invoices..."
             className="h-[36px] w-full border border-[#5a5a5a] bg-black pl-[39px] pr-4 text-[15px] text-white outline-none placeholder:text-[#7a7a7a] focus:border-[#7a7a7a]"
           />
@@ -263,7 +371,10 @@ export default function InvoicesPortalPage() {
           <select
             aria-label="Filter invoices"
             value={filter}
-            onChange={(event) => setFilter(event.target.value as InvoiceFilter)}
+            onChange={(event) => {
+              setFilter(event.target.value as InvoiceFilter);
+              setCurrentPage(1);
+            }}
             className="h-[36px] w-full appearance-none rounded-[6px] border border-[#5a5a5a] bg-black px-[13px] pr-9 text-[15px] font-medium text-white outline-none focus:border-[#7a7a7a]"
           >
             {filterOptions.map((option) => (
@@ -276,8 +387,11 @@ export default function InvoicesPortalPage() {
         </label>
 
         <button
-          aria-label="Filter invoices"
-          className="flex h-[36px] w-full items-center justify-center rounded-[6px] border border-[#5a5a5a] bg-black text-white md:w-10"
+          type="button"
+          aria-label="Reset invoice filters"
+          title="Reset filters"
+          onClick={resetFilters}
+          className="flex h-[36px] w-full items-center justify-center rounded-[6px] border border-[#5a5a5a] bg-black text-white transition-colors hover:border-[#777] md:w-10"
         >
           <Filter className="h-5 w-5" />
         </button>
@@ -341,7 +455,7 @@ export default function InvoicesPortalPage() {
             </tr>
           </thead>
           <tbody>
-            {filteredInvoices.map((invoice) => (
+            {pagedInvoices.map((invoice) => (
               <tr
                 key={invoice.id}
                 className="h-[64px] border-b border-[#505050] last:border-b-0"
@@ -368,13 +482,91 @@ export default function InvoicesPortalPage() {
                   <StatusBadge status={invoice.status} />
                 </td>
                 <td>
-                  <div className="flex items-center gap-[12px] text-[17px] leading-none text-[#a8a8a8]">
+                  <div className="relative flex items-center gap-[12px] text-[17px] leading-none text-[#a8a8a8]">
                     <CalendarDays className="h-[18px] w-[18px] shrink-0 text-[#d1d1d1]" />
-                    {invoice.due}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setEditingDueId((currentId) =>
+                          currentId === invoice.id ? null : invoice.id
+                        )
+                      }
+                      className="rounded-[5px] border border-transparent px-1 py-1 text-left transition-colors hover:border-[#4a4a4a] hover:text-white"
+                      aria-label={`Edit due date for ${invoice.id}`}
+                    >
+                      {invoice.due}
+                    </button>
+                    {editingDueId === invoice.id && (
+                      <div className="absolute left-0 top-[32px] z-30 flex items-center gap-2 rounded-[7px] border border-[#555] bg-[#0b0b0b] p-2 shadow-xl">
+                        <input
+                          type="date"
+                          value={dueDateToInputDate(invoice.due)}
+                          onChange={(event) => updateDueDate(invoice.id, event.target.value)}
+                          className="h-[30px] rounded-[5px] border border-[#444] bg-black px-2 text-[13px] text-white outline-none [color-scheme:dark]"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setEditingDueId(null)}
+                          className="h-[30px] rounded-[5px] border border-[#444] px-2 text-[12px] font-semibold text-white hover:border-[#777]"
+                        >
+                          Done
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </td>
-                <td className="pr-[20px] text-right">
-                  <MoreHorizontal className="ml-auto h-5 w-5 text-[#838383]" />
+                <td className="relative pr-[20px] text-right">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setOpenMenuId((currentId) =>
+                        currentId === invoice.id ? null : invoice.id
+                      )
+                    }
+                    className="ml-auto flex h-8 w-8 items-center justify-center rounded-[6px] border border-transparent text-[#838383] transition-colors hover:border-[#4a4a4a] hover:text-white"
+                    aria-label={`Open actions for ${invoice.id}`}
+                  >
+                    <MoreHorizontal className="h-5 w-5" />
+                  </button>
+                  {openMenuId === invoice.id && (
+                    <div className="absolute right-[20px] top-[48px] z-30 w-[188px] rounded-[7px] border border-[#555] bg-[#0b0b0b] p-2 text-left shadow-xl">
+                      <p className="px-2 pb-2 text-[11px] font-semibold uppercase tracking-wider text-[#777]">
+                        Status
+                      </p>
+                      <select
+                        value={invoice.status}
+                        onChange={(event) =>
+                          updateStatus(invoice.id, event.target.value as InvoiceRow["status"])
+                        }
+                        className="mb-2 h-[32px] w-full rounded-[5px] border border-[#444] bg-black px-2 text-[13px] text-white outline-none"
+                      >
+                        {filterOptions
+                          .filter((option) => option !== "All Invoices")
+                          .map((option) => (
+                            <option key={option} value={option}>
+                              {option}
+                            </option>
+                          ))}
+                      </select>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingDueId(invoice.id);
+                          setOpenMenuId(null);
+                        }}
+                        className="block w-full rounded-[5px] px-2 py-2 text-left text-[13px] text-[#d7d7d7] hover:bg-white/[0.06] hover:text-white"
+                      >
+                        Edit due date
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => duplicateInvoice(invoice.id)}
+                        className="block w-full rounded-[5px] px-2 py-2 text-left text-[13px] text-[#d7d7d7] hover:bg-white/[0.06] hover:text-white"
+                      >
+                        Duplicate invoice
+                      </button>
+                    </div>
+                  )}
                 </td>
               </tr>
             ))}
@@ -391,13 +583,31 @@ export default function InvoicesPortalPage() {
 
       <div className="mt-[29px] flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
         <p className="text-[17px] leading-none text-[#aaa]">
-          Showing {filteredInvoices.length} of {invoices.length} invoices
+          {filteredInvoices.length === 0
+            ? `Showing 0 of ${invoiceRows.length} invoices`
+            : `Showing ${(safeCurrentPage - 1) * pageSize + 1}-${Math.min(
+                safeCurrentPage * pageSize,
+                filteredInvoices.length
+              )} of ${invoiceRows.length} invoices`}
         </p>
         <div className="flex items-center gap-[9px]">
-          <button className="h-[40px] rounded-[6px] border border-[#272727] bg-[#070707] px-[16px] text-[17px] font-semibold text-white">
+          <button
+            type="button"
+            onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+            disabled={safeCurrentPage === 1}
+            className="h-[40px] rounded-[6px] border border-[#272727] bg-[#070707] px-[16px] text-[17px] font-semibold text-white transition-colors hover:border-[#555] disabled:cursor-not-allowed disabled:opacity-45"
+          >
             Previous
           </button>
-          <button className="h-[40px] rounded-[6px] border border-[#272727] bg-[#070707] px-[16px] text-[17px] font-semibold text-white">
+          <span className="min-w-[64px] text-center text-[15px] font-semibold text-[#aaa]">
+            {safeCurrentPage}/{pageCount}
+          </span>
+          <button
+            type="button"
+            onClick={() => setCurrentPage((page) => Math.min(pageCount, page + 1))}
+            disabled={safeCurrentPage === pageCount}
+            className="h-[40px] rounded-[6px] border border-[#272727] bg-[#070707] px-[16px] text-[17px] font-semibold text-white transition-colors hover:border-[#555] disabled:cursor-not-allowed disabled:opacity-45"
+          >
             Next
           </button>
         </div>
