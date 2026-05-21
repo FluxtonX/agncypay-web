@@ -67,8 +67,8 @@ export function DashboardSidebar() {
   };
 
   return (
-    <aside className="hidden h-screen w-[312px] shrink-0 border-r border-[#171717] bg-black lg:flex lg:flex-col">
-      <div className="flex h-[78px] items-center border-b border-[#111] px-[26px]">
+    <aside className="hidden h-screen w-[312px] shrink-0 overflow-y-auto border-r border-[#171717] bg-black lg:flex lg:flex-col">
+      <div className="flex h-[78px] shrink-0 items-center border-b border-[#111] px-[26px]">
         <Link href="/dashboard" aria-label="AgncyPay dashboard" className="flex items-center">
           <Image
             src="/agncypayLogo.png"
@@ -81,7 +81,7 @@ export function DashboardSidebar() {
         </Link>
       </div>
 
-      <nav className="flex-1 px-[15px] pt-[30px]">
+      <nav className="shrink-0 px-[15px] pt-[30px]">
         <div className="space-y-[1px]">{primaryNav.map(renderItem)}</div>
 
         <div className="mt-[58px] space-y-[1px]">
@@ -114,7 +114,7 @@ export function DashboardSidebar() {
         </div>
       </nav>
 
-      <div className="border-t border-[#171717] px-8 py-[32px]">
+      <div className="shrink-0 border-t border-[#171717] px-8 py-[32px]">
         <div className="flex items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-[15px]">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#4a4a4a] bg-[#2d2d2f] text-[15px] font-medium text-white">
