@@ -3,6 +3,7 @@ export type RegisteredUser = {
   password: string;
   fullName: string;
   accountType: "individual" | "agency" | "brand";
+  verificationFlow?: "manual" | "instant";
 };
 
 const REGISTERED_USERS_KEY = "agncypay_registered_users";
@@ -20,7 +21,9 @@ export function getRegisteredUsers(): RegisteredUser[] {
       typeof user?.email === "string" &&
       typeof user?.password === "string" &&
       typeof user?.fullName === "string" &&
-      ["individual", "agency", "brand"].includes(user?.accountType)
+      ["individual", "agency", "brand"].includes(user?.accountType) &&
+      (user?.verificationFlow === undefined ||
+        ["manual", "instant"].includes(user.verificationFlow))
     ));
   } catch (error) {
     console.error("Failed to load registered users:", error);

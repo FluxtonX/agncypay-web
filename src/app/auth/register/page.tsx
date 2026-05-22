@@ -3,6 +3,8 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Building2, Check, CreditCard } from "lucide-react";
+import { useApp } from "../../../context/AppContext";
 import { saveRegisteredUser } from "../../../lib/authStorage";
 
 const DEMO_EMAIL = "martin.safi@adidas.com";
@@ -10,6 +12,7 @@ const DEMO_PASSWORD = "password123";
 
 export default function RegisterPage() {
   const router = useRouter();
+  const { loginUser, updateBusinessSetup } = useApp();
 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -17,6 +20,7 @@ export default function RegisterPage() {
   const [companyName, setCompanyName] = useState("");
   const [password, setPassword] = useState("");
   const [agree, setAgree] = useState(false);
+  const [verificationFlow, setVerificationFlow] = useState<"manual" | "instant">("instant");
   
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
@@ -66,9 +70,20 @@ export default function RegisterPage() {
         password,
         fullName: `${firstName.trim()} ${lastName.trim()}`,
         accountType: "brand",
+        verificationFlow,
+      });
+      loginUser(email.trim().toLowerCase(), `${firstName.trim()} ${lastName.trim()}`, "brand");
+      updateBusinessSetup({
+        legalName: companyName.trim(),
+        brandName: companyName.trim(),
+        email: email.trim().toLowerCase(),
       });
       setIsLoading(false);
-      router.push("/auth/login");
+      router.push(
+        verificationFlow === "instant"
+          ? "/verification/instant"
+          : "/verification/business-info"
+      );
     }, 1500);
   };
 
@@ -187,11 +202,28 @@ export default function RegisterPage() {
               Create Account
             </h2>
             <p className="text-[#8E8E93] text-sm mt-1.5 font-normal">
-              Get started with AgencyPay
+              Choose how your business should be verified
             </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <VerificationFlowOption
+                selected={verificationFlow === "instant"}
+                title="Instant"
+                description="Connect bank"
+                icon={<CreditCard className="h-4 w-4" strokeWidth={1.9} />}
+                onClick={() => setVerificationFlow("instant")}
+              />
+              <VerificationFlowOption
+                selected={verificationFlow === "manual"}
+                title="Manual"
+                description="Full KYB form"
+                icon={<Building2 className="h-4 w-4" strokeWidth={1.9} />}
+                onClick={() => setVerificationFlow("manual")}
+              />
+            </div>
+
             {/* First Name & Last Name */}
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-2 w-full">
@@ -364,5 +396,52 @@ export default function RegisterPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+interface VerificationFlowOptionProps {
+  selected: boolean;
+  title: string;
+  description: string;
+  icon: React.ReactNode;
+  onClick: () => void;
+}
+
+function VerificationFlowOption({
+  selected,
+  title,
+  description,
+  icon,
+  onClick,
+}: VerificationFlowOptionProps) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex min-h-[82px] items-start gap-3 rounded-lg border p-3 text-left transition-colors ${
+        selected
+          ? "border-white bg-white/[0.06] text-white"
+          : "border-[#262626] bg-[#0B0B0B] text-[#8E8E93] hover:border-white/30 hover:text-white"
+      }`}
+    >
+      <span
+        className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border ${
+          selected ? "border-white text-white" : "border-[#3A3A3A] text-[#8E8E93]"
+        }`}
+      >
+        {icon}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="flex items-center justify-between gap-2">
+          <span className="text-[14px] font-semibold leading-tight text-white">
+            {title}
+          </span>
+          {selected ? <Check className="h-4 w-4 shrink-0" strokeWidth={2.4} /> : null}
+        </span>
+        <span className="mt-1 block text-[12px] leading-snug text-[#8E8E93]">
+          {description}
+        </span>
+      </span>
+    </button>
   );
 }

@@ -79,16 +79,34 @@ const KYB_STEPS = [
   },
 ];
 
+const INSTANT_STEPS = [
+  {
+    id: 1,
+    label: "Simple Signup",
+    path: "/verification/instant",
+    icon: UserRound,
+  },
+  {
+    id: 2,
+    label: "Bank Verification",
+    path: "/verification/instant/connect-bank",
+    icon: CreditCard,
+  },
+];
+
 export function VerificationLayout({ children }: VerificationLayoutProps) {
   const pathname = usePathname();
   const router = useRouter();
   const stepperRef = React.useRef<HTMLDivElement | null>(null);
   const activeStepRef = React.useRef<HTMLButtonElement | null>(null);
+  const isInstantFlow = pathname.startsWith("/verification/instant");
+  const steps = isInstantFlow ? INSTANT_STEPS : KYB_STEPS;
   const currentIndex = Math.max(
     0,
-    KYB_STEPS.findIndex((step) => step.path === pathname)
+    steps.findIndex((step) => step.path === pathname)
   );
-  const currentStep = KYB_STEPS[currentIndex] || KYB_STEPS[0];
+  const currentStep = steps[currentIndex] || steps[0];
+  const progressWidth = `${((currentStep.id - 1) / steps.length) * 100 + 100 / steps.length}%`;
 
   React.useEffect(() => {
     const stepper = stepperRef.current;
@@ -122,14 +140,14 @@ export function VerificationLayout({ children }: VerificationLayoutProps) {
           </Link>
 
           <div className="text-[13px] font-medium leading-none text-[#8B8B8B] sm:text-[15px]">
-            Step {currentStep.id} of 9
+            Step {currentStep.id} of {steps.length}
           </div>
         </div>
 
         <div className="absolute bottom-0 left-5 right-5 h-1 bg-[#242424] sm:left-8 sm:right-8 lg:left-10 lg:right-10">
           <div
             className="h-full bg-white transition-[width] duration-300"
-            style={{ width: `${((currentStep.id - 1) / 9) * 100 + 11.1}%` }}
+            style={{ width: progressWidth }}
           />
         </div>
       </header>
@@ -139,7 +157,7 @@ export function VerificationLayout({ children }: VerificationLayoutProps) {
         className="h-[78px] overflow-x-auto overflow-y-hidden border-b border-[#171717] bg-black px-5 sm:h-[86px] sm:px-8 lg:px-10 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         <div className="flex h-full w-max min-w-full items-center gap-2 pr-8 sm:gap-[10px] sm:pr-12">
-          {KYB_STEPS.map((step, index) => {
+          {steps.map((step, index) => {
             const Icon = step.icon;
             const isActive = step.id === currentStep.id;
             const isPast = step.id < currentStep.id;
@@ -178,7 +196,7 @@ export function VerificationLayout({ children }: VerificationLayoutProps) {
                   </span>
                 </button>
 
-                {index < KYB_STEPS.length - 1 && (
+                {index < steps.length - 1 && (
                   <span className="block h-px w-5 shrink-0 bg-[#A7A7A7] sm:w-7" />
                 )}
               </React.Fragment>

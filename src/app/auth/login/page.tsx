@@ -78,8 +78,12 @@ export default function LoginPage() {
         registeredUser?.accountType || "brand"
       );
       setIsLoading(false);
-      
-      router.push("/verification/business-info");
+
+      router.push(
+        registeredUser?.verificationFlow === "instant"
+          ? "/verification/instant"
+          : "/verification/business-info"
+      );
     }, 1500);
   };
 
