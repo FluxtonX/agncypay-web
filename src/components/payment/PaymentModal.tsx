@@ -107,7 +107,7 @@ export function PaymentModal({ isOpen, onClose, invoice }: PaymentModalProps) {
             {/* Header */}
             <div className="flex items-center justify-between border-b border-white/[0.06] px-6 py-4">
               <div className="flex items-center gap-2">
-                <ShieldCheck className="h-5 w-5 text-[#10B981]" />
+                <ShieldCheck className="h-5 w-5 text-white" />
                 <h3 className="text-sm font-bold text-white uppercase tracking-wider">
                   {payState === "summary" && "Confirm Brand Payment"}
                   {payState === "processing" && "Processing Settlement"}
@@ -138,7 +138,7 @@ export function PaymentModal({ isOpen, onClose, invoice }: PaymentModalProps) {
                       </div>
                       <div>
                         <h4 className="text-xs font-bold text-white">Adidas AG</h4>
-                        <p className="text-[10px] text-[#6B7280]/60 mt-0.5">Invoice {invoice.id}</p>
+                      <p className="text-[10px] text-[#8f8f8f] mt-0.5">Invoice {invoice.id}</p>
                       </div>
                     </div>
                     <Badge variant="warning">Payable</Badge>
@@ -147,28 +147,28 @@ export function PaymentModal({ isOpen, onClose, invoice }: PaymentModalProps) {
                   {/* Due Date & Settlement Currency */}
                   <div className="grid grid-cols-2 gap-4 text-xs">
                     <div className="bg-white/[0.01] border border-white/[0.04] p-3 rounded-lg">
-                      <p className="text-[#6B7280]/60 font-semibold uppercase tracking-wider text-[9px]">Due Date</p>
+                      <p className="text-[#8f8f8f] font-semibold uppercase tracking-wider text-[9px]">Due Date</p>
                       <p className="text-white font-bold mt-1">{formatDate(invoice.dueDate)}</p>
                     </div>
                     <div className="bg-white/[0.01] border border-white/[0.04] p-3 rounded-lg">
-                      <p className="text-[#6B7280]/60 font-semibold uppercase tracking-wider text-[9px]">Settlement Method</p>
+                      <p className="text-[#8f8f8f] font-semibold uppercase tracking-wider text-[9px]">Settlement Method</p>
                       <p className="text-white font-bold mt-1">AgncyPay ACH Secure</p>
                     </div>
                   </div>
 
                   {/* Pricing grid */}
                   <div className="space-y-2 border-b border-white/[0.06] pb-4 text-xs">
-                    <div className="flex justify-between text-[#6B7280]">
+                    <div className="flex justify-between text-[#8f8f8f]">
                       <span>Invoice Subtotal</span>
                       <span className="font-semibold text-white">{formatCurrency(invoice.amount)}</span>
                     </div>
-                    <div className="flex justify-between text-[#6B7280]">
+                    <div className="flex justify-between text-[#8f8f8f]">
                       <span>Reconciliation Processing Fee</span>
-                      <span className="font-semibold text-[#10B981]">Free (SaaS Plan)</span>
+                      <span className="font-semibold text-white">Free (SaaS Plan)</span>
                     </div>
-                    <div className="flex justify-between text-[#6B7280]">
+                    <div className="flex justify-between text-[#8f8f8f]">
                       <span>ACH Gateway Discount</span>
-                      <span className="font-semibold text-[#22C55E]">- {formatCurrency(0)}</span>
+                      <span className="font-semibold text-white">- {formatCurrency(0)}</span>
                     </div>
                   </div>
 
@@ -179,7 +179,7 @@ export function PaymentModal({ isOpen, onClose, invoice }: PaymentModalProps) {
 
                   {/* Payment method selector mock */}
                   <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">
+                    <label className="text-[10px] font-bold text-[#8f8f8f] uppercase tracking-wider">
                       Select Funding Account
                     </label>
                     <div className="grid grid-cols-2 gap-3">
@@ -189,14 +189,14 @@ export function PaymentModal({ isOpen, onClose, invoice }: PaymentModalProps) {
                         className={cn(
                           "p-3 rounded-xl border text-left cursor-pointer transition-all",
                           selectedMethod === "ach"
-                            ? "bg-[#10B981]/15 border-[#10B981] text-white"
-                            : "border-white/10 text-[#6B7280] hover:bg-white/5"
+                            ? "bg-white border-white text-black"
+                            : "border-white/10 text-[#8f8f8f] hover:bg-white/5"
                         )}
                       >
                         <div className="flex items-center gap-1.5 font-bold text-xs">
                           <CreditCard className="h-3.5 w-3.5" /> Corporate ACH
                         </div>
-                        <span className="text-[9px] text-[#6B7280]/60 mt-1 block">Deutsche Bank (...1212)</span>
+                        <span className={cn("text-[9px] mt-1 block", selectedMethod === "ach" ? "text-[#333]" : "text-[#8f8f8f]")}>Deutsche Bank (...1212)</span>
                       </button>
                       
                       <button
@@ -205,20 +205,20 @@ export function PaymentModal({ isOpen, onClose, invoice }: PaymentModalProps) {
                         className={cn(
                           "p-3 rounded-xl border text-left cursor-pointer transition-all",
                           selectedMethod === "card"
-                            ? "bg-[#10B981]/15 border-[#10B981] text-white"
-                            : "border-white/10 text-[#6B7280] hover:bg-white/5"
+                            ? "bg-white border-white text-black"
+                            : "border-white/10 text-[#8f8f8f] hover:bg-white/5"
                         )}
                       >
                         <div className="flex items-center gap-1.5 font-bold text-xs">
                           <CreditCard className="h-3.5 w-3.5" /> Corporate Card
                         </div>
-                        <span className="text-[9px] text-[#6B7280]/60 mt-1 block">Visa Signature (...8930)</span>
+                        <span className={cn("text-[9px] mt-1 block", selectedMethod === "card" ? "text-[#333]" : "text-[#8f8f8f]")}>Visa Signature (...8930)</span>
                       </button>
                     </div>
                   </div>
 
                   {/* Security message */}
-                  <div className="flex items-start gap-2 bg-[#22C55E]/5 border border-[#22C55E]/10 p-3 rounded-lg text-[10px] text-[#22C55E] leading-relaxed">
+                  <div className="flex items-start gap-2 bg-black border border-[#444] p-3 rounded-lg text-[10px] text-[#d7d7d7] leading-relaxed">
                     <Lock className="h-3.5 w-3.5 shrink-0 mt-0.5" />
                     <span>
                       Payment is protected by AgncyPay Secure Vaulting. Compliance verification guarantees instant matching and automatic bookkeeping reconciliation on Adidas Group ledgers.
@@ -242,13 +242,13 @@ export function PaymentModal({ isOpen, onClose, invoice }: PaymentModalProps) {
                 <div className="py-8 flex flex-col items-center justify-center text-center space-y-6">
                   {/* Animated Loader Circle */}
                   <div className="relative flex items-center justify-center">
-                    <RefreshCw className="h-16 w-16 text-[#10B981] animate-spin stroke-[1.5px]" />
+                    <RefreshCw className="h-16 w-16 text-white animate-spin stroke-[1.5px]" />
                     <Lock className="absolute h-6 w-6 text-white animate-pulse" />
                   </div>
 
                   <div className="space-y-1">
                     <h3 className="text-base font-bold text-white">Settling {formatCurrency(invoice.amount)}</h3>
-                    <p className="text-xs text-[#6B7280]">Federal Reserve ACH rails are active</p>
+                    <p className="text-xs text-[#8f8f8f]">Payment rails are active</p>
                   </div>
 
                   {/* Micro checklist of validation steps */}
@@ -262,7 +262,7 @@ export function PaymentModal({ isOpen, onClose, invoice }: PaymentModalProps) {
                           key={idx}
                           className={cn(
                             "flex items-center gap-2.5 text-xs transition-all duration-300",
-                            isDone ? "text-[#22C55E]" : isActive ? "text-[#10B981]" : "text-[#6B7280]/30"
+                            isDone ? "text-white" : isActive ? "text-white" : "text-[#5f5f5f]"
                           )}
                         >
                           {isDone ? (
@@ -284,7 +284,7 @@ export function PaymentModal({ isOpen, onClose, invoice }: PaymentModalProps) {
               {payState === "success" && (
                 <div className="py-6 flex flex-col items-center justify-center text-center space-y-6">
                   {/* Drawing Checkmark Icon Container */}
-                  <div className="h-16 w-16 rounded-full bg-[#22C55E]/10 border border-[#22C55E]/20 flex items-center justify-center text-[#22C55E] shadow-[0_0_20px_rgba(34,197,94,0.2)]">
+                  <div className="h-16 w-16 rounded-full bg-white border border-white flex items-center justify-center text-black">
                     <svg className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path
                         className="check-draw"
@@ -298,25 +298,25 @@ export function PaymentModal({ isOpen, onClose, invoice }: PaymentModalProps) {
 
                   <div className="space-y-1">
                     <h3 className="text-lg font-black text-white tracking-tight">Payment Settled Successfully</h3>
-                    <p className="text-xs text-[#6B7280]">Adidas ledger book reconciliations completed.</p>
+                    <p className="text-xs text-[#8f8f8f]">Ledger reconciliation completed.</p>
                   </div>
 
                   {/* Transaction metadata */}
                   <div className="w-full bg-white/[0.01] border border-white/[0.04] p-4 rounded-xl text-left text-xs divide-y divide-white/[0.04] space-y-2">
                     <div className="flex justify-between py-1">
-                      <span className="text-[#6B7280]/60">Transaction Reference</span>
+                      <span className="text-[#8f8f8f]">Transaction Reference</span>
                       <span className="font-mono font-bold text-white">{txId}</span>
                     </div>
                     <div className="flex justify-between py-2">
-                      <span className="text-[#6B7280]/60">Invoice ID</span>
+                      <span className="text-[#8f8f8f]">Invoice ID</span>
                       <span className="font-bold text-white">{invoice.id}</span>
                     </div>
                     <div className="flex justify-between py-2">
-                      <span className="text-[#6B7280]/60">Settlement Amount</span>
-                      <span className="font-extrabold text-[#22C55E]">{formatCurrency(invoice.amount)}</span>
+                      <span className="text-[#8f8f8f]">Settlement Amount</span>
+                      <span className="font-extrabold text-white">{formatCurrency(invoice.amount)}</span>
                     </div>
                     <div className="flex justify-between py-2">
-                      <span className="text-[#6B7280]/60">Settled At</span>
+                      <span className="text-[#8f8f8f]">Settled At</span>
                       <span className="font-bold text-white">{new Date().toLocaleString()}</span>
                     </div>
                   </div>
@@ -336,17 +336,17 @@ export function PaymentModal({ isOpen, onClose, invoice }: PaymentModalProps) {
               {/* STATE 4: FAILED */}
               {payState === "failed" && (
                 <div className="py-6 flex flex-col items-center justify-center text-center space-y-6">
-                  <div className="h-16 w-16 rounded-full bg-[#EF4444]/10 border border-[#EF4444]/20 flex items-center justify-center text-[#EF4444] shadow-[0_0_20px_rgba(239,68,68,0.2)]">
+                  <div className="h-16 w-16 rounded-full bg-[#111] border border-[#555] flex items-center justify-center text-white">
                     <XCircle className="h-10 w-10" />
                   </div>
 
                   <div className="space-y-1">
                     <h3 className="text-lg font-black text-white tracking-tight">Payment Settlement Declined</h3>
-                    <p className="text-xs text-[#EF4444]">{errorMessage}</p>
+                    <p className="text-xs text-[#b8b8b8]">{errorMessage}</p>
                   </div>
 
                   <div className="w-full bg-white/[0.01] border border-white/[0.04] p-4 rounded-xl text-left text-xs space-y-2">
-                    <p className="text-[#6B7280] leading-relaxed">
+                    <p className="text-[#8f8f8f] leading-relaxed">
                       Federal Reserve ACH returned code: <span className="font-mono text-white font-semibold">R01 (Insufficient Corporate Treasury Funds)</span>. If you are using delegated bank controls, please verify treasury permissions.
                     </p>
                   </div>

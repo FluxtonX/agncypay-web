@@ -1,8 +1,13 @@
+import { AccountType, WorkspaceType, normalizeWorkspaceType } from "../types/workspace";
+
 export type RegisteredUser = {
   email: string;
   password: string;
   fullName: string;
-  accountType: "individual" | "agency" | "brand";
+  accountType: AccountType;
+  workspaceType?: WorkspaceType;
+  workspaceName?: string;
+  agencyId?: string;
   verificationFlow?: "manual" | "instant";
 };
 
@@ -21,10 +26,20 @@ export function getRegisteredUsers(): RegisteredUser[] {
       typeof user?.email === "string" &&
       typeof user?.password === "string" &&
       typeof user?.fullName === "string" &&
-      ["individual", "agency", "brand"].includes(user?.accountType) &&
+      [
+        "individual",
+        "agency",
+        "brand",
+        "talent_independent",
+        "talent_agency",
+        "mother_agency",
+      ].includes(user?.accountType) &&
       (user?.verificationFlow === undefined ||
         ["manual", "instant"].includes(user.verificationFlow))
-    ));
+    )).map((user) => ({
+      ...user,
+      workspaceType: user.workspaceType ?? normalizeWorkspaceType(user.accountType),
+    }));
   } catch (error) {
     console.error("Failed to load registered users:", error);
     return [];

@@ -6,6 +6,7 @@ import { cn } from "../../../lib/utils";
 
 type Agency = {
   id: string;
+  agencyId: string;
   name: string;
   email: string;
   phone: string;
@@ -18,6 +19,7 @@ type Agency = {
 const initialAgencies: Agency[] = [
   {
     id: "creative-co",
+    agencyId: "AGY-1001",
     name: "Creative Co",
     email: "billing@creativeco.com",
     phone: "+1 (555) 123-4567",
@@ -28,6 +30,7 @@ const initialAgencies: Agency[] = [
   },
   {
     id: "media-partners",
+    agencyId: "AGY-1002",
     name: "Media Partners",
     email: "contact@mediapartners.com",
     phone: "+1 (555) 234-5678",
@@ -38,6 +41,7 @@ const initialAgencies: Agency[] = [
   },
   {
     id: "digital-agency",
+    agencyId: "AGY-1003",
     name: "Digital Agency",
     email: "team@digitalagency.com",
     phone: "+1 (555) 345-6789",
@@ -48,6 +52,7 @@ const initialAgencies: Agency[] = [
   },
   {
     id: "brand-studio",
+    agencyId: "AGY-1004",
     name: "Brand Studio",
     email: "hello@brandstudio.com",
     phone: "+1 (555) 456-7890",
@@ -58,6 +63,7 @@ const initialAgencies: Agency[] = [
   },
   {
     id: "marketing-pro",
+    agencyId: "AGY-1005",
     name: "Marketing Pro",
     email: "info@marketingpro.com",
     phone: "+1 (555) 567-8901",
@@ -73,14 +79,6 @@ function formatCompactMoney(value: number) {
     return `$${Math.round(value / 1000)}K`;
   }
 
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 0,
-  }).format(value);
-}
-
-function formatMoney(value: number) {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",
@@ -119,9 +117,19 @@ function AgencyCard({
           <div className="flex h-[41px] w-[41px] shrink-0 items-center justify-center rounded-[8px] border border-[#505050] bg-[#121212] text-[#d8d8d8]">
             <Building2 className="h-[24px] w-[24px]" />
           </div>
-          <h2 className="truncate text-[31px] font-semibold leading-none text-white">
-            {agency.name}
-          </h2>
+          <div className="min-w-0">
+            <div className="flex min-w-0 flex-wrap items-center gap-3">
+              <h2 className="truncate text-[31px] font-semibold leading-none text-white">
+                {agency.name}
+              </h2>
+              <span className="inline-flex h-[28px] items-center rounded-[7px] border border-[#444] bg-[#101010] px-[11px] font-mono text-[13px] font-semibold leading-none text-[#d7d7d7]">
+                {agency.agencyId}
+              </span>
+            </div>
+            <p className="mt-[9px] text-[14px] font-semibold leading-4 text-[#777]">
+              Agency ID
+            </p>
+          </div>
         </div>
         <span
           className={cn(
@@ -146,21 +154,6 @@ function AgencyCard({
         </div>
       </div>
 
-      <div className="mt-[28px] grid grid-cols-2 border-t border-[#343434] pt-[12px]">
-        <div>
-          <p className="text-[15px] leading-5 text-[#777]">Total Spend</p>
-          <p className="mt-[8px] text-[20px] font-semibold leading-6 text-white">
-            {formatCompactMoney(agency.totalSpend)}
-          </p>
-        </div>
-        <div>
-          <p className="text-[15px] leading-5 text-[#777]">Invoices</p>
-          <p className="mt-[8px] text-[20px] font-semibold leading-6 text-white">
-            {agency.invoices}
-          </p>
-        </div>
-      </div>
-
       <button
         type="button"
         onClick={() => onViewDetails(agency)}
@@ -178,10 +171,9 @@ export default function AgenciesPage() {
   const [activeAgency, setActiveAgency] = useState<Agency | null>(null);
   const [form, setForm] = useState({
     name: "",
+    agencyId: "",
     email: "",
     phone: "",
-    totalSpend: "",
-    invoices: "",
   });
 
   const stats = useMemo(() => {
@@ -203,21 +195,21 @@ export default function AgenciesPage() {
   const addAgency = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    const totalSpend = Number(form.totalSpend) || 0;
-    const invoices = Number(form.invoices) || 0;
+    const agencyId = form.agencyId.trim().toUpperCase();
     const nextAgency: Agency = {
-      id: `${form.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${Date.now()}`,
+      id: `${agencyId.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${Date.now()}`,
+      agencyId,
       name: form.name.trim(),
       email: form.email.trim(),
       phone: form.phone.trim(),
       status: "Active",
-      totalSpend,
-      invoices,
-      monthlySpend: Math.round(totalSpend / 6),
+      totalSpend: 0,
+      invoices: 0,
+      monthlySpend: 0,
     };
 
     setAgencies((currentAgencies) => [nextAgency, ...currentAgencies]);
-    setForm({ name: "", email: "", phone: "", totalSpend: "", invoices: "" });
+    setForm({ name: "", agencyId: "", email: "", phone: "" });
     setIsAddOpen(false);
   };
 
@@ -283,10 +275,9 @@ export default function AgenciesPage() {
             <div className="mt-[28px] grid grid-cols-1 gap-4 sm:grid-cols-2">
               {[
                 ["Agency Name", "name", "Creative Studio"],
+                ["Agency ID", "agencyId", "AGY-1006"],
                 ["Email", "email", "billing@example.com"],
                 ["Phone", "phone", "+1 (555) 000-0000"],
-                ["Total Spend", "totalSpend", "125000"],
-                ["Invoices", "invoices", "12"],
               ].map(([label, key, placeholder]) => (
                 <label key={key} className="flex flex-col gap-2">
                   <span className="text-[14px] font-semibold text-[#8d8d8d]">
@@ -342,6 +333,10 @@ export default function AgenciesPage() {
 
             <div className="mt-[29px] space-y-[15px] border-b border-[#343434] pb-[24px]">
               <p className="flex items-center gap-[12px] text-[17px] text-[#b8b8b8]">
+                <span className="font-semibold text-[#777]">Agency ID</span>
+                <span className="font-mono text-white">{activeAgency.agencyId}</span>
+              </p>
+              <p className="flex items-center gap-[12px] text-[17px] text-[#b8b8b8]">
                 <Mail className="h-[19px] w-[19px]" />
                 {activeAgency.email}
               </p>
@@ -351,7 +346,7 @@ export default function AgenciesPage() {
               </p>
             </div>
 
-            <div className="mt-[24px] grid grid-cols-3 gap-4">
+            <div className="mt-[24px] grid grid-cols-2 gap-4">
               <div>
                 <p className="text-[14px] text-[#777]">Status</p>
                 <p className="mt-2 text-[18px] font-semibold text-white">
@@ -359,15 +354,9 @@ export default function AgenciesPage() {
                 </p>
               </div>
               <div>
-                <p className="text-[14px] text-[#777]">Total Spend</p>
+                <p className="text-[14px] text-[#777]">Agency ID</p>
                 <p className="mt-2 text-[18px] font-semibold text-white">
-                  {formatMoney(activeAgency.totalSpend)}
-                </p>
-              </div>
-              <div>
-                <p className="text-[14px] text-[#777]">Invoices</p>
-                <p className="mt-2 text-[18px] font-semibold text-white">
-                  {activeAgency.invoices}
+                  {activeAgency.agencyId}
                 </p>
               </div>
             </div>

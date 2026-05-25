@@ -8,6 +8,7 @@ import { useApp } from "../../../context/AppContext";
 import { Input } from "../../../components/ui/Input";
 import { Button } from "../../../components/ui/Button";
 import { Card } from "../../../components/ui/Card";
+import { normalizeWorkspaceType } from "../../../types/workspace";
 
 export default function VerifyEmailPage() {
   const router = useRouter();
@@ -16,6 +17,12 @@ export default function VerifyEmailPage() {
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
+  const workspaceType = state.user ? normalizeWorkspaceType(state.user.accountType) : "brand";
+  const verificationRoute =
+    workspaceType === "talent_agency" || workspaceType === "talent_independent"
+      ? "/verification/representative"
+      : "/verification/business-info";
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,11 +39,11 @@ export default function VerifyEmailPage() {
       const verified = verifyEmail(code);
       setIsLoading(false);
       
-      // Bypass validation check and always navigate
-      router.push("/onboarding/business-setup");
+      // Bypass validation check and always navigate in the simulator.
+      router.push(verificationRoute);
       
       // if (verified) {
-      //   router.push("/onboarding/business-setup");
+      //   router.push(verificationRoute);
       // } else {
       //   setError("Invalid confirmation code. (Use code '123456' for simulation)");
       // }
@@ -58,7 +65,7 @@ export default function VerifyEmailPage() {
           <h2 className="text-xl font-bold tracking-tight text-white mt-4">
             Verify your email address
           </h2>
-          <p className="text-xs text-[#6B7280]">
+          <p className="text-xs text-[#8f8f8f]">
             Enter the 6-digit verification code dispatched to <span className="font-semibold text-white">{state.user?.email || "your email"}</span>.
           </p>
         </div>
@@ -81,10 +88,10 @@ export default function VerifyEmailPage() {
             />
 
             {/* Warning block about enterprise email verification */}
-            <div className="flex items-start gap-2 bg-[#10B981]/5 border border-[#10B981]/15 rounded-lg p-3 text-[11px] text-[#6B7280] leading-relaxed">
-              <ShieldAlert className="h-4 w-4 text-[#10B981] shrink-0 mt-0.5" />
+            <div className="flex items-start gap-2 rounded-lg border border-[#444] bg-black p-3 text-[11px] leading-relaxed text-[#8f8f8f]">
+              <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-white" />
               <div>
-                <span className="font-semibold text-white">Security Tip:</span> For branded corporate business profiles, email domain check (e.g. @adidas.com) must be verified to complete the manual compliance review.
+                <span className="font-semibold text-white">Security Tip:</span> Email verification protects your Agncy identity before {workspaceType === "talent_agency" || workspaceType === "talent_independent" ? "KYC" : "KYB"} starts.
               </div>
             </div>
 
@@ -99,11 +106,11 @@ export default function VerifyEmailPage() {
           </form>
 
           {/* Resend actions */}
-          <div className="flex items-center justify-between text-xs pt-1 text-[#6B7280]">
+          <div className="flex items-center justify-between pt-1 text-xs text-[#8f8f8f]">
             <span>Didn&apos;t receive code?</span>
             <button
               onClick={handleResend}
-              className="text-[#10B981] hover:underline font-semibold cursor-pointer"
+              className="cursor-pointer font-semibold text-white hover:underline"
             >
               Resend Code
             </button>
@@ -111,14 +118,14 @@ export default function VerifyEmailPage() {
 
           <div className="relative flex py-1 items-center text-xs">
             <div className="flex-grow border-t border-[#1F1F1F]" />
-            <span className="flex-shrink mx-4 text-[#4B5563]">SIMULATOR HINT</span>
+            <span className="mx-4 flex-shrink text-[#777]">SIMULATOR HINT</span>
             <div className="flex-grow border-t border-[#1F1F1F]" />
           </div>
 
           <button
             type="button"
             onClick={() => setCode("123456")}
-            className="w-full flex items-center justify-center gap-1.5 p-2 rounded-lg border border-dashed border-[#1F1F1F] hover:border-[#2A2A2A] text-xs font-semibold text-[#6B7280] transition-colors cursor-pointer"
+            className="flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-dashed border-[#444] p-2 text-xs font-semibold text-[#8f8f8f] transition-colors hover:border-[#777] hover:text-white"
           >
             Auto-fill mock code: <span className="font-bold text-white">123456</span>
           </button>

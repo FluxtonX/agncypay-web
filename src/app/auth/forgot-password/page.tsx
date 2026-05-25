@@ -48,7 +48,7 @@ export default function ForgotPasswordPage() {
         <Card className="border-[#1F1F1F] p-6 bg-[#0D0D0D]">
           {isSubmitted ? (
             <div className="space-y-4 text-center">
-              <div className="h-12 w-12 rounded-full bg-[#10B981]/10 border border-[#10B981]/25 flex items-center justify-center text-[#10B981] mx-auto">
+              <div className="h-12 w-12 rounded-full bg-white/[0.06] border border-white/15 flex items-center justify-center text-white mx-auto">
                 <Send className="h-5 w-5" />
               </div>
               <h3 className="text-sm font-bold text-white">Reset Link Dispatched</h3>

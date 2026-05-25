@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { ShieldCheck, CheckCircle2, AlertTriangle, ArrowRight, Lock } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { VerificationGate } from "../../../components/dashboard/VerificationGate";
 import { Card } from "../../../components/ui/Card";
@@ -45,8 +45,8 @@ export default function VerificationPage() {
           <VerificationGate />
 
           {isApproved && (
-            <Card className="border-[#22C55E]/20 bg-[#22C55E]/5 p-5 text-xs text-[#94A3B8] leading-relaxed flex items-start gap-3">
-              <CheckCircle2 className="h-5 w-5 text-[#22C55E] shrink-0 mt-0.5" />
+            <Card className="border-white/10 bg-white/[0.03] p-5 text-xs text-[#94A3B8] leading-relaxed flex items-start gap-3">
+              <CheckCircle2 className="h-5 w-5 text-white shrink-0 mt-0.5" />
               <div>
                 <span className="font-bold text-white">Verification Seal Active:</span> Your brand domain <span className="underline font-semibold text-white">adidas.com</span> and business registry licenses are verified. Settle vendor billing limits up to $1,000,000.
               </div>
@@ -72,7 +72,7 @@ export default function VerificationPage() {
             </div>
             <div className="space-y-1">
               <span className="text-[#94A3B8]/60">Security Encrypted Hash</span>
-              <p className="font-mono text-[#06B6D4] truncate">ap_984021_compliance_audit</p>
+              <p className="font-mono text-white truncate">ap_984021_compliance_audit</p>
             </div>
           </Card>
         </div>

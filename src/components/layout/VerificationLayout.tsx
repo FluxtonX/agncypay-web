@@ -17,39 +17,48 @@ import {
   UserRound,
 } from "lucide-react";
 import { cn } from "../../lib/utils";
+import { useApp } from "../../context/AppContext";
+import { WorkspaceType, normalizeWorkspaceType } from "../../types/workspace";
 
 interface VerificationLayoutProps {
   children: React.ReactNode;
 }
 
-const KYB_STEPS = [
+type VerificationStep = {
+  id: number;
+  label: string;
+  path: string;
+  icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
+};
+
+const BRAND_STEPS: VerificationStep[] = [
   {
     id: 1,
-    label: "Company Information",
+    label: "Brand KYB",
     path: "/verification/business-info",
     icon: Building2,
   },
   {
     id: 2,
-    label: "Business Details",
+    label: "Company Details",
     path: "/verification/business-details",
     icon: FileText,
   },
   {
     id: 3,
-    label: "Authorized Representative",
+    label: "Finance Admin",
     path: "/verification/representative",
     icon: UserRound,
   },
   {
     id: 4,
-    label: "KYB Verification",
+    label: "Approval Controls",
     path: "/verification/authorization",
     icon: Shield,
   },
   {
     id: 5,
-    label: "Document Upload",
+    label: "KYB Documents",
     path: "/verification/documents",
     icon: Upload,
   },
@@ -61,13 +70,13 @@ const KYB_STEPS = [
   },
   {
     id: 7,
-    label: "Team Setup",
+    label: "Team Users",
     path: "/verification/brand",
     icon: Users,
   },
   {
     id: 8,
-    label: "Payment Preferences",
+    label: "Payment Rules",
     path: "/verification/payment-preferences",
     icon: Settings,
   },
@@ -79,7 +88,39 @@ const KYB_STEPS = [
   },
 ];
 
-const INSTANT_STEPS = [
+const AGENCY_STEPS: VerificationStep[] = [
+  { id: 1, label: "Agency KYB", path: "/verification/business-info", icon: Building2 },
+  { id: 2, label: "Agency Details", path: "/verification/business-details", icon: FileText },
+  { id: 3, label: "Authorized Admin", path: "/verification/representative", icon: UserRound },
+  { id: 4, label: "Payout Authority", path: "/verification/authorization", icon: Shield },
+  { id: 5, label: "KYB Documents", path: "/verification/documents", icon: Upload },
+  { id: 6, label: "Payout Bank", path: "/verification/bank-details", icon: CreditCard },
+  { id: 7, label: "Talent Setup", path: "/verification/brand", icon: Users },
+  { id: 8, label: "Split Rules", path: "/verification/payment-preferences", icon: Settings },
+  { id: 9, label: "Review & Submit", path: "/verification/review", icon: ClipboardCheck },
+];
+
+const TALENT_STEPS: VerificationStep[] = [
+  { id: 1, label: "Identity Profile", path: "/verification/representative", icon: UserRound },
+  { id: 2, label: "KYC Documents", path: "/verification/documents", icon: Upload },
+  { id: 3, label: "Payout Bank", path: "/verification/bank-details", icon: CreditCard },
+  { id: 4, label: "Tax & Payout Info", path: "/verification/payment-preferences", icon: Settings },
+  { id: 5, label: "Review & Submit", path: "/verification/review", icon: ClipboardCheck },
+];
+
+const MOTHER_AGENCY_STEPS: VerificationStep[] = [
+  { id: 1, label: "Enterprise KYB", path: "/verification/business-info", icon: Building2 },
+  { id: 2, label: "Organization Details", path: "/verification/business-details", icon: FileText },
+  { id: 3, label: "Super Admin", path: "/verification/representative", icon: UserRound },
+  { id: 4, label: "Treasury Authority", path: "/verification/authorization", icon: Shield },
+  { id: 5, label: "Enterprise Docs", path: "/verification/documents", icon: Upload },
+  { id: 6, label: "Treasury Bank", path: "/verification/bank-details", icon: CreditCard },
+  { id: 7, label: "Child Agencies", path: "/verification/brand", icon: Users },
+  { id: 8, label: "Access Rules", path: "/verification/payment-preferences", icon: Settings },
+  { id: 9, label: "Review & Submit", path: "/verification/review", icon: ClipboardCheck },
+];
+
+const INSTANT_STEPS: VerificationStep[] = [
   {
     id: 1,
     label: "Simple Signup",
@@ -94,13 +135,23 @@ const INSTANT_STEPS = [
   },
 ];
 
+function getSteps(workspaceType: WorkspaceType, isInstantFlow: boolean) {
+  if (isInstantFlow) return INSTANT_STEPS;
+  if (workspaceType === "agency") return AGENCY_STEPS;
+  if (workspaceType === "mother_agency") return MOTHER_AGENCY_STEPS;
+  if (workspaceType === "talent_agency" || workspaceType === "talent_independent") return TALENT_STEPS;
+  return BRAND_STEPS;
+}
+
 export function VerificationLayout({ children }: VerificationLayoutProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const { state } = useApp();
   const stepperRef = React.useRef<HTMLDivElement | null>(null);
   const activeStepRef = React.useRef<HTMLButtonElement | null>(null);
   const isInstantFlow = pathname.startsWith("/verification/instant");
-  const steps = isInstantFlow ? INSTANT_STEPS : KYB_STEPS;
+  const workspaceType = state.user ? normalizeWorkspaceType(state.user.accountType) : "brand";
+  const steps = getSteps(workspaceType, isInstantFlow);
   const currentIndex = Math.max(
     0,
     steps.findIndex((step) => step.path === pathname)

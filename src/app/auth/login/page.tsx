@@ -75,7 +75,12 @@ export default function LoginPage() {
       loginUser(
         normalizedEmail,
         registeredUser?.fullName || fallbackName || "AgncyPay User",
-        registeredUser?.accountType || "brand"
+        registeredUser?.accountType || "brand",
+        {
+          workspaceName: registeredUser?.workspaceName,
+          workspaceType: registeredUser?.workspaceType,
+          agencyId: registeredUser?.agencyId,
+        }
       );
       setIsLoading(false);
 
@@ -206,11 +211,11 @@ export default function LoginPage() {
                   setEmail(e.target.value);
                   if (errors.email) setErrors({});
                 }}
-                className={`w-full border !bg-[#0B0B0B] !border-[#262626] ${errors.email ? "border-[#EF4444]" : ""} focus:border-white/30 focus:outline-none rounded-lg px-4 py-3 text-sm text-[#F8FAFC] placeholder-[#5A5A62] transition-colors`}
+                className={`w-full border !bg-[#0B0B0B] !border-[#262626] ${errors.email ? "border-white/40" : ""} focus:border-white/30 focus:outline-none rounded-lg px-4 py-3 text-sm text-[#F8FAFC] placeholder-[#5A5A62] transition-colors`}
                 placeholder="you@company.com"
               />
               {errors.email && (
-                <span className="text-xs text-[#EF4444] mt-0.5">{errors.email}</span>
+                <span className="text-xs text-white mt-0.5">{errors.email}</span>
               )}
             </div>
 
@@ -235,11 +240,11 @@ export default function LoginPage() {
                   setPassword(e.target.value);
                   if (errors.password) setErrors({});
                 }}
-                className={`w-full border !bg-[#0B0B0B] !border-[#262626] ${errors.password ? "border-[#EF4444]" : ""} focus:border-white/30 focus:outline-none rounded-lg px-4 py-3 text-sm text-[#F8FAFC] placeholder-[#5A5A62] transition-colors`}
+                className={`w-full border !bg-[#0B0B0B] !border-[#262626] ${errors.password ? "border-white/40" : ""} focus:border-white/30 focus:outline-none rounded-lg px-4 py-3 text-sm text-[#F8FAFC] placeholder-[#5A5A62] transition-colors`}
                 placeholder="••••••••"
               />
               {errors.password && (
-                <span className="text-xs text-[#EF4444] mt-0.5">{errors.password}</span>
+                <span className="text-xs text-white mt-0.5">{errors.password}</span>
               )}
             </div>
 

@@ -30,7 +30,7 @@ export function InvoiceTable({ invoices, isLocked = false }: InvoiceTableProps) 
       {/* Locked Overlay Banner */}
       {isLocked && (
         <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/60 backdrop-blur-[3px] p-6 text-center">
-          <div className="h-12 w-12 rounded-full bg-[#F59E0B]/10 border border-[#F59E0B]/20 flex items-center justify-center text-[#F59E0B] mb-3 shadow-[0_0_15px_rgba(245,158,11,0.1)]">
+          <div className="h-12 w-12 rounded-full bg-white/[0.06] border border-white/15 flex items-center justify-center text-white mb-3">
             <Lock className="h-5 w-5" />
           </div>
           <h4 className="text-sm font-bold text-white">Invoices Locked</h4>
@@ -104,11 +104,11 @@ export function InvoiceTable({ invoices, isLocked = false }: InvoiceTableProps) 
                 <td className="py-4 px-6 text-right">
                   <div className="flex justify-end items-center gap-2">
                     {invoice.status === "paid" ? (
-                      <span className="text-[11px] font-bold text-[#22C55E] flex items-center gap-0.5 group-hover:underline">
+                      <span className="text-[11px] font-bold text-white flex items-center gap-0.5 group-hover:underline">
                         View Receipt <ChevronRight className="h-3 w-3" />
                       </span>
                     ) : invoice.status === "processing" ? (
-                      <span className="text-[11px] font-bold text-[#06B6D4]">
+                      <span className="text-[11px] font-bold text-white">
                         Processing
                       </span>
                     ) : (
@@ -117,7 +117,7 @@ export function InvoiceTable({ invoices, isLocked = false }: InvoiceTableProps) 
                           e.stopPropagation();
                           handleRowClick(invoice.id);
                         }}
-                        className="px-2.5 py-1 text-[11px] font-bold bg-[#8B5CF6]/10 text-[#8B5CF6] border border-[#8B5CF6]/20 rounded-md hover:bg-[#8B5CF6]/20 transition-all cursor-pointer"
+                        className="px-2.5 py-1 text-[11px] font-bold bg-white text-black border border-white rounded-md hover:bg-[#e8e8e8] transition-all cursor-pointer"
                       >
                         Pay Invoice
                       </button>

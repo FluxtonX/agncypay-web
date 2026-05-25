@@ -21,8 +21,8 @@ export function Loader({
   };
 
   const colorClasses = {
-    primary: "text-[#10B981]",
-    secondary: "text-[#06B6D4]",
+    primary: "text-white",
+    secondary: "text-[#a3a3a3]",
     white: "text-white",
   };
 
@@ -34,9 +34,9 @@ export function Loader({
     };
     return (
       <div className={cn("flex items-center gap-1.5 justify-center", className)} {...props}>
-        <div className={cn("rounded-full animate-bounce delay-100", dotSizes[size], color === "primary" ? "bg-[#10B981]" : color === "secondary" ? "bg-[#06B6D4]" : "bg-white")} />
-        <div className={cn("rounded-full animate-bounce delay-200", dotSizes[size], color === "primary" ? "bg-[#10B981]" : color === "secondary" ? "bg-[#06B6D4]" : "bg-white")} />
-        <div className={cn("rounded-full animate-bounce delay-300", dotSizes[size], color === "primary" ? "bg-[#10B981]" : color === "secondary" ? "bg-[#06B6D4]" : "bg-white")} />
+        <div className={cn("rounded-full animate-bounce delay-100", dotSizes[size], color === "secondary" ? "bg-[#a3a3a3]" : "bg-white")} />
+        <div className={cn("rounded-full animate-bounce delay-200", dotSizes[size], color === "secondary" ? "bg-[#a3a3a3]" : "bg-white")} />
+        <div className={cn("rounded-full animate-bounce delay-300", dotSizes[size], color === "secondary" ? "bg-[#a3a3a3]" : "bg-white")} />
       </div>
     );
   }
@@ -47,7 +47,7 @@ export function Loader({
         className={cn(
           "rounded-full animate-ping opacity-75",
           size === "sm" ? "h-3 w-3" : size === "md" ? "h-6 w-6" : "h-10 w-10",
-          color === "primary" ? "bg-[#10B981]" : color === "secondary" ? "bg-[#06B6D4]" : "bg-white",
+          color === "secondary" ? "bg-[#a3a3a3]" : "bg-white",
           className
         )}
         {...props}

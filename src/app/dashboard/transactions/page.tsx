@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { History, Download, RefreshCw } from "lucide-react";
+import { History, Download } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { RecentTransactions } from "../../../components/dashboard/RecentTransactions";
 import { Card } from "../../../components/ui/Card";
@@ -71,7 +71,7 @@ export default function TransactionsHistoryPage() {
       <div className="space-y-4">
         <div className="flex justify-between items-center text-xs">
           <span className="font-semibold text-white uppercase tracking-wider flex items-center gap-1.5">
-            <History className="h-4 w-4 text-[#8B5CF6]" /> History Logs
+            <History className="h-4 w-4 text-white" /> History Logs
           </span>
           <Badge variant="neutral">{state.transactions.length} settlements</Badge>
         </div>

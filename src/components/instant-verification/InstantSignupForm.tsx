@@ -154,7 +154,7 @@ function InstantInput({
           {...props}
         />
       </span>
-      {error ? <span className="mt-2 block text-xs text-[#EF4444]">{error}</span> : null}
+      {error ? <span className="mt-2 block text-xs text-white">{error}</span> : null}
     </label>
   );
 }

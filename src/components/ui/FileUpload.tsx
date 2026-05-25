@@ -113,11 +113,11 @@ export function FileUpload({
         className={cn(
           "relative min-h-[132px] min-w-0 border border-dashed rounded-xl p-5 flex flex-col items-center justify-center text-center transition-all bg-white/[0.01]",
           dragActive
-            ? "border-[#10B981] bg-[#10B981]/5 scale-[1.01]"
+            ? "border-white/40 bg-white/[0.04] scale-[1.01]"
             : "border-white/10 hover:border-white/20",
-          status === "approved" && "border-[#22C55E]/30 bg-[#22C55E]/2",
-          status === "rejected" && "border-[#EF4444]/30 bg-[#EF4444]/2",
-          (status === "uploaded" || status === "processing") && "border-[#10B981]/30 bg-[#10B981]/2",
+          status === "approved" && "border-white/30 bg-white/[0.03]",
+          status === "rejected" && "border-white/25 bg-white/[0.02]",
+          (status === "uploaded" || status === "processing") && "border-white/25 bg-white/[0.02]",
           uploading && "pointer-events-none"
         )}
       >
@@ -139,13 +139,13 @@ export function FileUpload({
         {/* Main Interface States */}
         {uploading ? (
           <div className="w-full min-w-0 py-4 flex flex-col items-center justify-center">
-            <RefreshCw className="h-8 w-8 text-[#10B981] animate-spin mb-3" />
+            <RefreshCw className="h-8 w-8 text-white animate-spin mb-3" />
             <p className="w-full max-w-full truncate px-2 text-xs text-[#94A3B8] font-semibold mb-1">
               Uploading {localFileName}...
             </p>
             <div className="w-full max-w-48 bg-white/5 rounded-full h-1.5 overflow-hidden">
               <div
-                className="bg-gradient-to-r from-[#10B981] to-[#059669] h-1.5 rounded-full transition-all duration-150"
+                className="h-1.5 rounded-full bg-white transition-all duration-150"
                 style={{ width: `${progress}%` }}
               />
             </div>
@@ -153,9 +153,9 @@ export function FileUpload({
           </div>
         ) : status === "not_uploaded" || status === "needs_reupload" ? (
           <div className="flex max-w-full flex-col items-center cursor-pointer py-3" onClick={triggerInputClick}>
-            <UploadCloud className="h-8 w-8 text-[#94A3B8] mb-2.5 hover:text-[#10B981] transition-colors" />
+            <UploadCloud className="h-8 w-8 text-[#94A3B8] mb-2.5 transition-colors hover:text-white" />
             <p className="max-w-full text-sm text-[#F8FAFC] font-semibold leading-snug">
-              Drag & drop document or <span className="text-[#10B981] hover:underline">browse</span>
+              Drag & drop document or <span className="text-white hover:underline">browse</span>
             </p>
             <p className="max-w-full text-xs text-[#94A3B8]/60 mt-1 leading-snug">
               Supports PDF, PNG, JPG (Max {maxSizeMB}MB)
@@ -167,8 +167,8 @@ export function FileUpload({
             <div className="flex min-w-0 flex-1 items-center gap-3">
               <div className={cn(
                 "shrink-0 p-2.5 rounded-lg",
-                status === "approved" ? "bg-[#22C55E]/10 text-[#22C55E]" :
-                status === "rejected" ? "bg-[#EF4444]/10 text-[#EF4444]" : "bg-[#10B981]/10 text-[#10B981]"
+                status === "approved" ? "bg-white/10 text-white" :
+                status === "rejected" ? "bg-white/[0.06] text-white" : "bg-white/[0.06] text-white"
               )}>
                 <File className="h-5 w-5" />
               </div>
@@ -178,7 +178,7 @@ export function FileUpload({
                 </p>
                 <p className="flex max-w-full min-w-0 items-center gap-1 truncate text-xs text-[#94A3B8]/60">
                   {status === "approved" && (
-                    <span className="flex min-w-0 items-center gap-0.5 truncate text-[#22C55E]">
+                    <span className="flex min-w-0 items-center gap-0.5 truncate text-white">
                       <CheckCircle2 className="h-3 w-3" /> Auto-verified
                     </span>
                   )}
@@ -194,7 +194,7 @@ export function FileUpload({
               <button
                 onClick={triggerInputClick}
                 title="Replace File"
-                className="text-[#94A3B8] hover:text-[#10B981] p-1.5 rounded-lg hover:bg-white/5 transition-colors cursor-pointer"
+                className="text-[#94A3B8] hover:text-white p-1.5 rounded-lg hover:bg-white/5 transition-colors cursor-pointer"
               >
                 <RefreshCw className="h-4 w-4" />
               </button>
@@ -204,7 +204,7 @@ export function FileUpload({
                   onDelete();
                 }}
                 title="Delete File"
-                className="text-[#94A3B8] hover:text-[#EF4444] p-1.5 rounded-lg hover:bg-white/5 transition-colors cursor-pointer"
+                className="text-[#94A3B8] hover:text-white p-1.5 rounded-lg hover:bg-white/5 transition-colors cursor-pointer"
               >
                 <Trash2 className="h-4 w-4" />
               </button>
@@ -215,7 +215,7 @@ export function FileUpload({
 
       {/* Rejection Reason Warning */}
       {status === "rejected" && rejectionReason && (
-        <div className="flex items-start gap-2 bg-[#EF4444]/5 border border-[#EF4444]/10 rounded-lg p-3 text-xs text-[#EF4444] leading-relaxed">
+        <div className="flex items-start gap-2 bg-white/[0.03] border border-white/10 rounded-lg p-3 text-xs text-white leading-relaxed">
           <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
           <div>
             <span className="font-semibold">Reason:</span> {rejectionReason}

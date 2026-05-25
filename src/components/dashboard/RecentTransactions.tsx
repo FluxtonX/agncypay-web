@@ -31,12 +31,12 @@ export function RecentTransactions({ transactions }: RecentTransactionsProps) {
             {/* Status Icon */}
             <div
               className={cn(
-                "p-2 rounded-lg shrink-0",
+                "p-2 rounded-lg shrink-0 border",
                 tx.status === "success"
-                  ? "bg-[#22C55E]/10 text-[#22C55E]"
+                  ? "border-white/15 bg-white/[0.06] text-white"
                   : tx.status === "failed"
-                  ? "bg-[#EF4444]/10 text-[#EF4444]"
-                  : "bg-[#06B6D4]/10 text-[#06B6D4]"
+                  ? "border-white/10 bg-white/[0.03] text-[#bdbdbd]"
+                  : "border-white/10 bg-white/[0.03] text-white"
               )}
             >
               {tx.status === "success" ? (
@@ -69,10 +69,10 @@ export function RecentTransactions({ transactions }: RecentTransactionsProps) {
               className={cn(
                 "text-[9px] font-bold uppercase tracking-wider block mt-0.5",
                 tx.status === "success"
-                  ? "text-[#22C55E]"
+                  ? "text-white"
                   : tx.status === "failed"
-                  ? "text-[#EF4444]"
-                  : "text-[#06B6D4]"
+                  ? "text-[#bdbdbd]"
+                  : "text-white"
               )}
             >
               {tx.status === "success" ? "Success" : tx.status === "failed" ? "Failed" : "Processing"}

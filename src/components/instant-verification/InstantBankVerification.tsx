@@ -185,7 +185,7 @@ export function InstantBankVerification() {
           </div>
 
           {errors.bank ? (
-            <p className="mt-4 text-sm font-medium text-[#EF4444]">{errors.bank}</p>
+            <p className="mt-4 text-sm font-medium text-white">{errors.bank}</p>
           ) : null}
 
           <div className="mt-6 grid gap-3 sm:grid-cols-2">
@@ -380,7 +380,7 @@ function InstantField({ label, error, icon, id, ...props }: InstantFieldProps) {
           {...props}
         />
       </span>
-      {error ? <span className="mt-2 block text-xs text-[#EF4444]">{error}</span> : null}
+      {error ? <span className="mt-2 block text-xs text-white">{error}</span> : null}
     </label>
   );
 }
@@ -419,7 +419,7 @@ function InstantSelect({ label, error, options, id, ...props }: InstantSelectPro
           <path strokeLinecap="round" strokeLinejoin="round" d="m6 9 6 6 6-6" />
         </svg>
       </span>
-      {error ? <span className="mt-2 block text-xs text-[#EF4444]">{error}</span> : null}
+      {error ? <span className="mt-2 block text-xs text-white">{error}</span> : null}
     </label>
   );
 }

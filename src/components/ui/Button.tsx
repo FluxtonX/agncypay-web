@@ -28,7 +28,7 @@ export function Button({
   
   const variants = {
     primary:
-      "bg-[#10B981] text-black hover:bg-[#059669] focus:ring-[#10B981] border border-transparent font-bold shadow-[0_0_15px_rgba(16,185,129,0.2)] hover:shadow-[0_0_20px_rgba(16,185,129,0.4)]",
+      "bg-white text-black hover:bg-[#E5E7EB] focus:ring-white border border-transparent font-bold shadow-[0_0_15px_rgba(255,255,255,0.1)]",
     secondary:
       "bg-white text-black hover:bg-[#E5E7EB] focus:ring-white border border-transparent font-bold shadow-[0_0_15px_rgba(255,255,255,0.1)]",
     outline:
@@ -36,9 +36,9 @@ export function Button({
     ghost:
       "bg-transparent text-[#94A3B8] hover:bg-white/[0.04] hover:text-[#F8FAFC] focus:ring-white/10",
     danger:
-      "bg-[#EF4444] text-white hover:bg-[#DC2626] focus:ring-[#EF4444] border border-transparent shadow-[0_0_15px_rgba(239,68,68,0.2)]",
+      "bg-[#171717] text-white hover:bg-[#222] focus:ring-white/20 border border-[#4a4a4a]",
     success:
-      "bg-[#22C55E] text-white hover:bg-[#16A34A] focus:ring-[#22C55E] border border-transparent shadow-[0_0_15px_rgba(34,197,94,0.2)]",
+      "bg-white text-black hover:bg-[#E5E7EB] focus:ring-white border border-transparent font-bold",
   };
 
   const sizes = {

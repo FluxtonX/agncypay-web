@@ -8,12 +8,12 @@
   --color-brand-mid: #0D0D0D;
   --color-brand-light: #1A1A1A;
   
-  --color-primary: #10B981;
-  --color-primary-hover: #059669;
-  --color-secondary: #22C55E;
-  --color-success: #10B981;
-  --color-warning: #f59e0b;
-  --color-error: #ef4444;
+  --color-primary: #ffffff;
+  --color-primary-hover: #e5e5e5;
+  --color-secondary: #a3a3a3;
+  --color-success: #ffffff;
+  --color-warning: #bdbdbd;
+  --color-error: #ffffff;
   
   --text-primary: #f8fafc;
   --text-secondary: #6B7280;
@@ -107,11 +107,11 @@ body {
 
 /* Custom Gradients */
 .bg-radial-gradient {
-  background: radial-gradient(circle at 50% 50%, rgba(16, 185, 129, 0.08) 0%, transparent 60%);
+  background: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.08) 0%, transparent 60%);
 }
 
 .bg-radial-cyan {
-  background: radial-gradient(circle at 50% 50%, rgba(16, 185, 129, 0.05) 0%, transparent 65%);
+  background: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.05) 0%, transparent 65%);
 }
 
 /* Success Checkmark Animate Draw */
@@ -128,11 +128,11 @@ body {
 
 /* Text glow */
 .glow-text-cyan {
-  text-shadow: 0 0 10px rgba(16, 185, 129, 0.3);
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.16);
 }
 
 .glow-text-primary {
-  text-shadow: 0 0 10px rgba(16, 185, 129, 0.3);
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.16);
 }
 
 /* KYB Onboarding Form Borders Visibility Enhancements */

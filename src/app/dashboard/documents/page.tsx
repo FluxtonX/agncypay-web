@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { FileText, Download, ShieldCheck, Lock } from "lucide-react";
+import { FileText, Download, Lock } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { Card } from "../../../components/ui/Card";
 import { Badge } from "../../../components/ui/Badge";
@@ -45,8 +45,8 @@ export default function DocumentVaultPage() {
       </div>
 
       {!isApproved && (
-        <div className="bg-[#F59E0B]/5 border border-[#F59E0B]/10 rounded-xl p-4 flex gap-3 text-xs text-[#94A3B8] leading-relaxed">
-          <Lock className="h-5 w-5 text-[#F59E0B] shrink-0 mt-0.5" />
+        <div className="bg-white/[0.03] border border-white/10 rounded-xl p-4 flex gap-3 text-xs text-[#94A3B8] leading-relaxed">
+          <Lock className="h-5 w-5 text-white shrink-0 mt-0.5" />
           <div>
             <span className="font-bold text-white">Vault Access Restricted:</span> Document vault access is restricted in read-only mode until manual compliance audit is approved.
           </div>
@@ -65,7 +65,7 @@ export default function DocumentVaultPage() {
             >
               <div className="flex justify-between items-start gap-4">
                 <div className="flex gap-3">
-                  <div className="p-2.5 rounded-lg bg-[#8B5CF6]/15 border border-[#8B5CF6]/20 text-[#8B5CF6] shrink-0">
+                  <div className="p-2.5 rounded-lg bg-white/[0.06] border border-white/10 text-white shrink-0">
                     <FileText className="h-5 w-5" />
                   </div>
                   <div>
@@ -88,7 +88,7 @@ export default function DocumentVaultPage() {
                 {isUploaded && (
                   <button
                     onClick={() => alert(`Simulation: Downloading file ${doc.fileName}...`)}
-                    className="flex items-center gap-1 font-bold text-[#06B6D4] hover:underline cursor-pointer"
+                    className="flex items-center gap-1 font-bold text-white hover:underline cursor-pointer"
                   >
                     <Download className="h-3.5 w-3.5" /> Download
                   </button>

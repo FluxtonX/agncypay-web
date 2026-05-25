@@ -73,11 +73,11 @@ export default function VerificationStatusPage() {
       <div className="flex justify-between items-center">
         <div className="space-y-1">
           <h1 className="text-xl font-bold text-white flex items-center gap-2">
-            <ShieldCheck className="h-5 w-5 text-[#10B981]" />
-            KYB Compliance Desk
+            <ShieldCheck className="h-5 w-5 text-white" />
+            Verification Desk
           </h1>
-          <p className="text-xs text-[#6B7280] leading-relaxed">
-            Real-time status tracking of your corporate verification check.
+          <p className="text-xs text-[#8f8f8f] leading-relaxed">
+            Real-time status tracking for the active workspace verification check.
           </p>
         </div>
         <Badge variant={badgeProps.variant} size="md">
@@ -89,14 +89,14 @@ export default function VerificationStatusPage() {
       {(state.verificationStatus === "submitted" || state.verificationStatus === "in_review") && (
         <Card className="border-[#1F1F1F] p-6 space-y-6 bg-[#0D0D0D] text-center flex flex-col items-center justify-center min-h-[350px]">
           <div className="relative flex items-center justify-center">
-            <RefreshCw className="h-14 w-14 text-[#10B981] animate-spin stroke-[1.5px]" />
+            <RefreshCw className="h-14 w-14 text-white animate-spin stroke-[1.5px]" />
             <Lock className="absolute h-5 w-5 text-white animate-pulse" />
           </div>
 
           <div className="space-y-1.5 max-w-sm">
             <h3 className="text-base font-bold text-white">Compliance Audit in Progress</h3>
-            <p className="text-xs text-[#6B7280] leading-relaxed">
-              Our automated system is verifying signatures against trademark certificates. (Simulated review completion in <span className="font-bold text-[#10B981]">{secondsRemaining}s</span>)
+            <p className="text-xs text-[#8f8f8f] leading-relaxed">
+              Our simulator is checking the submitted workspace identity and payout readiness. Review completes in <span className="font-bold text-white">{secondsRemaining}s</span>.
             </p>
           </div>
 
@@ -109,13 +109,13 @@ export default function VerificationStatusPage() {
                   key={idx}
                   className={cn(
                     "flex items-center gap-2.5 transition-all duration-300",
-                    completed ? "text-[#22C55E]" : "text-[#6B7280]/30"
+                    completed ? "text-white" : "text-[#6b6b6b]"
                   )}
                 >
                   {completed ? (
                     <CheckCircle2 className="h-4 w-4 shrink-0" />
                   ) : (
-                    <RefreshCw className="h-4 w-4 shrink-0 animate-spin text-[#10B981]" />
+                    <RefreshCw className="h-4 w-4 shrink-0 animate-spin text-white" />
                   )}
                   <span>{stage.label}</span>
                 </div>
@@ -131,20 +131,20 @@ export default function VerificationStatusPage() {
 
       {/* STATE 2: APPROVED */}
       {state.verificationStatus === "approved" && (
-        <Card className="border-[#22C55E]/20 p-6 space-y-6 bg-[#0D0D0D] text-center flex flex-col items-center justify-center min-h-[350px]">
-          <div className="h-14 w-14 rounded-full bg-[#22C55E]/10 border border-[#22C55E]/20 flex items-center justify-center text-[#22C55E] shadow-[0_0_25px_rgba(34,197,94,0.2)]">
+        <Card className="border-[#555] p-6 space-y-6 bg-[#0D0D0D] text-center flex flex-col items-center justify-center min-h-[350px]">
+          <div className="h-14 w-14 rounded-full bg-white border border-white flex items-center justify-center text-black">
             <CheckCircle2 className="h-8 w-8" />
           </div>
 
           <div className="space-y-1.5 max-w-md">
-            <h3 className="text-lg font-black text-white tracking-tight">Corporate Verification Approved</h3>
-            <p className="text-xs text-[#6B7280] leading-relaxed">
-              Your demo verification is complete. Full treasury payments are now active.
+            <h3 className="text-lg font-black text-white tracking-tight">Workspace Verification Approved</h3>
+            <p className="text-xs text-[#8f8f8f] leading-relaxed">
+              Your demo verification is complete. Permissioned dashboard actions are now active.
             </p>
           </div>
 
           {/* Verification stamp log */}
-          <div className="w-full max-w-sm bg-black/40 border border-[#1F1F1F] p-3 rounded-lg text-left text-[11px] text-[#6B7280] space-y-1">
+          <div className="w-full max-w-sm bg-black/40 border border-[#1F1F1F] p-3 rounded-lg text-left text-[11px] text-[#8f8f8f] space-y-1">
             <p><span className="font-semibold text-white">Compliance Seal:</span> AP-DE-984021</p>
             <p><span className="font-semibold text-white">Verification Date:</span> {new Date().toLocaleDateString()}</p>
             <p><span className="font-semibold text-white">Brand Email:</span> Accepted</p>
@@ -164,25 +164,25 @@ export default function VerificationStatusPage() {
 
       {/* STATE 3: ACTION REQUIRED */}
       {state.verificationStatus === "requires_action" && (
-        <Card className="border-[#EF4444]/20 p-6 space-y-6 bg-[#0D0D0D] text-center flex flex-col items-center justify-center min-h-[350px]">
-          <div className="h-14 w-14 rounded-full bg-[#EF4444]/10 border border-[#EF4444]/20 flex items-center justify-center text-[#EF4444] shadow-[0_0_20px_rgba(239,68,68,0.15)]">
+        <Card className="border-[#555] p-6 space-y-6 bg-[#0D0D0D] text-center flex flex-col items-center justify-center min-h-[350px]">
+          <div className="h-14 w-14 rounded-full bg-[#111] border border-[#555] flex items-center justify-center text-white">
             <AlertTriangle className="h-7 w-7" />
           </div>
 
           <div className="space-y-1.5 max-w-md">
             <h3 className="text-lg font-black text-white tracking-tight">Verification Action Required</h3>
-            <p className="text-xs text-[#EF4444] leading-relaxed">
+            <p className="text-xs text-[#b8b8b8] leading-relaxed">
               The demo checker needs one more review before approval.
             </p>
           </div>
 
-          <div className="w-full max-w-md bg-[#EF4444]/5 border border-[#EF4444]/10 p-4 rounded-xl text-left text-xs space-y-2 text-[#6B7280]">
+          <div className="w-full max-w-md bg-black border border-[#555] p-4 rounded-xl text-left text-xs space-y-2 text-[#8f8f8f]">
             <p className="font-semibold text-white flex items-center gap-1.5">
-              <AlertTriangle className="h-4 w-4 text-[#F59E0B]" />
+              <AlertTriangle className="h-4 w-4 text-white" />
               Reason for Action Required:
             </p>
             <p className="leading-relaxed">
-              Continue back to the brand step and save again. Demo mode accepts any email address and will approve the flow on submit.
+              Continue back to the relevant verification step and save again. Demo mode accepts submitted workspace details and will approve on final submit.
             </p>
           </div>
 

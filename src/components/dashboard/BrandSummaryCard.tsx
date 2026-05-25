@@ -17,10 +17,7 @@ export function BrandSummaryCard() {
   const totalPendingAmount = pendingInvoices.reduce((sum, inv) => sum + inv.amount, 0);
 
   return (
-    <Card className="border-white/[0.04] p-6 relative overflow-hidden bg-gradient-to-br from-[#0B1020] via-[#070B14] to-[#050816]">
-      {/* Glow highlight */}
-      <div className="absolute -top-12 -right-12 h-36 w-36 rounded-full bg-[#8B5CF6]/5 blur-3xl" />
-
+    <Card className="relative overflow-hidden border-white/[0.04] bg-[#070707] p-6">
       <div className="flex flex-col sm:flex-row gap-5 justify-between items-start">
         <div className="flex gap-4 items-center">
           {/* Adidas logo box */}
@@ -32,9 +29,9 @@ export function BrandSummaryCard() {
               <h3 className="text-lg font-bold text-[#F8FAFC]">Adidas AG</h3>
               <div title={isApproved ? "Verified Brand" : "Awaiting Compliance Approval"} className="shrink-0 flex items-center">
                 {isApproved ? (
-                  <ShieldCheck className="h-4.5 w-4.5 text-[#22C55E]" />
+                  <ShieldCheck className="h-4.5 w-4.5 text-white" />
                 ) : (
-                  <Lock className="h-4 w-4 text-[#F59E0B]" />
+                  <Lock className="h-4 w-4 text-[#bdbdbd]" />
                 )}
               </div>
             </div>
@@ -67,13 +64,13 @@ export function BrandSummaryCard() {
       {/* Internal Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6 pt-5 border-t border-white/[0.04] text-xs text-[#94A3B8]">
         <div className="flex items-center gap-2.5">
-          <FileText className="h-4 w-4 text-[#8B5CF6]" />
+          <FileText className="h-4 w-4 text-white" />
           <div>
             <span className="font-semibold text-white">Active Invoices:</span> {state.invoices.length} items logged
           </div>
         </div>
         <div className="flex items-center gap-2.5">
-          <Calendar className="h-4 w-4 text-[#06B6D4]" />
+          <Calendar className="h-4 w-4 text-white" />
           <div>
             <span className="font-semibold text-white">Last Invoice Date:</span> May 18, 2026
           </div>
@@ -85,7 +82,7 @@ export function BrandSummaryCard() {
         {isApproved ? (
           <Link
             href="/dashboard/invoices"
-            className="flex items-center gap-1 text-xs font-bold text-[#06B6D4] hover:text-[#0891B2] transition-colors cursor-pointer group"
+            className="flex items-center gap-1 text-xs font-bold text-white transition-colors hover:text-[#d8d8d8] cursor-pointer group"
           >
             Manage Adidas Invoices
             <ChevronRight className="h-3.5 w-3.5 group-hover:translate-x-0.5 transition-transform" />
@@ -93,7 +90,7 @@ export function BrandSummaryCard() {
         ) : (
           <Link
             href="/dashboard/verification"
-            className="flex items-center gap-1 text-xs font-bold text-[#F59E0B] hover:text-[#D97706] transition-colors cursor-pointer group"
+            className="flex items-center gap-1 text-xs font-bold text-white transition-colors hover:text-[#d8d8d8] cursor-pointer group"
           >
             Complete Onboarding to Unlock
             <ChevronRight className="h-3.5 w-3.5 group-hover:translate-x-0.5 transition-transform" />

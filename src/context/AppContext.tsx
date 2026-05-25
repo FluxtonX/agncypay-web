@@ -9,15 +9,30 @@ import { INITIAL_BUSINESS_PROFILE } from "../data/verification";
 import { INITIAL_DOCUMENTS } from "../data/documents";
 import { MOCK_INVOICES } from "../data/invoices";
 import { MOCK_TRANSACTIONS } from "../data/transactions";
+import {
+  AccountType,
+  Membership,
+  Workspace,
+  WorkspaceType,
+  getDefaultPermissions,
+  getDefaultWorkspaceRole,
+  getVerificationTrack,
+  normalizeWorkspaceType,
+} from "../types/workspace";
 
 interface AppState {
   user: {
+    agncyId: string;
     fullName: string;
     email: string;
-    accountType: "individual" | "agency" | "brand";
+    accountType: AccountType;
     isLoggedIn: boolean;
     emailVerified: boolean;
+    activeWorkspaceId?: string;
   } | null;
+  workspaces: Workspace[];
+  memberships: Membership[];
+  activeWorkspaceId: string | null;
   businessSetup: Partial<BusinessProfile> & {
     industry?: string;
     address?: string;
@@ -94,6 +109,9 @@ interface AppState {
 
 const DEFAULT_STATE: AppState = {
   user: null,
+  workspaces: [],
+  memberships: [],
+  activeWorkspaceId: null,
   businessSetup: {
     legalName: "Adidas AG",
     brandName: "Adidas",
@@ -182,7 +200,16 @@ const DEFAULT_STATE: AppState = {
 
 interface AppContextType {
   state: AppState;
-  loginUser: (email: string, fullName: string, accountType: "individual" | "agency" | "brand") => void;
+  loginUser: (
+    email: string,
+    fullName: string,
+    accountType: AccountType,
+    workspaceOptions?: {
+      workspaceName?: string;
+      workspaceType?: WorkspaceType;
+      agencyId?: string;
+    }
+  ) => void;
   verifyEmail: (code: string) => boolean;
   resendEmailCode: () => void;
   updateBusinessSetup: (data: Partial<AppState["businessSetup"]>) => void;
@@ -195,11 +222,33 @@ interface AppContextType {
   updateBankDetails: (data: Partial<AppState["bankDetails"]>) => void;
   submitForVerification: () => void;
   payInvoice: (invoiceId: string) => Promise<{ success: boolean; error?: string }>;
+  switchWorkspace: (workspaceId: string) => void;
   resetState: () => void;
   setVerificationStatusDirectly: (status: AppState["verificationStatus"]) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
+
+function createAgncyId(prefix: string) {
+  return `${prefix}-${Math.floor(100000 + Math.random() * 900000)}`;
+}
+
+function normalizeStoredState(state: AppState): AppState {
+  return {
+    ...DEFAULT_STATE,
+    ...state,
+    workspaces: Array.isArray(state.workspaces) ? state.workspaces : [],
+    memberships: Array.isArray(state.memberships) ? state.memberships : [],
+    activeWorkspaceId: state.activeWorkspaceId ?? state.user?.activeWorkspaceId ?? null,
+    user: state.user
+      ? {
+          ...state.user,
+          agncyId: state.user.agncyId ?? createAgncyId("USR"),
+          activeWorkspaceId: state.user.activeWorkspaceId ?? state.activeWorkspaceId ?? undefined,
+        }
+      : null,
+  };
+}
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<AppState>(DEFAULT_STATE);
@@ -210,7 +259,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     try {
       const stored = localStorage.getItem("agncypay_state");
       if (stored) {
-        setState(JSON.parse(stored));
+        setState(normalizeStoredState(JSON.parse(stored)));
       }
     } catch (e) {
       console.error("Failed to load local storage state:", e);
@@ -228,16 +277,67 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, [state, isLoaded]);
 
-  const loginUser = (email: string, fullName: string, accountType: "individual" | "agency" | "brand") => {
+  const loginUser = (
+    email: string,
+    fullName: string,
+    accountType: AccountType,
+    workspaceOptions?: {
+      workspaceName?: string;
+      workspaceType?: WorkspaceType;
+      agencyId?: string;
+    }
+  ) => {
+    const normalizedEmail = email.trim().toLowerCase();
+    const workspaceType = workspaceOptions?.workspaceType ?? normalizeWorkspaceType(accountType);
+    const workspaceName =
+      workspaceOptions?.workspaceName?.trim() ||
+      (workspaceType === "talent_independent" || workspaceType === "talent_agency"
+        ? `${fullName.trim() || "Talent"} Workspace`
+        : "AgncyPay Workspace");
+    const workspaceId = `${workspaceType}-${Date.now()}`;
+    const role = getDefaultWorkspaceRole(workspaceType);
+    const workspace: Workspace = {
+      id: workspaceId,
+      type: workspaceType,
+      name: workspaceName,
+      agncyId: workspaceOptions?.agencyId || createAgncyId("ORG"),
+      externalId: workspaceOptions?.agencyId,
+      verificationTrack: getVerificationTrack(workspaceType),
+      verificationStatus: "draft",
+    };
+    const membership: Membership = {
+      id: `mem-${Date.now()}`,
+      userEmail: normalizedEmail,
+      workspaceId,
+      role,
+      permissions: getDefaultPermissions(role),
+      status: "active",
+    };
+
     setState((prev) => ({
       ...prev,
       user: {
+        agncyId: prev.user?.email === normalizedEmail ? prev.user.agncyId : createAgncyId("USR"),
         fullName,
-        email,
+        email: normalizedEmail,
         accountType,
         isLoggedIn: true,
         emailVerified: false,
+        activeWorkspaceId: workspaceId,
       },
+      workspaces: [
+        ...prev.workspaces.filter((existingWorkspace) => existingWorkspace.id !== workspaceId),
+        workspace,
+      ],
+      memberships: [
+        ...prev.memberships.filter(
+          (existingMembership) =>
+            existingMembership.userEmail !== normalizedEmail ||
+            existingMembership.workspaceId !== workspaceId
+        ),
+        membership,
+      ],
+      activeWorkspaceId: workspaceId,
     }));
   };
 
@@ -250,6 +350,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return true;
     }
     return false;
+  };
+
+  const switchWorkspace = (workspaceId: string) => {
+    setState((prev) => {
+      const workspace = prev.workspaces.find((item) => item.id === workspaceId);
+
+      if (!workspace || !prev.user) return prev;
+
+      return {
+        ...prev,
+        activeWorkspaceId: workspace.id,
+        user: {
+          ...prev.user,
+          accountType: workspace.type,
+          activeWorkspaceId: workspace.id,
+        },
+      };
+    });
   };
 
   const resendEmailCode = () => {
@@ -486,6 +604,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         updateBankDetails,
         submitForVerification,
         payInvoice,
+        switchWorkspace,
         resetState,
         setVerificationStatusDirectly,
       }}

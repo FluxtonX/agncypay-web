@@ -43,7 +43,7 @@ export function StatCard({
         {(description || trend) && (
           <div className="flex items-center gap-1.5 mt-1.5 text-[11px]">
             {trend && (
-              <span className={cn("font-semibold", trend.isPositive ? "text-[#22C55E]" : "text-[#EF4444]")}>
+              <span className={cn("font-semibold", trend.isPositive ? "text-white" : "text-[#bdbdbd]")}>
                 {trend.value}
               </span>
             )}

@@ -10,6 +10,9 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { cn } from "../../lib/utils";
+import { useApp } from "../../context/AppContext";
+import { normalizeWorkspaceType } from "../../types/workspace";
+import { RoleDashboardOverview } from "../../components/dashboard/RoleDashboardOverview";
 
 const stats = [
   {
@@ -311,6 +314,8 @@ function InvoiceStatusChart() {
 }
 
 export default function DashboardOverviewPage() {
+  const { state } = useApp();
+  const workspaceType = state.user ? normalizeWorkspaceType(state.user.accountType) : "brand";
   const [dashboardInvoices, setDashboardInvoices] = React.useState(recentInvoices);
   const [editingDueId, setEditingDueId] = React.useState<string | null>(null);
 
@@ -325,6 +330,10 @@ export default function DashboardOverviewPage() {
       )
     );
   };
+
+  if (workspaceType !== "brand") {
+    return <RoleDashboardOverview workspaceType={workspaceType} />;
+  }
 
   return (
     <div className="max-w-[1048px]">
