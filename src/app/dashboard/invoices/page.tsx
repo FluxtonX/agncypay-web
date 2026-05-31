@@ -29,6 +29,7 @@ import {
 import { cn } from "../../../lib/utils";
 import { downloadTableReportPdf } from "../../../lib/pdfExport";
 import { useApp } from "../../../context/AppContext";
+import { AgncyPayLogo } from "../../../components/payment/AgncyPayLogo";
 import {
   WorkspaceType,
   getDefaultPermissions,
@@ -1427,9 +1428,10 @@ export default function InvoicesPortalPage() {
                     <button
                       type="button"
                       onClick={confirmSelectedPayment}
-                      className="h-[42px] rounded-[7px] border border-white bg-white px-[22px] text-[15px] font-semibold text-black transition-colors hover:bg-[#e8e8e8]"
+                      className="inline-flex h-[42px] items-center justify-center gap-2 rounded-[7px] border border-white bg-white px-[22px] text-[15px] font-semibold text-black transition-colors hover:bg-[#e8e8e8]"
                     >
-                      Confirm Payment
+                      <AgncyPayLogo imageClassName="h-4" />
+                      <span>AgncyPay now</span>
                     </button>
                   </div>
                 </div>

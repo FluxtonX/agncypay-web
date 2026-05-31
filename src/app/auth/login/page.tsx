@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useApp } from "../../../context/AppContext";
@@ -20,6 +20,13 @@ export default function LoginPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [showDemoHelper, setShowDemoHelper] = useState(false);
+  const [safeNextPath, setSafeNextPath] = useState<string | null>(null);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const nextPath = params.get("next");
+    setSafeNextPath(nextPath && nextPath.startsWith("/") && !nextPath.startsWith("//") ? nextPath : null);
+  }, []);
 
   const handlePrefillAdidas = () => {
     setEmail(DEMO_EMAIL);
@@ -84,11 +91,7 @@ export default function LoginPage() {
       );
       setIsLoading(false);
 
-      router.push(
-        registeredUser?.verificationFlow === "instant"
-          ? "/verification/instant"
-          : "/verification/business-info"
-      );
+      router.push(safeNextPath || "/dashboard");
     }, 1500);
   };
 
@@ -193,7 +196,7 @@ export default function LoginPage() {
               Welcome Back
             </h2>
             <p className="text-[#8E8E93] text-sm mt-1.5 font-normal">
-              Sign in to your AgencyPay account
+              Sign in to your AgncyPay account
             </p>
           </div>
 

@@ -1,4 +1,7 @@
+"use client";
+
 import React from "react";
+import { usePathname } from "next/navigation";
 import { DashboardSidebar, MobileDashboardNav } from "./DashboardSidebar";
 import { DashboardHeader } from "./DashboardHeader";
 import { DashboardContentFrame } from "./DashboardContentFrame";
@@ -8,6 +11,13 @@ interface DashboardShellProps {
 }
 
 export function DashboardShell({ children }: DashboardShellProps) {
+  const pathname = usePathname();
+  const isHomeScreen = pathname === "/dashboard";
+
+  if (isHomeScreen) {
+    return <div className="min-h-screen bg-black text-white">{children}</div>;
+  }
+
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-black">
       <DashboardSidebar />
