@@ -1,480 +1,862 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
 import Link from "next/link";
+import { useMemo, useState } from "react";
 import {
-  ArrowLeft,
+  BriefcaseBusiness,
   CheckCircle2,
+  ChevronDown,
   CreditCard,
   FileText,
+  GripVertical,
   Landmark,
-  MoreHorizontal,
+  MoreVertical,
   Search,
   Send,
-  ShieldCheck,
+  Settings,
+  Split,
+  Trash2,
   Users,
+  Wand2,
+  X,
 } from "lucide-react";
 import { AgncyPayLogo } from "../../../components/payment/AgncyPayLogo";
 import { cn } from "../../../lib/utils";
 
-type FlowMode = "send" | "request";
-type FlowStage = "select" | "details" | "review" | "success";
+type TransferMode = "send" | "request";
+type TransferStage = "search" | "amount" | "success";
 
-type Contact = {
+type Recipient = {
   id: string;
   name: string;
   handle: string;
   email: string;
-  initials: string;
-  logo: string;
+  mobile: string;
+  type: "user" | "brand";
+  color: string;
+  amount: number;
+  rate: string;
 };
 
-const contacts: Contact[] = [
+const recipients: Recipient[] = [
   {
-    id: "adidas",
-    name: "Adidas",
-    handle: "@adidas",
-    email: "payables@adidas.com",
-    initials: "AD",
-    logo: "https://www.google.com/s2/favicons?domain=adidas.com&sz=128",
+    id: "john-adams",
+    name: "John Adams",
+    handle: "@agncy11174",
+    email: "john@westernmodels.com",
+    mobile: "+1 (555) 810-1174",
+    type: "user",
+    color: "from-[#5a382c] to-[#1a1513]",
+    amount: 7840.25,
+    rate: "$250/hr",
+  },
+  {
+    id: "amy-holland",
+    name: "Amy Holland",
+    handle: "@agncy65122",
+    email: "amy@studioholland.com",
+    mobile: "+1 (555) 324-6512",
+    type: "user",
+    color: "from-[#7d5c44] to-[#1d1410]",
+    amount: 4200,
+    rate: "$175/hr",
+  },
+  {
+    id: "lucy-che",
+    name: "Lucy Che",
+    handle: "@agncy88179",
+    email: "lucy@chetalent.com",
+    mobile: "+1 (555) 881-7900",
+    type: "user",
+    color: "from-[#7b3d4e] to-[#1e1116]",
+    amount: 3250.5,
+    rate: "$200/hr",
+  },
+  {
+    id: "jessica-bailey",
+    name: "Jessica Bailey",
+    handle: "@agncy67171",
+    email: "jessica@baileycreative.com",
+    mobile: "+1 (555) 671-7100",
+    type: "user",
+    color: "from-[#9d6556] to-[#25110e]",
+    amount: 1800,
+    rate: "$150/hr",
+  },
+  {
+    id: "lola-durant",
+    name: "Lola Durant",
+    handle: "@agncy72176",
+    email: "lola@duranttalent.com",
+    mobile: "+1 (555) 721-7600",
+    type: "user",
+    color: "from-[#8f6c3e] to-[#1c1710]",
+    amount: 9600,
+    rate: "$300/hr",
   },
   {
     id: "nike",
-    name: "Nike, Inc.",
+    name: "Nike",
     handle: "@nike",
     email: "treasury@nike.com",
-    initials: "NK",
-    logo: "https://www.google.com/s2/favicons?domain=nike.com&sz=128",
+    mobile: "+1 (503) 671-6453",
+    type: "brand",
+    color: "from-[#2b2b2b] to-[#050505]",
+    amount: 12500,
+    rate: "Campaign",
   },
   {
-    id: "airbnb",
-    name: "Airbnb",
-    handle: "@airbnb",
-    email: "billing@airbnb.com",
-    initials: "AB",
-    logo: "https://www.google.com/s2/favicons?domain=airbnb.com&sz=128",
-  },
-  {
-    id: "spotify",
-    name: "Spotify",
-    handle: "@spotify",
-    email: "ap@spotify.com",
-    initials: "SP",
-    logo: "https://www.google.com/s2/favicons?domain=spotify.com&sz=128",
-  },
-  {
-    id: "land-rover",
-    name: "Land Rover",
-    handle: "@landrover",
-    email: "finance@landrover.com",
-    initials: "LR",
-    logo: "https://www.google.com/s2/favicons?domain=landrover.com&sz=128",
-  },
-  {
-    id: "the-north-face",
-    name: "The North Face",
-    handle: "@thenorthface",
-    email: "invoices@thenorthface.com",
-    initials: "NF",
-    logo: "https://www.google.com/s2/favicons?domain=thenorthface.com&sz=128",
+    id: "bank-of-america",
+    name: "Bank of America",
+    handle: "@bankofamerica",
+    email: "business@bofa.com",
+    mobile: "+1 (800) 432-1000",
+    type: "brand",
+    color: "from-[#1f4c98] to-[#11213f]",
+    amount: 2840.25,
+    rate: "Bank transfer",
   },
 ];
 
-const quickTools = [
-  { label: "Add card or bank", icon: CreditCard, href: "/dashboard/wallet/link" },
-  { label: "Create an invoice", icon: FileText, href: "/dashboard/invoices" },
-  { label: "Brand directory", icon: Users, href: "/dashboard/profile" },
-  { label: "Wallet", icon: Landmark, href: "/dashboard/wallet" },
+const moreOptions = [
+  { label: "Split Payout", icon: Users, href: "/dashboard/splits" },
+  { label: "Multi Payout", icon: Wand2, href: "/dashboard/payouts" },
+  { label: "Send an invoice", icon: FileText, href: "/dashboard/invoices" },
+  { label: "Apply for AgncyPay card", icon: CreditCard, href: "/dashboard/wallet/link" },
+] as const;
+
+const currencies = [
+  { code: "GBP", name: "British Pound", flag: "🇬🇧", rate: 0.78 },
+  { code: "AED", name: "United Arab Emirates Dirham", flag: "🇦🇪", rate: 3.67 },
+  { code: "EUR", name: "Euro", flag: "🇪🇺", rate: 0.92 },
+  { code: "USD", name: "United States Dollar", flag: "🇺🇸", rate: 1 },
+  { code: "AUD", name: "Australian Dollar", flag: "🇦🇺", rate: 1.52 },
+  { code: "BAM", name: "Bosnia-Herzegovina Convertible Mark", flag: "🇧🇦", rate: 1.8 },
+  { code: "BGN", name: "Bulgarian Lev", flag: "🇧🇬", rate: 1.8 },
+  { code: "BHD", name: "Bahraini Dinar", flag: "🇧🇭", rate: 0.38 },
+  { code: "BIF", name: "Burundian Franc", flag: "🇧🇮", rate: 2870 },
+  { code: "BOB", name: "Bolivian Boliviano", flag: "🇧🇴", rate: 6.91 },
+  { code: "BRL", name: "Brazilian Real", flag: "🇧🇷", rate: 5.3 },
+  { code: "ARS", name: "Argentine Peso", flag: "🇦🇷", rate: 894 },
+] as const;
+
+type Currency = (typeof currencies)[number];
+type CurrencyCode = Currency["code"];
+
+const batchInvoices = [
+  { id: "QB-inv#29475 - 2918...", requested: "paid", status: "Done", due: 27, amount: 1500, currency: "USD" as CurrencyCode, client: "Nike, Inc." },
+  { id: "QB-inv#38485 - 2299...", requested: "request", status: "In Process", due: 2, amount: 5400, currency: "USD" as CurrencyCode, client: "The Gap, Inc." },
+  { id: "QB-inv#88573 - 8857...", requested: "request", status: "In Process", due: 20, amount: 12000, currency: "USD" as CurrencyCode, client: "Levi Strauss & Co." },
+  { id: "QB-inv#88442 - 1184...", requested: "request", status: "In Process", due: 19, amount: 2800, currency: "EUR" as CurrencyCode, client: "Adidas AG" },
+  { id: "QB-inv#99781 - 7463...", requested: "paid", status: "Done", due: 25, amount: 1200, currency: "GBP" as CurrencyCode, client: "Burberry Group plc" },
+  { id: "QB-inv#77362 - 9911...", requested: "paid", status: "Done", due: 7, amount: 800.65, currency: "GBP" as CurrencyCode, client: "Timberland LLC" },
+  { id: "QB-inv#65622 - 7712...", requested: "paid", status: "Done", due: 30, amount: 1100.11, currency: "USD" as CurrencyCode, client: "Levi Strauss & Co." },
 ];
 
-function ContactAvatar({ contact, size = "md" }: { contact: Contact; size?: "sm" | "md" | "lg" }) {
-  const [failed, setFailed] = useState(false);
+function formatAmount(value: number, currency: CurrencyCode) {
+  const selectedCurrency = currencies.find((item) => item.code === currency) || currencies[0];
+
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency,
+    maximumFractionDigits: 2,
+  }).format(value * selectedCurrency.rate);
+}
+
+function RecipientAvatar({ recipient, size = "md" }: { recipient: Recipient; size?: "sm" | "md" | "lg" }) {
+  const initials = recipient.name
+    .split(" ")
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2);
 
   return (
     <div
       className={cn(
-        "flex shrink-0 items-center justify-center overflow-hidden rounded-full border border-[#4a4a4a] bg-white text-center font-semibold text-black",
-        size === "sm" && "h-9 w-9 p-1 text-[10px]",
-        size === "md" && "h-12 w-12 p-1.5 text-[12px]",
-        size === "lg" && "h-16 w-16 p-2 text-[14px]"
+        "flex shrink-0 items-center justify-center overflow-hidden rounded-[6px] border border-white/10 bg-gradient-to-br text-center font-black text-white",
+        recipient.color,
+        size === "sm" && "h-10 w-10 text-[11px]",
+        size === "md" && "h-14 w-14 text-[14px]",
+        size === "lg" && "h-[74px] w-[74px] text-[18px]"
       )}
     >
-      {failed ? (
-        <span>{contact.initials}</span>
+      {recipient.type === "brand" ? (
+        <BriefcaseBusiness className="h-6 w-6" />
       ) : (
-        <img
-          src={contact.logo}
-          alt={contact.name}
-          className="h-full w-full object-contain"
-          loading="lazy"
-          referrerPolicy="no-referrer"
-          onError={() => setFailed(true)}
-        />
+        <span>{initials}</span>
       )}
     </div>
   );
 }
 
-function StepShell({
-  children,
-  title,
-  subtitle,
-}: {
-  children: React.ReactNode;
-  title: string;
-  subtitle: string;
-}) {
+function TopBar() {
   return (
-    <div className="w-full">
-      <div className="mb-6">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#777]">
-          AgncyPay transfer
-        </p>
-        <h1 className="mt-2 text-[30px] font-semibold leading-none text-white">{title}</h1>
-        <p className="mt-3 max-w-[660px] text-[14px] leading-6 text-[#8f8f8f]">{subtitle}</p>
+    <header className="flex items-center justify-between gap-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <Link
+          href="/dashboard"
+          className="inline-flex h-9 items-center rounded-[4px] border border-white bg-white px-4 text-[12px] font-semibold uppercase text-[#1a1a1a]"
+        >
+          Booking Dashboard
+        </Link>
+        <Link
+          href="/dashboard"
+          className="inline-flex h-9 items-center rounded-[4px] border border-white bg-white px-4 text-[12px] font-semibold uppercase text-[#3971b6]"
+        >
+          Finance Dashboard
+        </Link>
+        <Link
+          href="/dashboard/settings"
+          className="inline-flex h-9 w-11 items-center justify-center rounded-[4px] border border-white bg-white text-[#3971b6]"
+          aria-label="Settings"
+        >
+          <Settings className="h-5 w-5" />
+        </Link>
       </div>
-      {children}
+      <AgncyPayLogo imageClassName="h-6 sm:h-7" />
+    </header>
+  );
+}
+
+function FooterBar() {
+  return (
+    <footer className="mt-16 border-y border-[#343434]">
+      <div className="mx-auto flex max-w-[1040px] flex-wrap items-center justify-center gap-8 px-4 py-8 text-[12px] font-bold text-white">
+        <AgncyPayLogo imageClassName="h-7" />
+        <Link href="/dashboard/support">Help</Link>
+        <Link href="/dashboard/support">Contact Us</Link>
+        <Link href="/dashboard/verification">Security</Link>
+        <Link href="/dashboard/settings">Fees</Link>
+      </div>
+    </footer>
+  );
+}
+
+function CurrencyPickerModal({
+  selectedCurrency,
+  search,
+  onSearchChange,
+  onSelect,
+  onClose,
+}: {
+  selectedCurrency: Currency;
+  search: string;
+  onSearchChange: (value: string) => void;
+  onSelect: (currency: Currency) => void;
+  onClose: () => void;
+}) {
+  const filteredCurrencies = currencies.filter((currency) =>
+    [currency.code, currency.name].join(" ").toLowerCase().includes(search.trim().toLowerCase())
+  );
+
+  return (
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/62 px-4 py-10 backdrop-blur-[1px]">
+      <div className="mx-auto w-full max-w-[840px]">
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-6 top-1/2 h-5 w-5 -translate-y-1/2 text-[#858585]" />
+          <input
+            autoFocus
+            value={search}
+            onChange={(event) => onSearchChange(event.target.value)}
+            placeholder="Search currency by name or code"
+            className="h-[58px] w-full rounded-full border border-[#323232] bg-[#1f1f1f] pl-16 pr-14 text-[22px] font-black text-white outline-none placeholder:text-[#777] focus:border-[#6a6a6a]"
+          />
+          <button
+            type="button"
+            onClick={onClose}
+            className="absolute right-5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full text-[#cfcfcf] hover:bg-white/[0.08]"
+            aria-label="Close currency selector"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="mt-3 min-h-[680px] rounded-[3px] bg-[#252322] px-8 py-7 sm:px-28">
+          <p className="mb-8 text-[10px] font-black text-white">Recent searches</p>
+          <div className="space-y-3">
+            {filteredCurrencies.map((currency) => {
+              const isSelected = currency.code === selectedCurrency.code;
+
+              return (
+                <button
+                  key={currency.code}
+                  type="button"
+                  onClick={() => onSelect(currency)}
+                  className={cn(
+                    "flex min-h-[60px] w-full items-center justify-between gap-4 rounded-[7px] px-4 text-left",
+                    isSelected ? "bg-black" : "hover:bg-black/35"
+                  )}
+                >
+                  <span className="flex min-w-0 items-center gap-4">
+                    <span className="text-[30px] leading-none">{currency.flag}</span>
+                    <span className="min-w-0">
+                      <span className="block truncate text-[14px] font-black text-white">{currency.name}</span>
+                      <span className="block text-[13px] font-black text-white">{currency.code}</span>
+                    </span>
+                  </span>
+                  {isSelected && (
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#00ef27] text-black">
+                      <CheckCircle2 className="h-4 w-4" />
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+            {filteredCurrencies.length === 0 && (
+              <div className="rounded-[7px] border border-[#454545] bg-black/25 px-4 py-5 text-[13px] font-bold text-[#bdbdbd]">
+                No currency found.
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function BatchPaymentModal({
+  selectedIds,
+  onToggle,
+  onToggleAll,
+  onClose,
+  onCreate,
+}: {
+  selectedIds: string[];
+  onToggle: (id: string) => void;
+  onToggleAll: () => void;
+  onClose: () => void;
+  onCreate: () => void;
+}) {
+  const allSelected = selectedIds.length === batchInvoices.length;
+  const selectedTotal = batchInvoices
+    .filter((invoice) => selectedIds.includes(invoice.id))
+    .reduce((total, invoice) => total + invoice.amount, 0);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/62 px-4 py-8 backdrop-blur-[1px]">
+      <div className="w-full max-w-[1180px] overflow-hidden rounded-[9px] border border-[#343434] bg-[#080808] shadow-2xl">
+        <div className="grid h-14 grid-cols-[42px_44px_minmax(220px,1.35fr)_160px_150px_90px_150px_minmax(150px,1fr)_34px] items-center border-b border-[#272727] bg-[#222] text-[15px] font-black text-white">
+          <div className="flex h-full items-center justify-center bg-[#22a92d] text-white">
+            <span className="rounded-full bg-[#1a8f25] px-1.5 py-1 text-[16px] leading-none">qb</span>
+          </div>
+          <label className="flex justify-center">
+            <input
+              type="checkbox"
+              checked={allSelected}
+              onChange={onToggleAll}
+              aria-label="Select all batch invoices"
+              className="h-5 w-5 rounded border-[#444] bg-black accent-white"
+            />
+          </label>
+          <span>Invoice(s)</span>
+          <span>Requested</span>
+          <span>Status</span>
+          <span>Due</span>
+          <span>Amount</span>
+          <span>Client</span>
+          <button type="button" onClick={onClose} aria-label="Close batch payment">
+            <X className="h-5 w-5 text-[#cfcfcf]" />
+          </button>
+        </div>
+
+        <div className="max-h-[520px] overflow-y-auto">
+          {batchInvoices.map((invoice) => {
+            const checked = selectedIds.includes(invoice.id);
+
+            return (
+              <div
+                key={invoice.id}
+                className={cn(
+                  "grid min-h-[66px] grid-cols-[42px_44px_minmax(220px,1.35fr)_160px_150px_90px_150px_minmax(150px,1fr)_34px] items-center border-b border-[#202020] text-[15px] font-black",
+                  checked ? "bg-white/[0.04]" : "bg-[#090909]"
+                )}
+              >
+                <div className="flex justify-center text-[#8b8b8b]">
+                  <GripVertical className="h-4 w-4" />
+                </div>
+                <label className="flex justify-center">
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={() => onToggle(invoice.id)}
+                    aria-label={`Select ${invoice.id}`}
+                    className="h-5 w-5 rounded border-[#444] bg-black accent-white"
+                  />
+                </label>
+                <span className="truncate pr-4">{invoice.id}</span>
+                <span>
+                  {invoice.requested === "paid" ? (
+                    <span className="inline-flex h-9 min-w-[76px] items-center justify-center rounded-full border border-[#303030] bg-black px-3">
+                      <AgncyPayLogo imageClassName="h-4 w-auto" />
+                      <span className="ml-1 text-[10px]">paid</span>
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => onToggle(invoice.id)}
+                      className="inline-flex h-9 min-w-[138px] items-center justify-center rounded-full border border-[#05d66c] bg-black px-4 text-[11px] font-black text-white hover:bg-[#07150e]"
+                    >
+                      Request
+                      <AgncyPayLogo imageClassName="ml-1 h-3.5 w-auto" />
+                    </button>
+                  )}
+                </span>
+                <span>
+                  <span className="inline-flex h-8 items-center gap-2 rounded-full border border-[#242424] bg-black px-3 text-[#9d9d9d]">
+                    {invoice.status === "Done" ? (
+                      <CheckCircle2 className="h-4 w-4 text-[#08d66c]" />
+                    ) : (
+                      <span className="h-4 w-4 rounded-full border border-[#777]" />
+                    )}
+                    {invoice.status}
+                  </span>
+                </span>
+                <span>{invoice.due}</span>
+                <span>{formatAmount(invoice.amount, invoice.currency)}</span>
+                <span className="truncate pr-3">{invoice.client}</span>
+                <button type="button" aria-label={`More actions for ${invoice.id}`}>
+                  <MoreVertical className="h-5 w-5 text-[#8f8f8f]" />
+                </button>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="flex flex-col gap-3 border-t border-[#252525] bg-[#0b0b0b] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="text-[13px] font-bold text-[#cfcfcf]">
+            {selectedIds.length} invoice{selectedIds.length === 1 ? "" : "s"} selected - Approx. total {formatAmount(selectedTotal, "USD")}
+          </div>
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="h-9 rounded-[6px] border border-[#444] px-4 text-[12px] font-black text-white hover:border-[#777]"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={onCreate}
+              disabled={selectedIds.length === 0}
+              className="h-9 rounded-[6px] border border-white bg-white px-4 text-[12px] font-black text-black hover:bg-[#e5e5e5] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Create Batch Payment
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
 
 export default function SendRequestPage() {
-  const [mode, setMode] = useState<FlowMode>("send");
-  const [stage, setStage] = useState<FlowStage>("select");
+  const [mode, setMode] = useState<TransferMode>("send");
+  const [stage, setStage] = useState<TransferStage>("search");
   const [query, setQuery] = useState("");
-  const [selectedContactId, setSelectedContactId] = useState(contacts[0].id);
-  const [amount, setAmount] = useState("400.00");
-  const [currency, setCurrency] = useState("USD");
-  const [note, setNote] = useState("");
-  const [fundingMethod, setFundingMethod] = useState("AgncyPay balance");
+  const [selectedId, setSelectedId] = useState(recipients[0].id);
+  const [currency, setCurrency] = useState<CurrencyCode>("USD");
+  const [amount, setAmount] = useState(recipients[0].amount.toFixed(2));
+  const [message, setMessage] = useState("");
+  const [splitEnabled, setSplitEnabled] = useState(false);
+  const [batchCreated, setBatchCreated] = useState(false);
+  const [multiPayout, setMultiPayout] = useState(false);
+  const [isCurrencyOpen, setIsCurrencyOpen] = useState(false);
+  const [currencySearch, setCurrencySearch] = useState("");
+  const [isBatchOpen, setIsBatchOpen] = useState(false);
+  const [batchSelectedIds, setBatchSelectedIds] = useState<string[]>(() =>
+    batchInvoices.filter((invoice) => invoice.requested === "request").map((invoice) => invoice.id)
+  );
 
-  const selectedContact = contacts.find((contact) => contact.id === selectedContactId) ?? contacts[0];
-  const filteredContacts = useMemo(() => {
+  const selectedRecipient = recipients.find((recipient) => recipient.id === selectedId) || recipients[0];
+  const selectedCurrency = currencies.find((item) => item.code === currency) || currencies[0];
+  const amountValue = Number(amount) || 0;
+  const fee = Math.max(3.25, amountValue * 0.00042);
+  const total = mode === "send" ? amountValue + fee : amountValue;
+  const recipientGets = mode === "send" ? amountValue - fee : amountValue;
+
+  const filteredRecipients = useMemo(() => {
     const normalized = query.trim().toLowerCase();
 
-    if (!normalized) return contacts;
+    if (!normalized) return recipients.slice(0, 5);
 
-    return contacts.filter((contact) =>
-      [contact.name, contact.handle, contact.email].join(" ").toLowerCase().includes(normalized)
+    return recipients.filter((recipient) =>
+      [recipient.name, recipient.handle, recipient.email, recipient.mobile, recipient.type]
+        .join(" ")
+        .toLowerCase()
+        .includes(normalized)
     );
   }, [query]);
 
-  const actionText = mode === "send" ? "Send payment" : "Request payment";
-  const resultText =
-    mode === "send"
-      ? `${currency} ${amount || "0.00"} has been sent to ${selectedContact.name}.`
-      : `A ${currency} ${amount || "0.00"} request has been sent to ${selectedContact.name}.`;
+  const selectRecipient = (recipient: Recipient) => {
+    setSelectedId(recipient.id);
+    setAmount(recipient.amount.toFixed(2));
+    setStage("amount");
+    setMessage("");
+  };
 
-  const resetFlow = () => {
-    setStage("select");
-    setQuery("");
-    setNote("");
+  const showMessage = (value: string) => {
+    setMessage(value);
+    window.setTimeout(() => setMessage(""), 2600);
+  };
+
+  const toggleBatchInvoice = (invoiceId: string) => {
+    setBatchSelectedIds((current) =>
+      current.includes(invoiceId) ? current.filter((id) => id !== invoiceId) : [...current, invoiceId]
+    );
+  };
+
+  const toggleAllBatchInvoices = () => {
+    setBatchSelectedIds((current) =>
+      current.length === batchInvoices.length ? [] : batchInvoices.map((invoice) => invoice.id)
+    );
   };
 
   return (
-    <div className="w-full max-w-[1120px]">
-      <div className="mb-6 flex flex-col gap-4 border-b border-[#222] pb-5 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex items-center gap-3">
-          <Link
-            href="/dashboard"
-            className="inline-flex h-10 items-center gap-2 rounded-[7px] border border-[#333] bg-[#050505] px-3 text-[13px] font-semibold text-white hover:border-[#666]"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Dashboard
-          </Link>
-          <AgncyPayLogo imageClassName="h-7 sm:h-8" />
-        </div>
+    <main className="min-h-screen bg-[#080808] text-white">
+      <div className="mx-auto flex min-h-screen w-full max-w-[1480px] flex-col px-5 py-4 sm:px-7 lg:px-10">
+        <TopBar />
 
-        <div className="flex flex-wrap gap-2">
-          {[
-            ["send", "Send"],
-            ["request", "Request"],
-          ].map(([key, label]) => (
-            <button
-              key={key}
-              type="button"
-              onClick={() => {
-                setMode(key as FlowMode);
-                setStage("select");
-              }}
-              className={cn(
-                  "h-10 rounded-full border px-5 text-[13px] font-semibold transition-colors",
-                mode === key
-                  ? "border-white bg-white text-black"
-                  : "border-[#333] bg-[#0b0b0b] text-white hover:border-[#666]"
-              )}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {stage === "select" && (
-        <StepShell
-          title={mode === "send" ? "Send payment to" : "Request payment from"}
-          subtitle="Search by brand, wallet ID, email, or pick a recent brand from the AgncyPay network."
-        >
-          <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
-            <section className="rounded-[13px] border border-[#3a3a3a] bg-[#050505] p-5">
-              <div className="relative">
-                <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#777]" />
-                <input
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                  placeholder="Brand, wallet ID, email, mobile"
-                  className="h-12 w-full rounded-full border border-[#444] bg-black pl-11 pr-4 text-[14px] text-white outline-none placeholder:text-[#666] focus:border-[#777]"
-                />
-              </div>
-
-              <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-                {filteredContacts.map((contact) => (
-                  <button
-                    key={contact.id}
-                    type="button"
-                    onClick={() => {
-                      setSelectedContactId(contact.id);
-                      setStage("details");
-                    }}
-                    className={cn(
-                      "flex min-h-[116px] flex-col items-center justify-center rounded-[8px] border bg-black px-2 py-3 text-center transition-colors hover:border-[#777]",
-                      selectedContact.id === contact.id ? "border-white" : "border-[#333]"
-                    )}
-                  >
-                    <ContactAvatar contact={contact} />
-                    <p className="mt-3 line-clamp-2 text-[12px] font-semibold leading-4 text-white">
-                      {contact.name}
-                    </p>
-                  </button>
-                ))}
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setStage("details")}
-                className="mt-5 h-11 rounded-full border border-white bg-white px-8 text-[13px] font-semibold text-black hover:bg-[#e8e8e8] disabled:cursor-not-allowed disabled:opacity-50"
-                disabled={!selectedContact}
-              >
-                Next
-              </button>
-            </section>
-
-            <aside className="space-y-4">
-              <section className="rounded-[13px] border border-[#3a3a3a] bg-[#050505] p-5">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-[18px] font-semibold text-white">More ways</h2>
-                  <MoreHorizontal className="h-4 w-4 text-[#8f8f8f]" />
-                </div>
-                <div className="mt-4 space-y-3">
-                  {quickTools.map((tool) => {
-                    const Icon = tool.icon;
-                    return (
-                      <Link
-                        key={tool.label}
-                        href={tool.href}
-                        className="flex items-center gap-3 rounded-[8px] border border-[#333] bg-black p-3 hover:border-[#666]"
-                      >
-                        <span className="flex h-9 w-9 items-center justify-center rounded-[7px] border border-[#444] bg-[#0b0b0b]">
-                          <Icon className="h-4 w-4 text-white" />
-                        </span>
-                        <span className="text-[13px] font-semibold text-white">{tool.label}</span>
-                      </Link>
-                    );
-                  })}
-                </div>
-              </section>
-
-              <section className="rounded-[13px] border border-[#3a3a3a] bg-[#050505] p-5">
-                <h2 className="text-[18px] font-semibold text-white">Recent brands</h2>
-                <div className="mt-4 flex flex-wrap gap-3">
-                  {contacts.slice(0, 4).map((contact) => (
+        {stage === "search" && (
+          <section className="mx-auto grid w-full max-w-[720px] flex-1 grid-cols-1 content-start gap-12 pb-8 pt-20 lg:max-w-[760px] xl:max-w-[920px] xl:grid-cols-[1fr_280px] xl:pt-24">
+            <div>
+              <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+                <h1 className="text-[20px] font-black tracking-[-0.01em]">Send and request money</h1>
+                <div className="inline-flex rounded-full border border-[#343434] bg-[#111] p-1">
+                  {(["send", "request"] as const).map((item) => (
                     <button
-                      key={contact.id}
+                      key={item}
                       type="button"
-                      onClick={() => {
-                        setSelectedContactId(contact.id);
-                        setStage("details");
-                      }}
-                      className="flex flex-col items-center gap-2"
+                      onClick={() => setMode(item)}
+                      className={cn(
+                        "h-8 rounded-full px-4 text-[12px] font-black capitalize",
+                        mode === item ? "bg-white text-black" : "text-[#bdbdbd]"
+                      )}
                     >
-                      <ContactAvatar contact={contact} size="sm" />
-                      <span className="max-w-[66px] truncate text-[11px] text-[#bdbdbd]">{contact.name}</span>
+                      {item}
                     </button>
                   ))}
                 </div>
-              </section>
+              </div>
+
+              <div className="rounded-[7px] bg-[#2b2929] pb-5">
+                <label className="relative block">
+                  <Search className="pointer-events-none absolute left-5 top-1/2 h-5 w-5 -translate-y-1/2 text-[#898989]" />
+                  <input
+                    autoFocus
+                    value={query}
+                    onChange={(event) => setQuery(event.target.value)}
+                    placeholder="Name, Agency ID, email, mobile"
+                    className="h-[56px] w-full rounded-full border border-[#5b5959] bg-[#302e2e] pl-14 pr-5 text-[13px] font-bold text-white outline-none placeholder:text-[#8d8b8b] focus:border-[#9a9a9a]"
+                  />
+                </label>
+
+                <div className="px-4 pt-5">
+                  <p className="mb-3 text-[11px] font-black text-white">
+                    {query.trim() ? "Search results" : "Recent searches"}
+                  </p>
+                  <div className="space-y-3">
+                    {filteredRecipients.map((recipient) => (
+                      <button
+                        key={recipient.id}
+                        type="button"
+                        onClick={() => selectRecipient(recipient)}
+                        className="flex w-full items-center gap-4 rounded-[7px] px-2 py-1.5 text-left transition-colors hover:bg-white/[0.06]"
+                      >
+                        <RecipientAvatar recipient={recipient} size="sm" />
+                        <span className="min-w-0">
+                          <span className="block truncate text-[14px] font-black text-white">{recipient.name}</span>
+                          <span className="block truncate text-[10px] font-bold text-[#c4c4c4]">{recipient.handle}</span>
+                        </span>
+                      </button>
+                    ))}
+                    {filteredRecipients.length === 0 && (
+                      <div className="rounded-[7px] border border-[#454545] bg-black/25 px-4 py-5 text-[13px] font-bold text-[#bdbdbd]">
+                        No recipient found. Try a name, agency ID, email, or mobile number.
+                      </div>
+                    )}
+                  </div>
+                  <div className="mt-4 flex justify-center">
+                    <button
+                      type="button"
+                      onClick={() => setQuery("")}
+                      className="text-[12px] font-black text-[#22e03b] underline"
+                    >
+                      Clear all
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <aside className="pt-1">
+              <h2 className="mb-7 text-[20px] font-black">More options</h2>
+              <div className="space-y-6">
+                {moreOptions.map((option) => {
+                  const Icon = option.icon;
+                  return (
+                    <Link
+                      key={option.label}
+                      href={option.href}
+                      className="flex items-center gap-5 text-[14px] font-black text-white hover:text-[#d7d7d7]"
+                    >
+                      <span className="flex h-9 w-9 items-center justify-center">
+                        <Icon className="h-8 w-8" />
+                      </span>
+                      {option.label}
+                    </Link>
+                  );
+                })}
+              </div>
             </aside>
-          </div>
-        </StepShell>
-      )}
-
-      {stage === "details" && (
-        <StepShell
-          title={mode === "send" ? "Enter payment amount" : "Enter request amount"}
-          subtitle="Add the amount and an optional note before reviewing the transfer."
-        >
-          <section className="mx-auto max-w-[520px] rounded-[13px] border border-[#3a3a3a] bg-[#050505] p-5 sm:p-6">
-            <div className="flex items-center gap-4">
-              <ContactAvatar contact={selectedContact} size="lg" />
-              <div className="min-w-0">
-                <h2 className="truncate text-[22px] font-semibold text-white">{selectedContact.name}</h2>
-                <p className="mt-1 text-[13px] text-[#8f8f8f]">{selectedContact.handle}</p>
-              </div>
-            </div>
-
-            <div className="mt-6 flex items-end gap-3 border-b border-[#333] pb-3">
-              <input
-                value={amount}
-                onChange={(event) => setAmount(event.target.value)}
-                inputMode="decimal"
-                className="min-w-0 flex-1 bg-transparent text-[42px] font-semibold leading-none text-white outline-none placeholder:text-[#444]"
-                placeholder="0.00"
-              />
-              <select
-                value={currency}
-                onChange={(event) => setCurrency(event.target.value)}
-                className="h-10 rounded-full border border-[#444] bg-black px-3 text-[13px] font-semibold text-white outline-none"
-              >
-                <option>USD</option>
-                <option>EUR</option>
-                <option>GBP</option>
-              </select>
-            </div>
-
-            <textarea
-              value={note}
-              onChange={(event) => setNote(event.target.value.slice(0, 280))}
-              placeholder="Add a note"
-              className="mt-5 min-h-[96px] w-full resize-none rounded-[8px] border border-[#333] bg-black p-3 text-[14px] text-white outline-none placeholder:text-[#666] focus:border-[#666]"
-            />
-            <p className="mt-2 text-right text-[12px] text-[#777]">{note.length}/280</p>
-
-            <div className="mt-6 flex flex-col gap-3">
-              <button
-                type="button"
-                onClick={() => setStage("review")}
-                className="h-11 rounded-full border border-white bg-white px-5 text-[13px] font-semibold text-black hover:bg-[#e8e8e8]"
-              >
-                Next
-              </button>
-              <button
-                type="button"
-                onClick={() => setStage("select")}
-                className="h-10 text-[13px] font-semibold text-[#bdbdbd] hover:text-white"
-              >
-                Cancel
-              </button>
-            </div>
           </section>
-        </StepShell>
-      )}
+        )}
 
-      {stage === "review" && (
-        <StepShell
-          title={mode === "send" ? "Review payment" : "Review request"}
-          subtitle="Confirm the recipient, amount, and funding details before continuing."
-        >
-          <section className="mx-auto max-w-[640px] rounded-[13px] border border-[#3a3a3a] bg-[#050505] p-5 sm:p-6">
-            <div className="flex items-center gap-4 border-b border-[#242424] pb-5">
-              <ContactAvatar contact={selectedContact} />
-              <div>
-                <p className="text-[13px] text-[#8f8f8f]">{mode === "send" ? "Sending to brand" : "Requesting from brand"}</p>
-                <h2 className="mt-1 text-[22px] font-semibold text-white">{selectedContact.name}</h2>
+        {stage === "amount" && (
+          <section className="mx-auto flex w-full max-w-[540px] flex-1 flex-col justify-start pb-8 pt-12 sm:pt-16">
+            {message && (
+              <div className="mb-4 rounded-[7px] border border-[#3c3c3c] bg-[#151515] px-4 py-2 text-[12px] font-bold">
+                {message}
               </div>
-            </div>
+            )}
 
-            <div className="mt-5 space-y-3 rounded-[8px] border border-[#242424] bg-black p-4">
-              <div className="flex justify-between gap-4">
-                <span className="text-[13px] text-[#8f8f8f]">Amount</span>
-                <span className="text-[14px] font-semibold text-white">
-                  {currency} {amount || "0.00"}
-                </span>
+            <div className="rounded-[9px] border border-[#444] bg-[#1a1a1a] px-9 py-10">
+              <div className="flex items-center justify-center gap-4">
+                <RecipientAvatar recipient={selectedRecipient} size="lg" />
+                <div className="min-w-0">
+                  <h1 className="truncate text-[28px] font-black leading-none">{selectedRecipient.name}</h1>
+                  <p className="mt-2 text-[14px] font-black text-white">{selectedRecipient.handle}</p>
+                </div>
               </div>
-              <div className="flex justify-between gap-4">
-                <span className="text-[13px] text-[#8f8f8f]">Method</span>
-                <select
-                  value={fundingMethod}
-                  onChange={(event) => setFundingMethod(event.target.value)}
-                  className="max-w-[220px] rounded-[7px] border border-[#333] bg-[#0b0b0b] px-2 py-1 text-[13px] text-white outline-none"
+
+              <div className="mt-8 flex items-end justify-between gap-4">
+                <input
+                  value={amount}
+                  onChange={(event) => setAmount(event.target.value.replace(/[^\d.]/g, ""))}
+                  inputMode="decimal"
+                  aria-label="Transfer amount"
+                  className="min-w-0 flex-1 bg-transparent text-[40px] font-black leading-none text-[#c9c9c9] outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCurrencySearch("");
+                    setIsCurrencyOpen(true);
+                  }}
+                  className="inline-flex h-10 shrink-0 items-center gap-2 rounded-[7px] border border-[#484848] bg-[#181818] px-4 text-[14px] font-black text-white hover:border-[#777]"
+                  aria-label="Select currency"
                 >
-                  <option>AgncyPay balance</option>
-                  <option>Chase Business Debit</option>
-                  <option>Mercury Mastercard</option>
-                </select>
-              </div>
-              <div className="flex justify-between gap-4">
-                <span className="text-[13px] text-[#8f8f8f]">Note</span>
-                <span className="max-w-[260px] text-right text-[13px] text-white">{note || "No note added"}</span>
+                  <span className="text-[18px] leading-none">{selectedCurrency.flag}</span>
+                  {selectedCurrency.code}
+                  <ChevronDown className="h-4 w-4 text-white" />
+                </button>
               </div>
             </div>
 
-            <div className="mt-5 flex items-start gap-3 rounded-[8px] border border-[#333] bg-black p-4 text-[13px] leading-5 text-[#9b9b9b]">
-              <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-white" />
-              AgncyPay will create a transaction record and update wallet activity after confirmation.
-            </div>
+            <div className="mt-5 rounded-[8px] border border-[#3c3c3c] bg-black px-8 py-7">
+              <div className="grid grid-cols-[1fr_48px_54px_78px_28px] items-center gap-2 text-[12px] font-black">
+                <span className="text-center">Name/Total</span>
+                <span>Qty</span>
+                <span>Rate</span>
+                <span>Wallet ID</span>
+                <span />
+              </div>
 
-            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+              <div className="mt-2 grid min-h-[48px] grid-cols-[1fr_48px_54px_78px_28px] items-center gap-2 rounded-[5px] bg-[#242424] px-3">
+                <div className="flex min-w-0 items-center gap-3">
+                  <RecipientAvatar recipient={selectedRecipient} size="sm" />
+                  <div className="min-w-0">
+                    <p className="truncate text-[11px] font-black">{selectedRecipient.name}</p>
+                    <p className="text-[9px] font-bold text-[#c7c7c7]">{formatAmount(amountValue, currency)}</p>
+                  </div>
+                </div>
+                <span className="flex h-7 items-center justify-center rounded-[2px] border border-[#444] text-[11px]">1</span>
+                <span className="rounded-[2px] border border-[#444] px-1 py-2 text-[8px] font-black">{selectedRecipient.rate}</span>
+                <span className="flex h-7 items-center justify-center rounded-[2px] border border-[#444] text-[11px]">1</span>
+                <button
+                  type="button"
+                  onClick={() => showMessage("This synced recipient cannot be removed from the draft.")}
+                  aria-label="Remove recipient"
+                >
+                  <Trash2 className="h-4 w-4 text-[#d7d7d7]" />
+                </button>
+              </div>
+
               <button
                 type="button"
-                onClick={() => setStage("success")}
-                className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-full border border-white bg-white px-5 text-[13px] font-semibold text-black hover:bg-[#e8e8e8]"
+                onClick={() => showMessage("Funding account selected.")}
+                className="mt-4 flex h-12 w-full items-center justify-between rounded-[5px] bg-[#2d2d2d] px-4 text-left"
               >
-                <Send className="h-4 w-4" />
-                {actionText}
+                <span className="flex min-w-0 items-center gap-3">
+                  <span className="flex h-8 w-12 items-center justify-center rounded-[4px] bg-[#154a91] text-[9px] font-black">VISA</span>
+                  <span className="min-w-0">
+                    <span className="block truncate text-[15px] font-black">Bank of America Business Debit Visa</span>
+                    <span className="block text-[10px] font-black">Debit ****88</span>
+                  </span>
+                </span>
+                <ChevronDown className="h-5 w-5 shrink-0" />
               </button>
-              <button
-                type="button"
-                onClick={() => setStage("details")}
-                className="h-11 rounded-full border border-[#333] bg-[#111] px-5 text-[13px] font-semibold text-white hover:border-[#666]"
-              >
-                Back
-              </button>
+
+              <div className="mt-4 grid gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSplitEnabled((value) => !value);
+                    showMessage(splitEnabled ? "Split payout disabled." : "Split payout enabled.");
+                  }}
+                  className={cn(
+                    "h-8 rounded-[5px] text-[11px] font-black",
+                    splitEnabled ? "bg-white text-black" : "bg-[#2d2d2d] text-[#d9d9d9]"
+                  )}
+                >
+                  <Users className="mr-2 inline h-4 w-4" />
+                  Split Payout (%)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsBatchOpen(true);
+                  }}
+                  className={cn(
+                    "h-8 rounded-[5px] text-[11px] font-black",
+                    batchCreated ? "bg-white text-black" : "bg-[#2d2d2d] text-[#d9d9d9]"
+                  )}
+                >
+                  <Split className="mr-2 inline h-4 w-4" />
+                  {batchCreated ? "Batch Payment Created" : "+ Create Batch Payment"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMultiPayout((value) => !value);
+                    showMessage(multiPayout ? "Multi payout disabled." : "Multi payout enabled.");
+                  }}
+                  className={cn(
+                    "h-8 rounded-[5px] text-[11px] font-black",
+                    multiPayout ? "bg-white text-black" : "bg-[#2d2d2d] text-[#d9d9d9]"
+                  )}
+                >
+                  <Landmark className="mr-2 inline h-4 w-4" />
+                  Multi Payout
+                </button>
+              </div>
+
+              <div className="mt-4 space-y-3 text-[12px] font-bold">
+                <div className="flex justify-between">
+                  <span>You&apos;ll {mode === "send" ? "send" : "request"}:</span>
+                  <span>{formatAmount(amountValue, currency)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>AgncyPay fee:</span>
+                  <span>{formatAmount(fee, currency)}</span>
+                </div>
+                <div className="flex justify-between text-[13px]">
+                  <span>Total:</span>
+                  <span>{formatAmount(total, currency)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Estimated delivery:</span>
+                  <span>In seconds</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>{selectedRecipient.name} will get:</span>
+                  <span>{formatAmount(recipientGets, currency)}</span>
+                </div>
+              </div>
+
+              {currency !== "USD" && (
+                <p className="mt-4 text-[12px] font-bold leading-5 text-white">
+                  1 USD = {selectedCurrency.rate.toFixed(2)} {currency}
+                  <br />
+                  This rate includes a currency conversion spread.
+                </p>
+              )}
+
+              <div className="mt-6 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setStage("search")}
+                  className="h-9 w-[94px] rounded-[6px] bg-[#ff4e2f] text-[13px] font-black text-white hover:bg-[#ff684d]"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStage("success")}
+                  aria-label={mode === "send" ? "Pay Now" : "Request Now"}
+                  className="inline-flex h-9 w-[94px] items-center justify-center gap-1 overflow-hidden rounded-[6px] border border-[#444] bg-black text-[13px] font-black text-white hover:border-[#777] hover:bg-[#111]"
+                >
+                  <AgncyPayLogo imageClassName="h-3.5 w-auto" />
+                  Now
+                </button>
+              </div>
             </div>
           </section>
-        </StepShell>
-      )}
+        )}
 
-      {stage === "success" && (
-        <StepShell
-          title={mode === "send" ? "Payment sent" : "Request sent"}
-          subtitle="The transfer is recorded in AgncyPay activity and ready for follow-up."
-        >
-          <section className="mx-auto max-w-[520px] rounded-[13px] border border-[#3a3a3a] bg-[#050505] p-6 text-center">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-[#1f7a43] bg-[#0d140f]">
-              <CheckCircle2 className="h-8 w-8 text-[#39d26d]" />
-            </div>
-            <h2 className="mt-5 text-[24px] font-semibold text-white">{mode === "send" ? "Payment sent" : "Request sent"}</h2>
-            <p className="mt-2 text-[14px] leading-6 text-[#8f8f8f]">{resultText}</p>
-
-            <div className="mt-6 rounded-[8px] border border-[#242424] bg-black p-4 text-left">
-              <div className="flex justify-between gap-4 border-b border-[#1d1d1d] pb-3">
-                <span className="text-[13px] text-[#777]">Brand</span>
-                <span className="text-[13px] font-semibold text-white">{selectedContact.name}</span>
+        {stage === "success" && (
+          <section className="mx-auto flex w-full max-w-[520px] flex-1 items-center pb-12 pt-12">
+            <div className="w-full rounded-[8px] border border-[#3c3c3c] bg-[#151515] px-8 py-9 text-center">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#1ea94b]">
+                <Send className="h-7 w-7 text-white" />
               </div>
-              <div className="flex justify-between gap-4 pt-3">
-                <span className="text-[13px] text-[#777]">Reference</span>
-                <span className="font-mono text-[13px] text-white">AP-{Math.floor(100000 + selectedContact.id.length * 831)}</span>
+              <h1 className="mt-5 text-[28px] font-black">{mode === "send" ? "Payment sent" : "Request sent"}</h1>
+              <p className="mt-3 text-[14px] font-bold leading-6 text-[#bdbdbd]">
+                {formatAmount(amountValue, currency)} {mode === "send" ? "was sent to" : "was requested from"}{" "}
+                {selectedRecipient.name}.
+              </p>
+              <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+                <Link
+                  href="/dashboard"
+                  className="inline-flex h-11 flex-1 items-center justify-center rounded-[6px] border border-white bg-white text-[13px] font-black text-black"
+                >
+                  Go to Dashboard
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setQuery("");
+                    setStage("search");
+                  }}
+                  className="h-11 rounded-[6px] border border-[#444] px-5 text-[13px] font-black text-white"
+                >
+                  Send another
+                </button>
               </div>
-            </div>
-
-            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-              <Link
-                href="/dashboard"
-                className="inline-flex h-11 flex-1 items-center justify-center rounded-full border border-white bg-white px-5 text-[13px] font-semibold text-black hover:bg-[#e8e8e8]"
-              >
-                Go to Dashboard
-              </Link>
-              <button
-                type="button"
-                onClick={resetFlow}
-                className="h-11 rounded-full border border-[#333] bg-[#111] px-5 text-[13px] font-semibold text-white hover:border-[#666]"
-              >
-                Send another
-              </button>
             </div>
           </section>
-        </StepShell>
-      )}
-    </div>
+        )}
+
+        {isCurrencyOpen && (
+          <CurrencyPickerModal
+            selectedCurrency={selectedCurrency}
+            search={currencySearch}
+            onSearchChange={setCurrencySearch}
+            onSelect={(nextCurrency) => {
+              setCurrency(nextCurrency.code);
+              setCurrencySearch("");
+              setIsCurrencyOpen(false);
+              showMessage(`Currency changed to ${nextCurrency.code}.`);
+            }}
+            onClose={() => setIsCurrencyOpen(false)}
+          />
+        )}
+
+        {isBatchOpen && (
+          <BatchPaymentModal
+            selectedIds={batchSelectedIds}
+            onToggle={toggleBatchInvoice}
+            onToggleAll={toggleAllBatchInvoices}
+            onClose={() => setIsBatchOpen(false)}
+            onCreate={() => {
+              setBatchCreated(true);
+              setIsBatchOpen(false);
+              showMessage(`${batchSelectedIds.length} invoice batch payment created.`);
+            }}
+          />
+        )}
+
+        <FooterBar />
+      </div>
+    </main>
   );
 }

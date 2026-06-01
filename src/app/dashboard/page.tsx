@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -11,6 +11,7 @@ import {
   Landmark,
   Search,
   Send,
+  Settings,
   Users,
 } from "lucide-react";
 import { AgncyPayLogo } from "../../components/payment/AgncyPayLogo";
@@ -180,7 +181,7 @@ function RequestedBadge({ invoiceId }: { invoiceId: string }) {
         <AgncyPayLogo imageClassName="h-[8px] w-auto" />
       </span>
       <Link
-        href={`/pay/${invoiceId}?mode=guest`}
+        href={`/dashboard/pay-flow/${invoiceId}`}
         className="inline-flex h-4 items-center rounded-full border border-white bg-white px-1.5 text-[8px] font-semibold leading-none text-black hover:bg-[#e8e8e8]"
       >
         Pay
@@ -189,26 +190,57 @@ function RequestedBadge({ invoiceId }: { invoiceId: string }) {
   );
 }
 
+function DashboardFooter() {
+  return (
+    <footer className="mt-8 border-y border-[#343434]">
+      <div className="mx-auto flex max-w-[1040px] flex-wrap items-center justify-center gap-8 px-4 py-8 text-[12px] font-bold text-white">
+        <AgncyPayLogo imageClassName="h-7" />
+        <Link href="/dashboard/support">Help</Link>
+        <Link href="/dashboard/support">Contact Us</Link>
+        <Link href="/dashboard/verification">Security</Link>
+        <Link href="/dashboard/settings">Fees</Link>
+      </div>
+    </footer>
+  );
+}
+
 export default function DashboardHomePage() {
+  const [selectedInvoiceId, setSelectedInvoiceId] = useState(dashboardInvoices[0]?.id || "");
+  const [selectedInvoiceIds, setSelectedInvoiceIds] = useState<string[]>([]);
+  const selectedInvoice = dashboardInvoices.find((invoice) => invoice.id === selectedInvoiceId) || dashboardInvoices[0];
+
+  const toggleInvoiceSelection = (invoiceId: string) => {
+    setSelectedInvoiceIds((current) =>
+      current.includes(invoiceId) ? current.filter((id) => id !== invoiceId) : [...current, invoiceId]
+    );
+  };
+
   return (
     <main className="min-h-screen bg-black text-white">
       <div className="mx-auto max-w-[1520px] px-4 py-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between gap-4 pb-4">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Link
               href="/dashboard"
-              className="inline-flex h-9 items-center rounded-[7px] border border-[#404040] bg-[#0b0b0b] px-3 text-[12px] font-semibold text-white"
+              className="inline-flex h-9 items-center rounded-[4px] border border-white bg-white px-4 text-[12px] font-semibold uppercase text-[#1a1a1a]"
             >
-              Booking dashboard
+              Booking Dashboard
             </Link>
             <Link
               href="/dashboard"
-              className="inline-flex h-9 items-center rounded-[7px] border border-white bg-white px-3 text-[12px] font-semibold text-black"
+              className="inline-flex h-9 items-center rounded-[4px] border border-white bg-white px-4 text-[12px] font-semibold uppercase text-[#3971b6]"
             >
-              Finance dashboard
+              Finance Dashboard
+            </Link>
+            <Link
+              href="/dashboard/settings"
+              className="inline-flex h-9 w-11 items-center justify-center rounded-[4px] border border-white bg-white text-[#3971b6]"
+              aria-label="Settings"
+            >
+              <Settings className="h-5 w-5" />
             </Link>
           </div>
-          <AgncyPayLogo imageClassName="h-7 sm:h-8" />
+          <AgncyPayLogo imageClassName="h-6 sm:h-7" />
         </div>
 
         <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(360px,0.85fr)]">
@@ -315,20 +347,46 @@ export default function DashboardHomePage() {
               <div className="flex items-center justify-between border-b border-[#333] p-4 sm:p-5">
                 <div>
                   <h2 className="text-[18px] font-semibold text-white">Invoices</h2>
-                  <p className="mt-1 text-[13px] text-[#8f8f8f]">Requested, status, due, amount, client.</p>
+                  <p className="mt-1 text-[13px] text-[#8f8f8f]">
+                    Requested, status, due, amount, client. Select an invoice to inspect or pay.
+                  </p>
                 </div>
-                <Link
-                  href="/dashboard/invoices"
-                  className="inline-flex items-center gap-2 rounded-[7px] border border-[#333] bg-[#0b0b0b] px-3 py-2 text-[12px] font-semibold text-white"
-                >
-                  Open
-                  <ArrowUpRight className="h-4 w-4" />
-                </Link>
+                <div className="flex items-center gap-2">
+                  <Link
+                    href={selectedInvoice ? `/dashboard/pay-flow/${selectedInvoice.id}` : "/dashboard/invoices"}
+                    className="inline-flex items-center gap-2 rounded-[7px] border border-white bg-white px-3 py-2 text-[12px] font-semibold text-black"
+                  >
+                    Pay Selected
+                  </Link>
+                  <Link
+                    href="/dashboard/invoices"
+                    className="inline-flex items-center gap-2 rounded-[7px] border border-[#333] bg-[#0b0b0b] px-3 py-2 text-[12px] font-semibold text-white"
+                  >
+                    Open
+                    <ArrowUpRight className="h-4 w-4" />
+                  </Link>
+                </div>
               </div>
 
+              {selectedInvoiceIds.length > 0 && (
+                <div className="flex items-center justify-between gap-3 border-b border-[#333] bg-white/[0.02] px-4 py-3 text-[13px]">
+                  <span className="font-semibold text-white">
+                    {selectedInvoiceIds.length} invoice{selectedInvoiceIds.length === 1 ? "" : "s"} selected
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedInvoiceIds([])}
+                    className="h-8 rounded-[7px] border border-[#333] bg-black px-3 text-[12px] font-semibold text-white hover:border-[#666]"
+                  >
+                    Clear
+                  </button>
+                </div>
+              )}
+
               <div className="overflow-x-auto">
-                <table className="min-w-[920px] w-full table-fixed text-left">
+                <table className="min-w-[980px] w-full table-fixed text-left">
                   <colgroup>
+                    <col className="w-[52px]" />
                     <col className="w-[128px]" />
                     <col className="w-[220px]" />
                     <col className="w-[128px]" />
@@ -338,6 +396,19 @@ export default function DashboardHomePage() {
                   </colgroup>
                   <thead>
                     <tr className="h-12 border-b border-[#333] text-[11px] font-semibold uppercase tracking-[0.12em] text-[#777]">
+                      <th className="px-4">
+                        <input
+                          type="checkbox"
+                          aria-label="Select all dashboard invoices"
+                          checked={selectedInvoiceIds.length === dashboardInvoices.length && dashboardInvoices.length > 0}
+                          onChange={() =>
+                            setSelectedInvoiceIds((current) =>
+                              current.length === dashboardInvoices.length ? [] : dashboardInvoices.map((invoice) => invoice.id)
+                            )
+                          }
+                          className="h-4 w-4 accent-white"
+                        />
+                      </th>
                       <th className="px-4">Invoice</th>
                       <th className="px-0">Requested</th>
                       <th className="px-0">Status</th>
@@ -350,13 +421,30 @@ export default function DashboardHomePage() {
                     {dashboardInvoices.map((invoice, index) => (
                       <tr
                         key={invoice.id}
+                        onClick={() => setSelectedInvoiceId(invoice.id)}
                         className={cn(
-                        "h-[72px] border-b border-[#2c2c2c] transition-colors hover:bg-white/[0.02]",
-                          index === 0 && "bg-white/[0.02]"
+                        "h-[72px] cursor-pointer border-b border-[#2c2c2c] transition-colors hover:bg-white/[0.02]",
+                          (invoice.id === selectedInvoiceId || index === 0 && !selectedInvoiceId) && "bg-white/[0.04]"
                         )}
                       >
                         <td className="px-4">
-                          <Link href={`/request/${invoice.id}?mode=logged_in`} className="font-mono text-[13px] font-semibold text-white hover:underline">
+                          <input
+                            type="checkbox"
+                            checked={selectedInvoiceIds.includes(invoice.id)}
+                            onChange={(event) => {
+                              event.stopPropagation();
+                              toggleInvoiceSelection(invoice.id);
+                            }}
+                            onClick={(event) => event.stopPropagation()}
+                            className="h-4 w-4 accent-white"
+                          />
+                        </td>
+                        <td className="px-4">
+                          <Link
+                            href={`/dashboard/pay-flow/${invoice.id}`}
+                            onClick={(event) => event.stopPropagation()}
+                            className="font-mono text-[13px] font-semibold text-white hover:underline"
+                          >
                             {invoice.id}
                           </Link>
                         </td>
@@ -564,6 +652,7 @@ export default function DashboardHomePage() {
           </div>
         </div>
       </div>
+      <DashboardFooter />
     </main>
   );
 }

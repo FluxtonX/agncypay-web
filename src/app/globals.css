@@ -167,3 +167,25 @@ body {
 .max-w-2xl .border-dashed:hover {
   border-color: #444 !important;
 }
+
+.dashboard-action-surface button:not(:disabled),
+.dashboard-action-surface a[href] {
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    background-color 160ms ease,
+    color 160ms ease,
+    opacity 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.dashboard-action-surface button:not(:disabled):hover,
+.dashboard-action-surface a[href]:hover {
+  transform: translateY(-1px);
+}
+
+.dashboard-action-surface button:not(:disabled):active,
+.dashboard-action-surface a[href]:active {
+  transform: translateY(0);
+  opacity: 0.88;
+}

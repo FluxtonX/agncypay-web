@@ -1,23 +1,19 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import {
   ArrowLeft,
   CheckCircle2,
   Copy,
-  Download,
   FileText,
   Lock,
-  Mail,
   ShieldCheck,
-  Smartphone,
-  X,
 } from "lucide-react";
 import { downloadTableReportPdf } from "../../../lib/pdfExport";
 import { cn } from "../../../lib/utils";
-import { AgncyPayLogo } from "../../../components/payment/AgncyPayLogo";
 import {
   findMainboardInvoice,
   formatMainboardMoney,
@@ -25,22 +21,169 @@ import {
   type MainboardInvoice,
 } from "../../../lib/mainboard";
 
-type CheckoutMode = "guest" | "logged_in";
-type PaymentStage = "review" | "processing" | "success";
+type CheckoutStage = "payment" | "processing" | "success";
+type CardRail = "agncypay" | "visa" | "mastercard" | "discover" | "amex" | "plaid";
 
-function InvoiceStatus({ status }: { status: MainboardInvoice["status"] }) {
+const cardRails: CardRail[] = ["agncypay", "visa", "mastercard", "discover", "amex", "plaid"];
+const paymentMethods = [
+  ["usa", "Fedwire", "Bank transfer"],
+  ["global", "SWIFT", "International"],
+  ["brazil", "PIX", "Instant"],
+  ["eurozone", "SEPA Instant", "Instant"],
+  ["usa", "FedNow", "Instant"],
+  ["brazil", "TED", "Transfer"],
+  ["usa", "RTP", "Instant"],
+  ["uk", "RTGS", "FPS"],
+  ["mexico", "SPEI", "Instant"],
+  ["stablecoin", "USDC", "Instant"],
+  ["stablecoin", "USDT", "Instant"],
+  ["stablecoin", "USDH", "Instant"],
+] as const;
+
+function CardRailLogo({ rail }: { rail: CardRail }) {
+  if (rail === "visa") {
+    return <span className="text-[20px] font-black italic tracking-[0.08em] text-[#1434cb]">VISA</span>;
+  }
+
+  if (rail === "mastercard") {
+    return (
+      <span className="flex items-center">
+        <span className="h-8 w-8 rounded-full bg-[#eb001b]" />
+        <span className="-ml-3 h-8 w-8 rounded-full bg-[#f79e1b] mix-blend-screen" />
+      </span>
+    );
+  }
+
+  if (rail === "discover") {
+    return (
+      <span className="relative flex h-full w-full items-center justify-center overflow-hidden rounded-[3px] bg-white px-2">
+        <span className="absolute bottom-0 right-0 h-9 w-12 rounded-tl-full bg-[#ff7a00]" />
+        <span className="relative text-[13px] font-black uppercase tracking-[0.02em] text-[#222]">DISCOVER</span>
+      </span>
+    );
+  }
+
+  if (rail === "amex") {
+    return (
+      <span className="flex h-full w-full items-center justify-center rounded-[3px] bg-[#2e77bc] px-2 text-center text-[10px] font-black uppercase leading-[0.95] text-white">
+        American<br />Express
+      </span>
+    );
+  }
+
+  if (rail === "plaid") {
+    return (
+      <span className="flex items-center gap-2 text-[#f4f4f4]">
+        <span className="grid h-5 w-5 grid-cols-2 gap-[2px]">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <span key={index} className="rounded-[2px] bg-white" />
+          ))}
+        </span>
+        <span className="text-[12px] font-black uppercase tracking-[0.08em]">Plaid</span>
+      </span>
+    );
+  }
+
   return (
-    <span
-      className={cn(
-        "inline-flex h-7 items-center rounded-[6px] border px-3 text-[12px] font-semibold",
-        status === "Ready" && "border-white bg-white text-black",
-        status === "Pending" && "border-[#444] bg-[#111] text-[#d7d7d7]",
-        status === "Processing" && "border-[#444] bg-[#161616] text-white",
-        status === "Paid" && "border-[#333] bg-[#0c0c0c] text-[#bdbdbd]"
-      )}
-    >
-      {status}
+    <span className="flex items-center gap-2 text-black">
+      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-black text-[13px] font-black text-white">A</span>
+      <span className="text-[13px] font-black">AgncyPay</span>
     </span>
+  );
+}
+
+function cardRailClasses(rail: CardRail, selected: boolean) {
+  const base = "relative flex h-11 min-w-[88px] items-center justify-center overflow-hidden rounded-[4px] border px-3 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80";
+  const palette: Record<CardRail, string> = {
+    agncypay: "bg-white text-black",
+    visa: "bg-white",
+    mastercard: "bg-white",
+    discover: "bg-white",
+    amex: "bg-[#2e77bc]",
+    plaid: "bg-[#111]",
+  };
+
+  return cn(
+    base,
+    palette[rail],
+    selected ? "border-white shadow-[0_0_0_2px_rgba(255,255,255,0.22)]" : "border-[#333] opacity-80 hover:opacity-100"
+  );
+}
+
+function SummaryCard({
+  invoice,
+  total,
+  returnTo,
+  onCopy,
+  onDownload,
+}: {
+  invoice: MainboardInvoice;
+  total: number;
+  returnTo: "dashboard" | "mainboard";
+  onCopy: () => void;
+  onDownload: () => void;
+}) {
+  const returnParam = `&returnTo=${returnTo}`;
+
+  return (
+    <aside className="space-y-5">
+      <section className="rounded-[10px] border border-[#303030] bg-[#161616] p-6">
+        <div className="space-y-5 text-[13px]">
+          <div className="flex items-center justify-between gap-4">
+            <span className="font-semibold text-[#d7d7d7]">Due Date</span>
+            <span className="font-semibold text-white">{invoice.due}</span>
+          </div>
+          <div className="flex items-center justify-between gap-4">
+            <span className="font-semibold text-[#d7d7d7]">Invoice Amount</span>
+            <span className="text-[26px] font-semibold text-white">{formatMainboardMoney(invoice.amount)}</span>
+          </div>
+          <div className="flex items-center justify-between gap-4">
+            <span className="font-semibold text-[#d7d7d7]">Amount Due</span>
+            <span className="text-[26px] font-semibold text-white">{formatMainboardMoney(total)}</span>
+          </div>
+        </div>
+
+        <div className="mt-8 grid grid-cols-3 items-end gap-4 text-center">
+          <Link
+            href={`/request/${invoice.id}?mode=guest${returnParam}`}
+            className="inline-flex h-9 items-center justify-center rounded-none border border-[#333] bg-black px-3 text-[12px] font-semibold text-white hover:border-[#666]"
+          >
+            View Invoice PDF
+          </Link>
+          <button type="button" onClick={onCopy} className="flex flex-col items-center gap-2 text-[12px] font-semibold text-[#d7d7d7] hover:text-white">
+            <Copy className="h-6 w-6" />
+            Copy Link
+          </button>
+          <button type="button" onClick={onDownload} className="flex flex-col items-center gap-2 text-[12px] font-semibold text-[#d7d7d7] hover:text-white">
+            <FileText className="h-6 w-6" />
+            Download PDF
+          </button>
+        </div>
+      </section>
+
+      <p className="text-center text-[12px] font-semibold text-[#8f8f8f]">
+        Have an AgncyPay account?{" "}
+        <Link href={`/auth/login?next=${encodeURIComponent(`/pay/${invoice.id}?mode=logged_in${returnParam}`)}`} className="text-white hover:underline">
+          Sign in
+        </Link>
+      </p>
+
+      <section className="rounded-[10px] border border-[#303030] bg-[#161616] p-5">
+        <h3 className="text-[18px] font-semibold text-white">Business details</h3>
+        <div className="mt-4 space-y-3 text-[13px]">
+          <p className="font-semibold text-white">Email: {invoice.payerEmail}</p>
+          <div className="border-t border-[#2b2b2b] pt-3 text-[#a7a7a7]">
+            <p>{invoice.payer}</p>
+            <p>{invoice.payerAddress[0]}</p>
+          </div>
+        </div>
+      </section>
+
+      <div className="flex items-center justify-center gap-2 pt-10 text-[12px] font-semibold text-[#777]">
+        <ShieldCheck className="h-4 w-4" />
+        Protected by bank-level security and encryption
+      </div>
+    </aside>
   );
 }
 
@@ -48,576 +191,234 @@ export default function PayRequestPage() {
   const params = useParams<{ invoiceId: string }>();
   const searchParams = useSearchParams();
   const rawInvoiceId = Array.isArray(params.invoiceId) ? params.invoiceId[0] : params.invoiceId;
-  const resolvedInvoiceId = rawInvoiceId || mainboardInvoices[0].id;
-  const initialMode = searchParams.get("mode") === "logged_in" ? "logged_in" : "guest";
+  const invoice = findMainboardInvoice(rawInvoiceId || "") || mainboardInvoices[0];
+  const isLoggedInMode = searchParams.get("mode") === "logged_in";
+  const returnTo = searchParams.get("returnTo") === "dashboard" ? "dashboard" : "mainboard";
+  const returnHref = returnTo === "dashboard" ? "/dashboard" : "/mainboard";
+  const returnLabel = returnTo === "dashboard" ? "Dashboard" : "Mainboard";
+  const total = invoice.amount + invoice.fee;
 
-  const invoice = findMainboardInvoice(resolvedInvoiceId);
-
-  const [mode, setMode] = useState<CheckoutMode>(initialMode);
-  const [stage, setStage] = useState<PaymentStage>("review");
+  const [stage, setStage] = useState<CheckoutStage>("payment");
+  const [activeRail, setActiveRail] = useState<CardRail>("agncypay");
+  const [activeMethod, setActiveMethod] = useState("Fedwire");
+  const [cardNumber, setCardNumber] = useState("1234 5678 9000 0000");
+  const [expiry, setExpiry] = useState("MM/YY");
+  const [cvc, setCvc] = useState("123");
+  const [nameOnCard, setNameOnCard] = useState(invoice.payer);
   const [transactionId, setTransactionId] = useState("");
-  const [activeStep, setActiveStep] = useState(0);
-  const [showPdfPreview, setShowPdfPreview] = useState(true);
-  const [fundingMethod, setFundingMethod] = useState<"ach" | "card" | "wallet">("ach");
-  const [guestName, setGuestName] = useState("Leo Tolstoy");
-  const [guestEmail, setGuestEmail] = useState("leo.tolstoy@nike.com");
-  const [guestPhone, setGuestPhone] = useState("+1 (555) 555-5555");
 
-  useEffect(() => {
-    setMode(initialMode);
-  }, [initialMode]);
+  const paymentLabel = useMemo(
+    () => (isLoggedInMode ? "Signed-in AgncyPay payment" : "Pay without AgncyPay account"),
+    [isLoggedInMode]
+  );
 
   useEffect(() => {
     if (stage !== "processing") return;
-
-    const steps = [
-      "Validating request",
-      "Securing payment rail",
-      "Submitting settlement instruction",
-      "Writing receipt to invoice log",
-    ];
-
-    setActiveStep(0);
-    const interval = window.setInterval(() => {
-      setActiveStep((current) => Math.min(current + 1, steps.length - 1));
-    }, 850);
-
-    const timeout = window.setTimeout(() => {
-      window.clearInterval(interval);
-      setStage("success");
-    }, 3550);
-
-    return () => {
-      window.clearInterval(interval);
-      window.clearTimeout(timeout);
-    };
+    const timeout = window.setTimeout(() => setStage("success"), 1200);
+    return () => window.clearTimeout(timeout);
   }, [stage]);
 
-  const request = invoice || mainboardInvoices[0];
-
-  const paymentItems = useMemo(() => request.items, [request.items]);
-  const paymentTotal = request.amount + request.fee;
-
-  const downloadPdf = () => {
-    downloadTableReportPdf({
-      title: `Invoice ${request.id}`,
-      subtitle: "Public AgncyPay request page and payment receipt preview.",
-      filename: `agncypay-request-${request.id}.pdf`,
-      summary: [
-        { label: "Recipient", value: request.recipient },
-        { label: "Wallet ID", value: request.walletId },
-        { label: "Due", value: request.due },
-      ],
-      columns: ["Item", "Qty", "Rate"],
-      rows: paymentItems.map((item) => [item.title, item.qty.toString(), formatMainboardMoney(item.rate)]),
-    });
-  };
-
-  const copyLink = async () => {
-    await navigator.clipboard.writeText(`${window.location.origin}/pay/${request.id}?mode=${mode}`);
-  };
-
-  const confirmPayment = () => {
+  const submitPayment = () => {
     setTransactionId(`TX-AP-${Math.floor(100000 + Math.random() * 900000)}`);
     setStage("processing");
   };
 
-  const paymentMethodCards = [
-    ["ach", "Instant transfer", "AgncyPay treasury rail"],
-    ["card", "Card", "Corporate card fallback"],
-    ["wallet", "Wallet", "Stored balance / wallet"],
-  ] as const;
+  const downloadPdf = () => {
+    downloadTableReportPdf({
+      title: `Invoice ${invoice.invoiceNumber}`,
+      subtitle: `${invoice.recipient} payable through AgncyPay.`,
+      filename: `agncypay-${invoice.invoiceNumber}.pdf`,
+      summary: [
+        { label: "Payer", value: invoice.payer },
+        { label: "Payee", value: invoice.recipient },
+        { label: "Due", value: invoice.due },
+        { label: "Total", value: formatMainboardMoney(total) },
+      ],
+      columns: ["Rate Type", "Fee Type", "Qty", "Rate", "Amount"],
+      rows: invoice.items.map((item) => [
+        item.title,
+        item.feeType,
+        item.qty.toString(),
+        formatMainboardMoney(item.rate),
+        formatMainboardMoney(item.qty * item.rate),
+      ]),
+    });
+  };
 
-  if (!invoice) {
-    return (
-      <div className="min-h-screen bg-black text-white">
-        <div className="mx-auto flex min-h-screen max-w-[980px] items-center justify-center px-4">
-          <div className="w-full rounded-[13px] border border-[#2b2b2b] bg-[#050505] p-6 text-center">
-            <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-[#7a7a7a]">
-              Request not found
-            </p>
-            <h1 className="mt-3 text-[28px] font-semibold text-white">Invoice unavailable</h1>
-            <p className="mt-2 text-[14px] text-[#8f8f8f]">
-              The requested invoice id does not exist in the current mock dataset.
-            </p>
-            <Link
-              href="/mainboard"
-              className="mt-6 inline-flex h-11 items-center justify-center rounded-[7px] border border-white bg-white px-4 text-[13px] font-semibold text-black hover:bg-[#e8e8e8]"
-            >
-              Back to Mainboard
-            </Link>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (stage === "success") {
-    return (
-      <div className="min-h-screen bg-black text-white">
-        <header className="sticky top-0 z-20 border-b border-[#111] bg-black/95 backdrop-blur">
-        <div className="mx-auto flex h-[76px] max-w-[1480px] items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
-          <Link href="/mainboard" className="inline-flex items-center gap-2 rounded-[7px] border border-[#222] bg-[#050505] px-3 py-2 text-[13px] font-semibold text-white hover:border-[#555]">
-            <ArrowLeft className="h-4 w-4" />
-            Mainboard
-          </Link>
-          <AgncyPayLogo imageClassName="h-8" />
-          <span className="inline-flex h-11 items-center rounded-[7px] border border-white bg-white px-4 text-[13px] font-semibold text-black">
-            {formatMainboardMoney(paymentTotal)}
-          </span>
-        </div>
-        </header>
-
-        <main className="mx-auto flex min-h-[calc(100vh-76px)] max-w-[980px] items-center px-4 py-6 sm:px-6 lg:px-8">
-          <section className="w-full rounded-[13px] border border-[#2b2b2b] bg-[#050505] p-6 text-center">
-            <div className="mx-auto flex h-[84px] w-[84px] items-center justify-center rounded-full border border-white bg-white text-black">
-              <CheckCircle2 className="h-10 w-10" />
-            </div>
-            <h2 className="mt-5 text-[28px] font-semibold text-white">Payment received</h2>
-            <p className="mt-2 text-[14px] text-[#8f8f8f]">
-              {request.recipient} has been settled and the receipt is now in the payment log.
-            </p>
-
-            <div className="mx-auto mt-8 w-full max-w-[520px] rounded-[12px] border border-[#242424] bg-black p-4 text-left">
-              <div className="flex flex-col gap-2 border-b border-[#1d1d1d] pb-3 sm:flex-row sm:justify-between">
-                <span className="text-[13px] text-[#7a7a7a]">Transaction ID</span>
-                <span className="font-mono text-[13px] text-white">{transactionId}</span>
-              </div>
-              <div className="flex justify-between gap-4 border-b border-[#1d1d1d] py-3">
-                <span className="text-[13px] text-[#7a7a7a]">Invoice</span>
-                <span className="text-[13px] text-white">{request.id}</span>
-              </div>
-              <div className="flex justify-between gap-4 pt-3">
-                <span className="text-[13px] text-[#7a7a7a]">Final amount</span>
-                <span className="text-[13px] font-semibold text-white">{formatMainboardMoney(paymentTotal)}</span>
-              </div>
-            </div>
-
-            <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
-              <button
-                type="button"
-                onClick={downloadPdf}
-                className="inline-flex h-11 items-center justify-center gap-2 rounded-[7px] border border-[#333] bg-[#111] px-4 text-[13px] font-semibold text-white hover:border-[#666]"
-              >
-                <Download className="h-4 w-4" />
-                Download Receipt
-              </button>
-              <Link
-                href={`/receipt/${request.id}?tx=${transactionId}&mode=${mode}`}
-                className="inline-flex h-11 items-center justify-center rounded-[7px] border border-white bg-white px-4 text-[13px] font-semibold text-black hover:bg-[#e8e8e8]"
-              >
-                View Receipt
-              </Link>
-              <Link
-                href={`/request/${request.id}?mode=${mode}`}
-                className="inline-flex h-11 items-center justify-center rounded-[7px] border border-[#333] bg-[#111] px-4 text-[13px] font-semibold text-white hover:border-[#666]"
-              >
-                Open Request Again
-              </Link>
-              <Link
-                href="/mainboard"
-                className="inline-flex h-11 items-center justify-center rounded-[7px] border border-[#333] bg-[#111] px-4 text-[13px] font-semibold text-white hover:border-[#666]"
-              >
-                Back to Mainboard
-              </Link>
-            </div>
-          </section>
-        </main>
-      </div>
-    );
-  }
+  const copyLink = async () => {
+    await navigator.clipboard.writeText(`${window.location.origin}/pay/${invoice.id}?mode=guest&returnTo=${returnTo}`);
+  };
 
   return (
     <div className="min-h-screen bg-black text-white">
-      <header className="sticky top-0 z-20 border-b border-[#111] bg-black/95 backdrop-blur">
+      <header className="sticky top-0 z-30 border-b border-[#111] bg-black/95 backdrop-blur">
         <div className="mx-auto flex h-[76px] max-w-[1480px] items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
-          <Link href="/mainboard" className="inline-flex items-center gap-2 rounded-[7px] border border-[#222] bg-[#050505] px-3 py-2 text-[13px] font-semibold text-white hover:border-[#555]">
+          <Link href={returnHref} className="inline-flex h-10 items-center gap-2 rounded-[7px] border border-[#252525] bg-[#050505] px-3 text-[13px] font-semibold text-white hover:border-[#555]">
             <ArrowLeft className="h-4 w-4" />
-            Mainboard
+            {returnLabel}
           </Link>
-          <AgncyPayLogo imageClassName="h-8" />
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setMode("guest")}
-              className={cn(
-                "h-11 rounded-[7px] border px-4 text-[13px] font-semibold",
-                mode === "guest"
-                  ? "border-white bg-white text-black"
-                  : "border-[#333] bg-[#111] text-white"
-              )}
-            >
-              Pay as Guest
-            </button>
-            <button
-              type="button"
-              onClick={() => setMode("logged_in")}
-              className={cn(
-                "h-11 rounded-[7px] border px-4 text-[13px] font-semibold",
-                mode === "logged_in"
-                  ? "border-white bg-white text-black"
-                  : "border-[#333] bg-[#111] text-white"
-              )}
-            >
-              View and Pay
-            </button>
-          </div>
+          <span className="text-[14px] font-semibold text-white">AgncyPay checkout</span>
+          <span className="hidden rounded-[7px] border border-[#252525] bg-[#050505] px-3 py-2 text-[12px] font-semibold text-[#d7d7d7] sm:inline-flex">
+            Secure checkout session
+          </span>
         </div>
       </header>
 
-      <main className="mx-auto max-w-[1480px] px-4 py-5 sm:px-6 lg:px-8">
-        <section className="rounded-[13px] border border-[#2b2b2b] bg-[#050505] p-5">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex items-start gap-3">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[8px] border border-[#333] bg-[#111] text-white">
-                <Mail className="h-5 w-5" />
-              </div>
+      <main className="mx-auto grid max-w-[1480px] grid-cols-1 gap-7 px-4 py-8 sm:px-6 lg:px-8 xl:grid-cols-[minmax(0,1.35fr)_minmax(390px,0.65fr)]">
+        <section className="rounded-[10px] border border-[#151515] bg-black p-5 sm:p-7">
+          <p className="text-[13px] font-semibold text-white">Payment Method</p>
+          <div className="mt-6 flex flex-wrap items-end gap-3">
+            <h1 className="text-[34px] font-bold tracking-[-0.02em] text-white">{formatMainboardMoney(invoice.amount)}</h1>
+            <span className="pb-2 text-[13px] font-semibold text-[#d7d7d7]">Due Date</span>
+          </div>
+
+          <div className="mt-16 flex flex-wrap gap-2">
+            {cardRails.map((rail) => (
+              <button
+                key={rail}
+                type="button"
+                aria-pressed={activeRail === rail}
+                onClick={() => setActiveRail(rail)}
+                className={cardRailClasses(rail, activeRail === rail)}
+              >
+                <CardRailLogo rail={rail} />
+              </button>
+            ))}
+          </div>
+
+          <div className="mt-5">
+            <h2 className="text-[16px] font-semibold text-white">Your information</h2>
+            <div className="mt-5 space-y-4">
+              <label className="block">
+                <span className="text-[14px] font-semibold text-white">Email</span>
+                <input
+                  value={invoice.payerEmail}
+                  readOnly
+                  className="mt-2 h-12 w-full border border-[#1c1c1c] bg-[#1a1a1a] px-4 text-[14px] font-semibold text-[#d7d7d7] outline-none"
+                />
+              </label>
+
               <div>
-                <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-[#7a7a7a]">
-                  Your invoice is ready
-                </p>
-                <h2 className="mt-2 text-[24px] font-semibold text-white">{request.recipient}</h2>
-                <p className="mt-2 max-w-[760px] text-[14px] text-[#8f8f8f]">
-                  Open the PDF, review the balance, and complete payment using AgncyPay.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={copyLink}
-                className="inline-flex h-10 items-center gap-2 rounded-[7px] border border-[#333] bg-[#111] px-4 text-[13px] font-semibold text-white hover:border-[#666]"
-              >
-                <Copy className="h-4 w-4" />
-                Copy Link
-              </button>
-              <button
-                type="button"
-                onClick={downloadPdf}
-                className="inline-flex h-10 items-center gap-2 rounded-[7px] border border-[#333] bg-[#111] px-4 text-[13px] font-semibold text-white hover:border-[#666]"
-              >
-                <Download className="h-4 w-4" />
-                Download PDF
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowPdfPreview((current) => !current)}
-                className="inline-flex h-10 items-center gap-2 rounded-[7px] border border-white bg-white px-4 text-[13px] font-semibold text-black hover:bg-[#e8e8e8]"
-              >
-                <FileText className="h-4 w-4" />
-                {showPdfPreview ? "Hide PDF" : "View PDF"}
-              </button>
-            </div>
-          </div>
-        </section>
-
-        <section className="mt-5 grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1.25fr)_minmax(380px,0.75fr)]">
-          <div className="space-y-5">
-            <section className="rounded-[13px] border border-[#2b2b2b] bg-[#050505] p-5">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-[#7a7a7a]">Invoice</p>
-                  <h3 className="mt-2 text-[28px] font-semibold text-white">{request.id}</h3>
-                  <p className="mt-2 text-[14px] text-[#8f8f8f]">{request.note}</p>
-                </div>
-                <InvoiceStatus status={request.status} />
-              </div>
-
-              <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
-                <div className="rounded-[10px] border border-[#222] bg-black p-3">
-                  <p className="text-[12px] text-[#7a7a7a]">Amount</p>
-                  <p className="mt-2 text-[18px] font-semibold text-white">{formatMainboardMoney(request.amount)}</p>
-                </div>
-                <div className="rounded-[10px] border border-[#222] bg-black p-3">
-                  <p className="text-[12px] text-[#7a7a7a]">Fee</p>
-                  <p className="mt-2 text-[18px] font-semibold text-white">{formatMainboardMoney(request.fee)}</p>
-                </div>
-                <div className="rounded-[10px] border border-[#222] bg-black p-3">
-                  <p className="text-[12px] text-[#7a7a7a]">Total</p>
-                  <p className="mt-2 text-[18px] font-semibold text-white">{formatMainboardMoney(paymentTotal)}</p>
-                </div>
-              </div>
-
-              <div className="mt-5 rounded-[12px] border border-[#242424] bg-black p-4">
-                <div className="flex items-center justify-between gap-4">
-                  <p className="text-[14px] font-semibold text-white">Invoice details</p>
-                  <span className="text-[12px] text-[#8f8f8f]">{request.due}</span>
-                </div>
-                <div className="mt-4 space-y-2 text-[13px]">
-                  {request.items.map((item) => (
-                    <div key={item.title} className="flex justify-between gap-4 border-b border-[#1d1d1d] pb-2">
-                      <div>
-                        <p className="text-[#d7d7d7]">{item.title}</p>
-                        <p className="mt-1 text-[#8f8f8f]">Qty {item.qty}</p>
-                      </div>
-                      <span className="text-white">{formatMainboardMoney(item.rate)}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {showPdfPreview && (
-                <div className="mt-5 rounded-[12px] border border-[#242424] bg-[#090909] p-4">
-                  <div className="flex items-center justify-between gap-4">
-                    <div>
-                      <p className="text-[12px] uppercase tracking-[0.08em] text-[#7a7a7a]">Invoice PDF preview</p>
-                      <p className="mt-2 text-[16px] font-semibold text-white">{request.recipient}</p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={downloadPdf}
-                      className="inline-flex items-center gap-2 rounded-[7px] border border-[#333] bg-[#111] px-3 py-2 text-[12px] font-semibold text-white hover:border-[#666]"
-                    >
-                      <Download className="h-4 w-4" />
-                      Download PDF
-                    </button>
+                <span className="text-[14px] font-semibold text-white">Phone Number</span>
+                <div className="mt-2 grid grid-cols-[174px_1fr] gap-1">
+                  <div className="flex h-12 items-center gap-3 border border-[#1c1c1c] bg-[#1a1a1a] px-4 text-[16px] font-semibold text-white">
+                    <span>US</span>
+                    <span>+1</span>
                   </div>
-                  <div className="mt-4 space-y-2 text-[13px]">
-                    {request.items.map((item) => (
-                      <div key={item.title} className="flex justify-between gap-4 border-b border-[#1d1d1d] pb-2">
-                        <span className="text-[#d7d7d7]">{item.title}</span>
-                        <span className="text-white">{formatMainboardMoney(item.rate)}</span>
-                      </div>
-                    ))}
-                  </div>
+                  <input
+                    value={invoice.mobile.replace("+1 ", "")}
+                    readOnly
+                    className="h-12 border border-[#1c1c1c] bg-[#1a1a1a] px-4 text-[14px] font-semibold text-[#d7d7d7] outline-none"
+                  />
                 </div>
-              )}
-            </section>
-          </div>
-
-          <aside className="space-y-5">
-            <section className="rounded-[13px] border border-[#2b2b2b] bg-[#050505] p-5">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-[#7a7a7a]">
-                    Checkout
-                  </p>
-                  <h3 className="mt-2 text-[22px] font-semibold text-white">
-                    {mode === "guest" ? "Pay as Guest" : "View and Pay"}
-                  </h3>
-                </div>
-                <ShieldCheck className="h-5 w-5 text-white" />
               </div>
 
-              <div className="mt-4 flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setMode("guest")}
-                  className={cn(
-                    "h-10 flex-1 rounded-[7px] border text-[13px] font-semibold",
-                    mode === "guest" ? "border-white bg-white text-black" : "border-[#333] bg-[#111] text-white"
-                  )}
-                >
-                  Guest
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setMode("logged_in")}
-                  className={cn(
-                    "h-10 flex-1 rounded-[7px] border text-[13px] font-semibold",
-                    mode === "logged_in" ? "border-white bg-white text-black" : "border-[#333] bg-[#111] text-white"
-                  )}
-                >
-                  Logged in
-                </button>
-              </div>
-
-              {mode === "guest" ? (
-                <div className="mt-4 space-y-3">
-                  <label className="block">
-                    <span className="text-[13px] text-[#8f8f8f]">Name</span>
-                    <input
-                      value={guestName}
-                      onChange={(event) => setGuestName(event.target.value)}
-                      className="mt-2 h-11 w-full rounded-[7px] border border-[#333] bg-[#090909] px-3 text-[14px] text-white outline-none focus:border-[#666]"
-                    />
-                  </label>
-                  <label className="block">
-                    <span className="text-[13px] text-[#8f8f8f]">Email</span>
-                    <input
-                      value={guestEmail}
-                      onChange={(event) => setGuestEmail(event.target.value)}
-                      className="mt-2 h-11 w-full rounded-[7px] border border-[#333] bg-[#090909] px-3 text-[14px] text-white outline-none focus:border-[#666]"
-                    />
-                  </label>
-                  <label className="block">
-                    <span className="text-[13px] text-[#8f8f8f]">Phone</span>
-                    <input
-                      value={guestPhone}
-                      onChange={(event) => setGuestPhone(event.target.value)}
-                      className="mt-2 h-11 w-full rounded-[7px] border border-[#333] bg-[#090909] px-3 text-[14px] text-white outline-none focus:border-[#666]"
-                    />
-                  </label>
-                </div>
-              ) : (
-                <div className="mt-4 rounded-[10px] border border-[#242424] bg-[#090909] p-4">
-                  <p className="text-[13px] font-semibold text-white">Signed-in profile</p>
-                  <p className="mt-2 text-[13px] text-[#8f8f8f]">
-                    Saved billing details will be used for this request.
-                  </p>
-                  <div className="mt-4 space-y-2 text-[13px] text-white">
-                    <div className="flex justify-between gap-4">
-                      <span className="text-[#8f8f8f]">Profile</span>
-                      <span>Brad @ Main Zetler</span>
-                    </div>
-                    <div className="flex justify-between gap-4">
-                      <span className="text-[#8f8f8f]">Billing email</span>
-                      <span>brad@mainzetler.com</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
-                {paymentMethodCards.map(([key, title, detail]) => {
-                  const isSelected = fundingMethod === key;
-                  return (
-                    <button
-                      key={key}
-                      type="button"
-                      onClick={() => setFundingMethod(key)}
-                      className={cn(
-                        "rounded-[10px] border p-3 text-left transition-colors",
-                        isSelected ? "border-white bg-white text-black" : "border-[#333] bg-[#090909] text-white hover:border-[#666]"
-                      )}
-                    >
-                      <p className="text-[14px] font-semibold">{title}</p>
-                      <p className={cn("mt-2 text-[12px]", isSelected ? "text-[#333]" : "text-[#8f8f8f]")}>
-                        {detail}
-                      </p>
-                    </button>
-                  );
-                })}
-              </div>
-
-              <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-                <Link
-                  href={`/request/${request.id}?mode=${mode}`}
-                  className="h-11 flex-1 items-center justify-center rounded-[7px] border border-[#333] bg-[#111] px-4 text-[13px] font-semibold text-white hover:border-[#666] inline-flex"
-                >
-                  Cancel
-                </Link>
-                <button
-                  type="button"
-                  onClick={confirmPayment}
-                  className="h-11 flex-1 rounded-[7px] border border-white bg-white px-4 text-[13px] font-semibold text-black hover:bg-[#e8e8e8]"
-                >
-                  <AgncyPayLogo imageClassName="h-4" />
-                  Confirm Payment
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowPdfPreview(true)}
-                  className="h-11 rounded-[7px] border border-[#333] bg-[#111] px-4 text-[13px] font-semibold text-white hover:border-[#666]"
-                >
-                  View Invoice PDF
-                </button>
-              </div>
-            </section>
-
-            <section className="rounded-[13px] border border-[#2b2b2b] bg-[#050505] p-5">
-              <div className="flex items-center gap-3">
-                <Smartphone className="h-4 w-4 text-white" />
-                <h3 className="text-[18px] font-semibold text-white">Request Log</h3>
-              </div>
-              <div className="mt-4 rounded-[12px] border border-[#242424] bg-black p-4">
-                <div className="space-y-3">
-                  {[
-                    "Invoice request received",
-                    "Checkout opened",
-                    "Payment method selected",
-                    "Receipt generation pending",
-                  ].map((step, index) => {
-                    const isDone = index < activeStep;
-                    const isActive = index === activeStep && stage === "processing";
+              <div>
+                <span className="text-[14px] font-semibold text-white">Payment method</span>
+                <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                  {paymentMethods.map(([region, title, detail]) => {
+                    const selected = activeMethod === title;
                     return (
-                      <div
-                        key={step}
+                      <button
+                        key={title}
+                        type="button"
+                        onClick={() => setActiveMethod(title)}
                         className={cn(
-                          "flex items-center gap-3 py-1 text-[14px]",
-                          isDone || isActive ? "text-white" : "text-[#595959]"
+                          "flex min-h-[64px] flex-col justify-center rounded-[7px] border px-3 py-2 text-left",
+                          selected ? "border-white bg-white text-black" : "border-[#2a2a2a] bg-[#242121] text-white hover:border-[#555]"
                         )}
                       >
-                        {isDone ? (
-                          <CheckCircle2 className="h-4 w-4" />
-                        ) : isActive ? (
-                          <Lock className="h-4 w-4 animate-pulse" />
-                        ) : (
-                          <span className="h-4 w-4 rounded-full border border-[#444]" />
-                        )}
-                        <span>{step}</span>
-                      </div>
+                        <p className={cn("text-[9px] font-black lowercase leading-none", selected ? "text-black/55" : "text-[#36d16d]")}>{region}</p>
+                        <p className="mt-1.5 truncate text-[13px] font-bold leading-none">{title}</p>
+                        <p className={cn("mt-1 truncate text-[9px] font-semibold leading-none", selected ? "text-black/55" : "text-[#a7a7a7]")}>{detail}</p>
+                      </button>
                     );
                   })}
                 </div>
               </div>
-            </section>
-          </aside>
+
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-[1fr_174px_130px]">
+                <label className="block">
+                  <span className="text-[14px] font-semibold text-white">Card Number</span>
+                  <input
+                    value={cardNumber}
+                    onChange={(event) => setCardNumber(event.target.value)}
+                    className="mt-2 h-12 w-full border border-[#1c1c1c] bg-[#1a1a1a] px-4 text-[14px] font-semibold text-[#d7d7d7] outline-none focus:border-[#555]"
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-[14px] font-semibold text-white">Exp date</span>
+                  <input
+                    value={expiry}
+                    onChange={(event) => setExpiry(event.target.value)}
+                    className="mt-2 h-12 w-full border border-[#1c1c1c] bg-[#1a1a1a] px-4 text-[14px] font-semibold text-[#d7d7d7] outline-none focus:border-[#555]"
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-[14px] font-semibold text-white">CVV code</span>
+                  <input
+                    value={cvc}
+                    onChange={(event) => setCvc(event.target.value)}
+                    className="mt-2 h-12 w-full border border-[#1c1c1c] bg-[#1a1a1a] px-4 text-[14px] font-semibold text-[#d7d7d7] outline-none focus:border-[#555]"
+                  />
+                </label>
+              </div>
+
+              <label className="block">
+                <span className="text-[14px] font-semibold text-white">Name on card</span>
+                <input
+                  value={nameOnCard}
+                  onChange={(event) => setNameOnCard(event.target.value)}
+                  className="mt-2 h-12 w-full border border-[#1c1c1c] bg-[#1a1a1a] px-4 text-[14px] font-semibold text-[#d7d7d7] outline-none focus:border-[#555]"
+                />
+              </label>
+
+              <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:items-center">
+                <button
+                  type="button"
+                  onClick={submitPayment}
+                  className="inline-flex h-12 flex-1 items-center justify-center gap-2 overflow-hidden rounded-[7px] border border-[#2a2a2a] bg-black px-5 text-[14px] font-bold text-white hover:border-[#555] hover:bg-[#111]"
+                >
+                  <Image src="/agncypayLogo.png" alt="AgncyPay" width={170} height={78} className="h-[32px] w-auto object-contain" />
+                  <span>Now</span>
+                </button>
+                <span className="text-[12px] font-semibold text-[#8f8f8f]">{paymentLabel}</span>
+              </div>
+            </div>
+          </div>
         </section>
+
+        <SummaryCard invoice={invoice} total={total} returnTo={returnTo} onCopy={copyLink} onDownload={downloadPdf} />
       </main>
 
-      {stage === "processing" && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/80 px-4 py-6 backdrop-blur-sm">
-          <section className="w-full max-w-[680px] rounded-[13px] border border-[#2b2b2b] bg-[#050505] shadow-2xl">
-            <div className="flex items-center justify-between gap-4 border-b border-[#222] px-5 py-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-[8px] border border-[#333] bg-[#111] text-white">
-                  <Lock className="h-5 w-5" />
+      {(stage === "processing" || stage === "success") && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 px-4 backdrop-blur-[2px]">
+          <section className="w-full max-w-[300px] rounded-[10px] border border-[#2f2f2f] bg-[#202020] p-6 text-center shadow-2xl">
+            {stage === "processing" ? (
+              <>
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-[#555] bg-[#151515]">
+                  <Lock className="h-7 w-7 animate-pulse text-white" />
                 </div>
-                <div>
-                  <h2 className="text-[20px] font-semibold text-white">Processing Payment</h2>
-                  <p className="mt-1 text-[13px] text-[#8f8f8f]">
-                    {request.recipient} - {request.id}
-                  </p>
+                <h2 className="mt-5 text-[23px] font-bold tracking-[-0.03em] text-white">processing payment</h2>
+                <p className="mt-2 text-[11px] leading-5 text-[#bdbdbd]">AgncyPay is securing the payment session.</p>
+              </>
+            ) : (
+              <>
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-white text-black">
+                  <CheckCircle2 className="h-9 w-9" />
                 </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setStage("review")}
-                className="flex h-9 w-9 items-center justify-center rounded-[7px] border border-[#333] text-[#bdbdbd] hover:border-[#666] hover:text-white"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <div className="p-5 text-center">
-              <div className="mx-auto flex h-[84px] w-[84px] items-center justify-center rounded-full border border-[#333] bg-[#090909]">
-                <Lock className="h-9 w-9 text-white" />
-              </div>
-              <h3 className="mt-5 text-[24px] font-semibold text-white">{formatMainboardMoney(paymentTotal)}</h3>
-              <p className="mt-2 text-[14px] text-[#8f8f8f]">
-                The request is moving through AgncyPay settlement.
-              </p>
-              <div className="mx-auto mt-8 max-w-[520px] rounded-[12px] border border-[#242424] bg-black p-4 text-left">
-                {[
-                  "Validating request",
-                  "Securing payment rail",
-                  "Submitting settlement instruction",
-                  "Writing receipt to invoice log",
-                ].map((step, index) => {
-                  const isDone = index < activeStep;
-                  const isActive = index === activeStep;
-                  return (
-                    <div
-                      key={step}
-                      className={cn(
-                        "flex items-center gap-3 py-2 text-[14px]",
-                        isDone || isActive ? "text-white" : "text-[#595959]"
-                      )}
-                    >
-                      {isDone ? (
-                        <CheckCircle2 className="h-4 w-4" />
-                      ) : isActive ? (
-                        <Smartphone className="h-4 w-4 animate-pulse" />
-                      ) : (
-                        <span className="h-4 w-4 rounded-full border border-[#444]" />
-                      )}
-                      <span>{step}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+                <h2 className="mt-5 text-[25px] font-bold tracking-[-0.04em] text-white">payment successful</h2>
+                <p className="mt-2 text-[11px] leading-5 text-[#bdbdbd]">
+                  Transaction {transactionId} was submitted successfully.
+                </p>
+                <Link
+                  href={`/receipt/${invoice.id}?tx=${transactionId}&mode=${isLoggedInMode ? "logged_in" : "guest"}&returnTo=${returnTo}`}
+                  className="mt-5 inline-flex h-10 items-center justify-center rounded-[5px] border border-white bg-white px-4 text-[12px] font-bold text-black hover:bg-[#ededed]"
+                >
+                  View receipt
+                </Link>
+              </>
+            )}
           </section>
         </div>
       )}

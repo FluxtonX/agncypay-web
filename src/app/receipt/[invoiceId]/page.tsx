@@ -44,6 +44,9 @@ export default function ReceiptPage() {
   const invoice = findMainboardInvoice(rawInvoiceId || "");
   const transactionId = searchParams.get("tx") || "TX-AP-000000";
   const mode = searchParams.get("mode") === "logged_in" ? "Logged-in checkout" : "Guest checkout";
+  const returnTo = searchParams.get("returnTo") === "dashboard" ? "dashboard" : "mainboard";
+  const returnHref = returnTo === "dashboard" ? "/dashboard" : "/mainboard";
+  const returnLabel = returnTo === "dashboard" ? "Dashboard" : "Mainboard";
 
   if (!invoice) {
     return (
@@ -58,10 +61,10 @@ export default function ReceiptPage() {
               The receipt reference does not match the demo invoice set.
             </p>
             <Link
-              href="/mainboard"
+              href={returnHref}
               className="mt-6 inline-flex h-11 items-center justify-center rounded-[7px] border border-white bg-white px-4 text-[13px] font-semibold text-black hover:bg-[#e8e8e8]"
             >
-              Back to Mainboard
+              Back to {returnLabel}
             </Link>
           </div>
         </div>
@@ -88,7 +91,7 @@ export default function ReceiptPage() {
 
   const copyReceiptLink = async () => {
     await navigator.clipboard.writeText(
-      `${window.location.origin}/receipt/${invoice.id}?tx=${transactionId}&mode=${searchParams.get("mode") || "guest"}`
+      `${window.location.origin}/receipt/${invoice.id}?tx=${transactionId}&mode=${searchParams.get("mode") || "guest"}&returnTo=${returnTo}`
     );
   };
 
@@ -97,11 +100,11 @@ export default function ReceiptPage() {
       <header className="sticky top-0 z-20 border-b border-[#111] bg-black/95 backdrop-blur">
         <div className="mx-auto flex h-[76px] max-w-[1480px] items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
           <Link
-            href="/mainboard"
+            href={returnHref}
             className="inline-flex items-center gap-2 rounded-[7px] border border-[#222] bg-[#050505] px-3 py-2 text-[13px] font-semibold text-white hover:border-[#555]"
           >
             <ArrowLeft className="h-4 w-4" />
-            Mainboard
+            {returnLabel}
           </Link>
           <AgncyPayLogo imageClassName="h-8" />
           <span className="inline-flex h-11 items-center rounded-[7px] border border-white bg-white px-4 text-[13px] font-semibold text-black">
@@ -165,7 +168,7 @@ export default function ReceiptPage() {
                   Copy Receipt Link
                 </button>
                 <Link
-                  href={`/request/${invoice.id}?mode=${searchParams.get("mode") || "guest"}`}
+                  href={`/request/${invoice.id}?mode=${searchParams.get("mode") || "guest"}&returnTo=${returnTo}`}
                   className="inline-flex h-10 items-center gap-2 rounded-[7px] border border-white bg-white px-4 text-[13px] font-semibold text-black hover:bg-[#e8e8e8]"
                 >
                   Back to Request
@@ -272,16 +275,16 @@ export default function ReceiptPage() {
 
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-1">
               <Link
-                href={`/pay/${invoice.id}?mode=${searchParams.get("mode") || "guest"}`}
+                href={`/pay/${invoice.id}?mode=${searchParams.get("mode") || "guest"}&returnTo=${returnTo}`}
                 className="inline-flex h-11 items-center justify-center rounded-[7px] border border-white bg-white px-4 text-[13px] font-semibold text-black hover:bg-[#e8e8e8]"
               >
                 Open Payment Page
               </Link>
               <Link
-                href="/mainboard"
+                href={returnHref}
                 className="inline-flex h-11 items-center justify-center rounded-[7px] border border-[#333] bg-[#111] px-4 text-[13px] font-semibold text-white hover:border-[#666]"
               >
-                Back to Mainboard
+                Back to {returnLabel}
               </Link>
             </div>
           </aside>
