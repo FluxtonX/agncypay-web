@@ -103,8 +103,8 @@ const dashboardInvoices = mainboardInvoices.slice(0, 5);
 const dashboardPeopleByInvoiceId: Record<string, string> = {
   "MB-6984": "Anthea Smith",
   "MB-7012": "John Adams",
-  "MB-7044": "Amy Holland",
-  "MB-6890": "Lucy Che",
+  "MB-7044": "Adidas",
+  "MB-6890": "Spotify",
   "MB-6815": "Jessica Bailey",
 };
 
@@ -114,6 +114,7 @@ const payeeLogoByInvoiceId: Record<
     mark: string;
     label: string;
     detail?: string;
+    src?: string;
     className: string;
     markClassName?: string;
   }
@@ -132,15 +133,16 @@ const payeeLogoByInvoiceId: Record<
     className: "bg-[#f4f4f4] text-black",
   },
   "MB-7044": {
-    mark: "AT",
-    label: "Atlas Talent Group",
-    detail: "TALENT",
-    className: "bg-[#111827] text-white",
+    mark: "Adidas",
+    label: "Adidas",
+    src: "https://cdn.simpleicons.org/adidas/000000",
+    className: "bg-white text-black",
   },
   "MB-6890": {
-    mark: "LC",
-    label: "Lucy Che",
-    className: "bg-[#1f2937] text-white",
+    mark: "Spotify",
+    label: "Spotify",
+    src: "https://cdn.simpleicons.org/spotify/1DB954",
+    className: "bg-black text-white",
   },
   "MB-6815": {
     mark: "JB",
@@ -203,7 +205,7 @@ function StatusPill({ status }: { status: string }) {
 
 function RequestPayPill() {
   return (
-    <span className="inline-flex h-9 min-w-[150px] items-center justify-center gap-1.5 rounded-full border-2 border-[#10d874] bg-black px-4 text-[13px] font-black text-white shadow-[0_0_0_1px_rgba(16,216,116,0.12)]">
+    <span className="inline-flex h-9 min-w-[150px] items-center justify-center gap-1.5 rounded-full border-2 border-[#ff3b30] bg-black px-4 text-[13px] font-black text-white shadow-[0_0_0_1px_rgba(255,59,48,0.14)]">
       <span>Request</span>
       <AgncyPayLogo className="h-[16px] w-[40px]" imageClassName="h-full w-full" />
     </span>
@@ -245,10 +247,20 @@ function PayeeLogoTile({
       aria-label={config?.label || name}
       title={config?.label || name}
     >
-      <span className={cn(size === "sm" ? "text-[12px]" : "text-[15px]", "font-black", config?.markClassName)}>
-        {mark}
-      </span>
-      {config?.detail && size === "md" ? (
+      {config?.src ? (
+        <RemoteBrandImage
+          src={config.src}
+          alt={config.label}
+          fallback={config.label}
+          className={cn("h-full w-full", size === "sm" ? "p-1.5" : "p-2")}
+          imageClassName="object-contain"
+        />
+      ) : (
+        <span className={cn(size === "sm" ? "text-[12px]" : "text-[15px]", "font-black", config?.markClassName)}>
+          {mark}
+        </span>
+      )}
+      {!config?.src && config?.detail && size === "md" ? (
         <span className="mt-1 max-w-full px-1 text-[6px] font-black tracking-[0.12em] opacity-75">
           {config.detail}
         </span>
