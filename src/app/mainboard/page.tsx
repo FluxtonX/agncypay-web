@@ -87,9 +87,9 @@ export default function MainboardPage() {
       <header className="sticky top-0 z-30 border-b border-[#151515] bg-black/95 backdrop-blur">
         <div className="mx-auto flex h-[76px] max-w-[1480px] items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-4">
-            <Link href="/" className="inline-flex h-10 items-center gap-2 rounded-[7px] border border-[#252525] bg-[#050505] px-3 text-[13px] font-semibold text-white hover:border-[#555]">
+            <Link href="/dashboard" className="inline-flex h-10 items-center gap-2 rounded-[7px] border border-[#252525] bg-[#050505] px-3 text-[13px] font-semibold text-white hover:border-[#555]">
               <ArrowLeft className="h-4 w-4" />
-              Home
+              Dashboard
             </Link>
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#777]">Mainboard LLC</p>
@@ -134,7 +134,7 @@ export default function MainboardPage() {
           ))}
         </section>
 
-        <section className="mt-5 grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1.1fr)_minmax(420px,0.9fr)]">
+        <section className="mt-5 mx-auto max-w-[1040px] flex flex-col gap-5">
           <div className="space-y-5">
             <section className="rounded-[8px] border border-[#252525] bg-[#050505]">
               <div className="flex flex-col gap-3 border-b border-[#1f1f1f] p-4 sm:flex-row sm:items-center sm:justify-between">
@@ -259,75 +259,6 @@ export default function MainboardPage() {
               </section>
             )}
           </div>
-
-          <aside className="space-y-5">
-            <section className="rounded-[8px] border border-[#252525] bg-[#050505] p-4">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#777]">Selected invoice</p>
-                  <h2 className="mt-2 text-[24px] font-semibold text-white">{selectedInvoice.recipient}</h2>
-                  <p className="mt-2 text-[13px] leading-5 text-[#8f8f8f]">{selectedInvoice.note}</p>
-                </div>
-                <StatusBadge status={selectedInvoice.status} />
-              </div>
-
-              <div className="mt-5 grid grid-cols-3 gap-3">
-                <div className="rounded-[7px] border border-[#222] bg-black p-3">
-                  <p className="text-[12px] text-[#777]">Invoice</p>
-                  <p className="mt-2 font-mono text-[15px] font-semibold text-white">{selectedInvoice.invoiceNumber}</p>
-                </div>
-                <div className="rounded-[7px] border border-[#222] bg-black p-3">
-                  <p className="text-[12px] text-[#777]">Due</p>
-                  <p className="mt-2 text-[15px] font-semibold text-white">{selectedInvoice.due}</p>
-                </div>
-                <div className="rounded-[7px] border border-[#222] bg-black p-3">
-                  <p className="text-[12px] text-[#777]">Total</p>
-                  <p className="mt-2 text-[15px] font-semibold text-white">{formatMainboardMoney(selectedInvoice.amount + selectedInvoice.fee)}</p>
-                </div>
-              </div>
-
-              <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <Link
-                  href={`/request/${selectedInvoice.id}?mode=guest`}
-                  className="inline-flex h-11 items-center justify-center gap-2 rounded-[7px] border border-white bg-white px-4 text-[13px] font-semibold text-black hover:bg-[#ededed]"
-                >
-                  Pay with AgncyPay
-                </Link>
-                <button
-                  type="button"
-                  onClick={copyShareLink}
-                  className="inline-flex h-11 items-center justify-center gap-2 rounded-[7px] border border-[#333] bg-black px-4 text-[13px] font-semibold text-white hover:border-[#666]"
-                >
-                  <Copy className="h-4 w-4" />
-                  Copy session link
-                </button>
-              </div>
-            </section>
-
-            <section className="rounded-[8px] border border-[#252525] bg-[#050505] p-4">
-              <div className="flex items-center gap-3">
-                <ShieldCheck className="h-4 w-4 text-white" />
-                <p className="text-[14px] font-semibold text-white">AgncyPay session details</p>
-              </div>
-              <div className="mt-4 space-y-3 text-[13px]">
-                {[
-                  ["Payer", selectedInvoice.payer],
-                  ["Payee", selectedInvoice.recipient],
-                  ["Settlement ETA", selectedInvoice.settlementEta],
-                  ["Auth mode", "Mainboard user, no AgncyPay account required"],
-                ].map(([label, value]) => (
-                  <div key={label} className="flex justify-between gap-4 border-b border-[#1d1d1d] pb-2">
-                    <span className="text-[#8f8f8f]">{label}</span>
-                    <span className="text-right text-white">{value}</span>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-4 flex items-center gap-2 text-[12px] text-[#8f8f8f]">
-                <Check className="h-4 w-4 text-white" />
-                Payment status syncs back to Mainboard after submission.
-              </div>
-            </section>
-          </aside>
         </section>
       </main>
     </div>

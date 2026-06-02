@@ -64,11 +64,11 @@ const quickActions = [
 ] as const;
 
 const brandShortcuts = [
-  { label: "Airbnb", src: "https://cdn.simpleicons.org/airbnb/FF5A5F", fallback: "Airbnb" },
-  { label: "The North Face", src: "https://cdn.simpleicons.org/thenorthface/E31837", fallback: "The North Face" },
-  { label: "Land Rover", src: LAND_ROVER_LOGO_IMAGE, fallback: "Land Rover" },
-  { label: "Adidas", src: "https://cdn.simpleicons.org/adidas/000000", fallback: "Adidas" },
-  { label: "Search", search: true, fallback: "S" },
+  { label: "Nike", src: "https://cdn.simpleicons.org/nike/000000", fallback: "Nike", href: "/mainboard" },
+  { label: "Zara", src: "https://cdn.simpleicons.org/zara/000000", fallback: "Zara", href: "/mainboard" },
+  { label: "Adidas", src: "https://upload.wikimedia.org/wikipedia/commons/2/20/Adidas_Logo.svg", fallback: "Adidas", href: "/mainboard" },
+  { label: "Spotify", src: "https://cdn.simpleicons.org/spotify/1DB954", fallback: "Spotify", href: "/mainboard" },
+  { label: "Netflix", src: "https://cdn.simpleicons.org/netflix/E50914", fallback: "Netflix", href: "/mainboard" },
 ] as const;
 
 const bankCards = [
@@ -188,9 +188,9 @@ function Panel({
 function ALogoIcon({ className }: { className?: string }) {
   return (
     <img
-      src="/Alogo.jpg"
+      src="/AlogoTransparent.png"
       alt="A"
-      className={cn("inline-block object-contain invert mix-blend-screen", className)}
+      className={cn("inline-block object-contain", className)}
     />
   );
 }
@@ -210,7 +210,7 @@ function StatusPill({ status }: { status: string }) {
     <span className={cn("inline-flex h-7 items-center gap-1.5 rounded-[7px] border px-2.5 text-[12px] font-semibold", colorClass)}>
       {normalized === "paid" ? (
         <>
-          <ALogoIcon className="h-4 w-4 rounded-[3px]" />
+          <ALogoIcon className="h-[22px] w-[22px] rounded-[3px]" />
           <span>Paid</span>
         </>
       ) : (
@@ -222,10 +222,10 @@ function StatusPill({ status }: { status: string }) {
 
 function RequestPayPill() {
   return (
-    <span className="inline-flex h-9 min-w-[155px] items-center justify-center gap-1.5 rounded-full border-2 border-[#ff3b30] bg-black px-4 text-[13px] font-black text-white shadow-[0_0_0_1px_rgba(255,59,48,0.14)]">
-      <span>Request</span>
-      <ALogoIcon className="h-[18px] w-[18px] rounded-[3px]" />
-      <span>Pay</span>
+    <span className="inline-flex h-9 min-w-[120px] items-center justify-center gap-1.5 rounded-full border-2 border-[#ff8a00] bg-[#261603] px-3 text-[12px] uppercase text-white shadow-[0_0_0_1px_rgba(255,138,0,0.14)]">
+      <span className="font-bold">Request</span>
+      <ALogoIcon className="h-[26px] w-[26px] rounded-[3px]" />
+      <span className="font-bold">Pay</span>
     </span>
   );
 }
@@ -248,7 +248,7 @@ function InvoiceStatusPill({ invoice }: { invoice: (typeof dashboardInvoices)[nu
 
     return (
       <span className={cn("inline-flex h-7 items-center gap-1.5 rounded-[7px] border px-2.5 text-[12px] font-semibold", colorClass)}>
-        <ALogoIcon className="h-4 w-4 rounded-[3px]" />
+        <ALogoIcon className="h-[22px] w-[22px] rounded-[3px]" />
         <span>{normalized === "needs approval" ? "Pay" : invoice.status}</span>
       </span>
     );
@@ -319,8 +319,13 @@ function BrandTile({
   fallback: string;
   search?: boolean;
 }) {
+  const Component = href ? Link : "button";
   return (
-    <div className="flex min-w-0 flex-col items-center gap-2 text-center" aria-label={label}>
+    <Component
+      href={href as string}
+      className="flex min-w-0 flex-col items-center gap-2 text-center"
+      aria-label={label}
+    >
       <div className="flex h-[68px] w-[68px] items-center justify-center overflow-hidden rounded-[12px] border border-[#5a5a5a] bg-white p-3 shadow-[0_0_0_1px_rgba(255,255,255,0.02)]">
         {search ? (
           <Search className="h-6 w-6 text-black" />
@@ -337,7 +342,7 @@ function BrandTile({
         )}
       </div>
       <span className="max-w-[78px] text-[12px] leading-4 text-[#b8b8b8]">{label}</span>
-    </div>
+    </Component>
   );
 }
 
@@ -513,7 +518,7 @@ function DashboardFooter() {
   return (
     <footer className="mt-8 border-y border-[#343434]">
       <div className="mx-auto flex max-w-[1040px] flex-wrap items-center justify-center gap-8 px-4 py-8 text-[12px] font-bold text-white">
-        <img src="/agncypaybrand.png" alt="AgncyPay" className="h-9 w-auto object-contain" />
+        <img src="/agncypaybrand.png" alt="AgncyPay" className="h-[48px] w-auto object-contain scale-[1.45]" />
         <Link href="/dashboard/support">Help</Link>
         <Link href="/dashboard/support">Contact Us</Link>
         <Link href="/dashboard/verification">Security</Link>
@@ -557,9 +562,6 @@ export default function DashboardHomePage() {
       <div className="mx-auto max-w-[1520px] px-4 py-4 sm:px-6 lg:px-8">
         <div className="flex flex-nowrap items-center justify-between gap-4 pb-4">
           <div className="flex min-w-0 flex-nowrap items-center gap-2 overflow-x-auto">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[4px] bg-[#22a92d] text-white" title="QuickBooks Sync Active">
-              <span className="rounded-full bg-[#1a8f25] px-1.5 py-1 text-[13px] font-black leading-none">qb</span>
-            </div>
             <Link
               href="/dashboard/booking"
               className="inline-flex h-9 shrink-0 items-center rounded-[4px] border border-white bg-white px-4 text-[12px] font-semibold uppercase text-[#1a1a1a]"
@@ -580,7 +582,7 @@ export default function DashboardHomePage() {
               <Settings className="h-5 w-5" />
             </Link>
           </div>
-          <img src="/agncypaybrand.png" alt="AgncyPay" className="h-10 w-auto shrink-0 object-contain" />
+          <img src="/agncypaybrand.png" alt="AgncyPay" className="h-[52px] w-auto shrink-0 object-contain scale-[1.5] origin-right" />
         </div>
 
         <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(360px,0.85fr)]">
@@ -756,9 +758,23 @@ export default function DashboardHomePage() {
                 </div>
               </Panel>
 
-              <Panel className="overflow-hidden p-0">
-                <div className="flex w-full bg-black">
-                  <img src="/card-promo.jpg" alt="AgncyPay Card Promo" className="w-full h-auto object-contain" />
+              <Panel className="overflow-hidden p-4 sm:p-5">
+                <div className="flex min-h-[190px] flex-col justify-between gap-5">
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      ["Limit", "$10k"],
+                      ["Spent", "$1.2k"],
+                      ["Review", "2"],
+                    ].map(([label, value]) => (
+                      <div key={label} className="rounded-[8px] border border-[#2f2f2f] bg-black px-3 py-2">
+                        <p className="text-[10px] font-semibold text-[#777]">{label}</p>
+                        <p className="mt-1 text-[14px] font-black text-white">{value}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex w-full bg-black -mx-4 -mb-5 sm:-mx-5 sm:-mb-5">
+                    <img src="/card-promo.jpg" alt="AgncyPay Card Promo" className="w-full h-auto object-contain" />
+                  </div>
                 </div>
               </Panel>
             </div>

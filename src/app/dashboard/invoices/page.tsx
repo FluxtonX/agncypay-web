@@ -573,11 +573,7 @@ export default function InvoicesPortalPage() {
   const downloadInvoicePdf = (invoice: InvoiceRow) => {
     const blob = new Blob([buildInvoicePdf(invoice, invoiceSource)], { type: "application/pdf" });
     const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-
-    link.href = url;
-    link.download = `${invoice.id}.pdf`;
-    link.click();
+    window.open(url, '_blank');
     URL.revokeObjectURL(url);
     setOpenMenuId(null);
   };
@@ -961,6 +957,9 @@ export default function InvoicesPortalPage() {
             <tr className="h-[49px] border-b border-[#686868] text-[17px] font-semibold leading-none text-[#a2a2a2]">
               <th className="pl-[10px] pr-4">
                 <div className="flex items-center gap-[10px]">
+                  <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-[4px] bg-[#22a92d] text-white" title="QuickBooks Sync Active">
+                    <span className="rounded-full bg-[#1a8f25] px-1 py-0.5 text-[10px] font-black leading-none">qb</span>
+                  </div>
                   {canSelectInvoices && (
                     <input
                       type="checkbox"

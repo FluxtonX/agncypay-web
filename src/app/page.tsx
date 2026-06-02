@@ -97,7 +97,7 @@ export default function LandingPage() {
             <img
               src="/agncypaybrand.png"
               alt="AgncyPay"
-              className="h-[48px] w-auto object-contain object-left sm:h-[54px]"
+              className="h-[48px] w-auto object-contain object-left sm:h-[54px] scale-[1.5] origin-left"
             />
           </Link>
 
@@ -359,7 +359,7 @@ function FullLogo() {
       <img
         src="/agncypaybrand.png"
         alt="AgncyPay"
-        className="h-[48px] w-auto object-contain object-left sm:h-[54px]"
+        className="h-[48px] w-auto object-contain object-left sm:h-[54px] scale-[1.5] origin-left"
       />
     </Link>
   );

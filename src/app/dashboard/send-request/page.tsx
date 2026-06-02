@@ -208,9 +208,6 @@ function TopBar() {
   return (
     <header className="flex flex-nowrap items-center justify-between gap-4 pb-4">
       <div className="flex min-w-0 flex-nowrap items-center gap-2 overflow-x-auto">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[4px] bg-[#22a92d] text-white" title="QuickBooks Sync Active">
-          <span className="rounded-full bg-[#1a8f25] px-1.5 py-1 text-[13px] font-black leading-none">qb</span>
-        </div>
         <Link
           href="/dashboard/booking"
           className="inline-flex h-9 shrink-0 items-center rounded-[4px] border border-white bg-white px-4 text-[12px] font-semibold uppercase text-[#1a1a1a]"
@@ -231,7 +228,7 @@ function TopBar() {
           <Settings className="h-5 w-5" />
         </Link>
       </div>
-      <img src="/agncypaybrand.png" alt="AgncyPay" className="h-10 w-auto shrink-0 object-contain" />
+      <img src="/agncypaybrand.png" alt="AgncyPay" className="h-[52px] w-auto shrink-0 object-contain scale-[1.5] origin-right" />
     </header>
   );
 }
@@ -405,18 +402,18 @@ function BatchPaymentModal({
                 <span>
                   {invoice.requested === "paid" ? (
                     <span className="inline-flex h-9 min-w-[76px] items-center justify-center rounded-full border border-[#10b95f] bg-[#082315] px-3 text-[#70ff9e]">
-                      <img src="/Alogo.jpg" alt="A" className="h-4 w-4 rounded-[3px] object-contain invert mix-blend-screen" />
-                      <span className="ml-1 text-[11px] font-black uppercase">Paid</span>
+                      <img src="/AlogoTransparent.png" alt="A" className="h-[26px] w-[26px] rounded-[3px] object-contain" />
+                      <span className="ml-1 text-[13px] font-black uppercase tracking-wide">Paid</span>
                     </span>
                   ) : (
                     <button
                       type="button"
                       onClick={() => onToggle(invoice.id)}
-                      className="inline-flex h-9 min-w-[138px] items-center justify-center gap-1.5 rounded-full border border-[#ff3b30] bg-[#250706] px-4 text-[11px] font-black uppercase text-white hover:bg-[#3a0c0a]"
+                      className="inline-flex h-7 w-full max-w-[152px] items-center justify-center gap-1 rounded-full border border-[#ff8a00] bg-[#261603] px-2 text-[10px] uppercase text-white hover:bg-[#3a200a]"
                     >
-                      Request
-                      <img src="/Alogo.jpg" alt="A" className="h-4 w-4 rounded-[3px] object-contain invert mix-blend-screen" />
-                      Pay
+                      <span className="font-bold leading-none">Request Pay</span>
+                      <img src="/AlogoTransparent.png" alt="A" className="h-[18px] w-[18px] shrink-0 rounded-[3px] object-contain" />
+                      <span className="font-bold leading-none">Pay</span>
                     </button>
                   )}
                 </span>

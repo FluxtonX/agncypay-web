@@ -14,7 +14,6 @@ import {
 } from "lucide-react";
 import { downloadTableReportPdf } from "../../../lib/pdfExport";
 import { cn } from "../../../lib/utils";
-import { AgncyPayLogo } from "../../../components/payment/AgncyPayLogo";
 import {
   findMainboardInvoice,
   formatMainboardMoney,
@@ -106,7 +105,7 @@ export default function ReceiptPage() {
             <ArrowLeft className="h-4 w-4" />
             {returnLabel}
           </Link>
-          <AgncyPayLogo imageClassName="w-[92px] sm:w-[104px]" />
+          <img src="/agncypaybrand.png" alt="AgncyPay" className="w-[92px] sm:w-[104px] shrink-0 object-contain scale-[1.5] origin-center" />
           <span className="inline-flex h-11 items-center rounded-[7px] border border-white bg-white px-4 text-[13px] font-semibold text-black">
             {formatMainboardMoney(total)}
           </span>
