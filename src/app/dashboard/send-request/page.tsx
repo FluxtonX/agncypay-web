@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import {
+  ArrowLeft,
   BriefcaseBusiness,
   CheckCircle2,
   ChevronDown,
@@ -20,11 +21,14 @@ import {
   Wand2,
   X,
 } from "lucide-react";
+import { FinanceInvoicesSection } from "../../../components/dashboard/FinanceInvoicesSection";
 import { AgncyPayLogo } from "../../../components/payment/AgncyPayLogo";
+import { getInvoicesForRecipient } from "../../../lib/finance-dashboard-invoices";
+import { type MainboardInvoice } from "../../../lib/mainboard";
 import { cn } from "../../../lib/utils";
 
 type TransferMode = "send" | "request";
-type TransferStage = "search" | "amount" | "success";
+type TransferStage = "search" | "invoices" | "amount" | "success";
 
 const BOFA_BUSINESS_DEBIT_VISA_IMAGE =
   "https://business.bankofamerica.com/content/dam/consumer/business/deposits/checking-accounts/debit-cards/bofa_busdbtcm_v.png";
@@ -482,8 +486,11 @@ export default function SendRequestPage() {
   const [batchSelectedIds, setBatchSelectedIds] = useState<string[]>(() =>
     batchInvoices.filter((invoice) => invoice.requested === "request").map((invoice) => invoice.id)
   );
+  const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
+  const [autosplitInvoiceIds, setAutosplitInvoiceIds] = useState<string[]>([]);
 
   const selectedRecipient = recipients.find((recipient) => recipient.id === selectedId) || recipients[0];
+  const recipientInvoices = getInvoicesForRecipient(selectedRecipient.id, selectedRecipient.name);
   const selectedCurrency = currencies.find((item) => item.code === currency) || currencies[0];
   const amountValue = Number(amount) || 0;
   const splitPercent = 80;
@@ -508,8 +515,23 @@ export default function SendRequestPage() {
   const selectRecipient = (recipient: Recipient) => {
     setSelectedId(recipient.id);
     setAmount(recipient.amount.toFixed(2));
+    setSelectedInvoiceId(null);
+    setAutosplitInvoiceIds([]);
+    setStage("invoices");
+    setMessage("");
+  };
+
+  const selectInvoice = (invoice: MainboardInvoice) => {
+    setSelectedInvoiceId(invoice.id);
+    setAmount((invoice.amount + invoice.fee).toFixed(2));
     setStage("amount");
     setMessage("");
+  };
+
+  const toggleAutosplitInvoice = (invoiceId: string) => {
+    setAutosplitInvoiceIds((current) =>
+      current.includes(invoiceId) ? current.filter((id) => id !== invoiceId) : [...current, invoiceId]
+    );
   };
 
   const showMessage = (value: string) => {
@@ -629,6 +651,40 @@ export default function SendRequestPage() {
           </section>
         )}
 
+        {stage === "invoices" && (
+          <section className="mx-auto w-full max-w-[1180px] flex-1 pb-8 pt-8 sm:pt-12">
+            <button
+              type="button"
+              onClick={() => setStage("search")}
+              className="mb-6 inline-flex items-center gap-2 text-[13px] font-black text-[#bdbdbd] transition-colors hover:text-white"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back to search
+            </button>
+
+            <div className="mb-6 flex items-center gap-4">
+              <RecipientAvatar recipient={selectedRecipient} size="md" />
+              <div className="min-w-0">
+                <h1 className="truncate text-[24px] font-black text-white sm:text-[28px]">{selectedRecipient.name}</h1>
+                <p className="mt-1 text-[13px] font-bold text-[#8f8f8f]">{selectedRecipient.handle}</p>
+                <p className="mt-1 text-[12px] font-semibold text-[#6f6f6f]">
+                  {recipientInvoices.length} invoice{recipientInvoices.length === 1 ? "" : "s"} — select one to{" "}
+                  {mode === "send" ? "send" : "request"} payment
+                </p>
+              </div>
+            </div>
+
+            <FinanceInvoicesSection
+              invoices={recipientInvoices}
+              autosplitInvoiceIds={autosplitInvoiceIds}
+              onToggleAutosplit={toggleAutosplitInvoice}
+              onInvoiceSelect={selectInvoice}
+              subtitle={`Invoices for ${selectedRecipient.name}. Select an invoice to continue.`}
+              showOpenInvoicesLink={false}
+            />
+          </section>
+        )}
+
         {stage === "amount" && (
           <section className="mx-auto flex w-full max-w-[540px] flex-1 flex-col justify-start pb-8 pt-12 sm:pt-16">
             {message && (
@@ -637,12 +693,24 @@ export default function SendRequestPage() {
               </div>
             )}
 
+            <button
+              type="button"
+              onClick={() => setStage("invoices")}
+              className="mb-4 inline-flex items-center gap-2 text-[13px] font-black text-[#bdbdbd] transition-colors hover:text-white"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back to invoices
+            </button>
+
             <div className="rounded-[9px] border border-[#444] bg-[#1a1a1a] px-9 py-10">
               <div className="flex items-center justify-center gap-4">
                 <RecipientAvatar recipient={selectedRecipient} size="lg" />
                 <div className="min-w-0">
                   <h1 className="truncate text-[28px] font-black leading-none">{selectedRecipient.name}</h1>
                   <p className="mt-2 text-[14px] font-black text-white">{selectedRecipient.handle}</p>
+                  {selectedInvoiceId && (
+                    <p className="mt-1 font-mono text-[12px] font-bold text-[#8f8f8f]">{selectedInvoiceId}</p>
+                  )}
                 </div>
               </div>
 
@@ -804,7 +872,7 @@ export default function SendRequestPage() {
               <div className="mt-6 flex justify-end gap-3">
                 <button
                   type="button"
-                  onClick={() => setStage("search")}
+                  onClick={() => setStage("invoices")}
                   className="h-9 w-[94px] rounded-[6px] bg-[#ff4e2f] text-[13px] font-black text-white hover:bg-[#ff684d]"
                 >
                   Cancel
