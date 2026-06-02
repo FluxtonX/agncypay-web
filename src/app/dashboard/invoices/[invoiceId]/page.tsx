@@ -567,7 +567,7 @@ export default function InvoiceDetailPage({ params }: PageProps) {
             className="inline-flex h-[36px] items-center justify-center gap-[11px] rounded-[6px] border border-[#5a5a5a] bg-[#0c0c0c] px-[18px] text-[14px] font-semibold text-white transition-colors hover:border-[#777]"
           >
             <Download className="h-4 w-4" />
-            Download PDF
+            View PDF
           </button>
           {(canApproveInvoice || canInitiatePayment) && (
             <button

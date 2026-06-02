@@ -95,9 +95,9 @@ export default function LandingPage() {
         <div className="mx-auto flex h-full max-w-[1440px] items-center justify-between px-7 lg:px-12">
           <Link href="/" className="flex items-center" aria-label="AgncyPay home">
             <img
-              src="/agncypayLogo.png"
+              src="/agncypaybrand.png"
               alt="AgncyPay"
-              className="h-[58px] w-[230px] object-contain object-left sm:h-[66px] sm:w-[260px]"
+              className="h-[48px] w-auto object-contain object-left sm:h-[54px]"
             />
           </Link>
 
@@ -357,9 +357,9 @@ function FullLogo() {
   return (
     <Link href="/" className="inline-flex items-center" aria-label="AgncyPay home">
       <img
-        src="/agncypayLogo.png"
+        src="/agncypaybrand.png"
         alt="AgncyPay"
-        className="h-[58px] w-[230px] object-contain object-left sm:h-[66px] sm:w-[260px]"
+        className="h-[48px] w-auto object-contain object-left sm:h-[54px]"
       />
     </Link>
   );

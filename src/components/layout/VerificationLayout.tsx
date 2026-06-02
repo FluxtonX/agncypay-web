@@ -177,17 +177,11 @@ export function VerificationLayout({ children }: VerificationLayoutProps) {
       <header className="relative h-[76px] bg-black px-5 sm:px-8 lg:px-10">
         <div className="flex h-[71px] items-center justify-between">
           <Link href="/" className="flex items-center" aria-label="AgncyPay home">
-            <span className="relative block h-[34px] w-[37px] overflow-hidden sm:h-[36px] sm:w-[39px]">
-              <img
-                src="/agncypayLogo.png"
-                alt=""
-                className="absolute h-[104px] w-[162px] max-w-none object-contain sm:h-[110px] sm:w-[171px]"
-                style={{ left: "-8px", top: "-31px" }}
-              />
-            </span>
-            <span className="ml-1 text-[26px] font-bold leading-none tracking-normal text-white sm:text-[28px]">
-              pay
-            </span>
+            <img
+              src="/agncypaybrand.png"
+              alt="AgncyPay"
+              className="h-[44px] w-auto object-contain sm:h-[48px]"
+            />
           </Link>
 
           <div className="text-[13px] font-medium leading-none text-[#8B8B8B] sm:text-[15px]">

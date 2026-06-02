@@ -64,11 +64,11 @@ const quickActions = [
 ] as const;
 
 const brandShortcuts = [
-  { label: "Airbnb", href: "/dashboard/invoices", src: "https://cdn.simpleicons.org/airbnb/FF5A5F", fallback: "Airbnb" },
-  { label: "The North Face", href: "/dashboard/invoices", src: "https://cdn.simpleicons.org/thenorthface/E31837", fallback: "The North Face" },
-  { label: "Land Rover", href: "/dashboard/invoices", src: LAND_ROVER_LOGO_IMAGE, fallback: "Land Rover" },
-  { label: "Adidas", href: "/dashboard/invoices", src: "https://cdn.simpleicons.org/adidas/000000", fallback: "Adidas" },
-  { label: "Search", href: "/dashboard/invoices", search: true, fallback: "S" },
+  { label: "Airbnb", src: "https://cdn.simpleicons.org/airbnb/FF5A5F", fallback: "Airbnb" },
+  { label: "The North Face", src: "https://cdn.simpleicons.org/thenorthface/E31837", fallback: "The North Face" },
+  { label: "Land Rover", src: LAND_ROVER_LOGO_IMAGE, fallback: "Land Rover" },
+  { label: "Adidas", src: "https://cdn.simpleicons.org/adidas/000000", fallback: "Adidas" },
+  { label: "Search", search: true, fallback: "S" },
 ] as const;
 
 const bankCards = [
@@ -101,11 +101,11 @@ const bankCards = [
 const dashboardInvoices = mainboardInvoices.slice(0, 5);
 
 const dashboardPeopleByInvoiceId: Record<string, string> = {
-  "MB-6984": "Anthea Smith",
-  "MB-7012": "John Adams",
+  "MB-6984": "Nike",
+  "MB-7012": "Zara",
   "MB-7044": "Adidas",
   "MB-6890": "Spotify",
-  "MB-6815": "Jessica Bailey",
+  "MB-6815": "Netflix",
 };
 
 const payeeLogoByInvoiceId: Record<
@@ -120,23 +120,22 @@ const payeeLogoByInvoiceId: Record<
   }
 > = {
   "MB-6984": {
-    mark: "M",
-    label: "M Models",
-    detail: "MODELS",
-    className: "bg-white text-[#2476c9]",
-    markClassName: "font-black",
+    mark: "Nike",
+    label: "Nike",
+    src: "https://cdn.simpleicons.org/nike/FFFFFF",
+    className: "bg-black text-white",
   },
   "MB-7012": {
-    mark: "NS",
-    label: "North Studio Agency",
-    detail: "STUDIO",
-    className: "bg-[#f4f4f4] text-black",
+    mark: "Zara",
+    label: "Zara",
+    src: "https://cdn.simpleicons.org/zara/000000",
+    className: "bg-white text-black",
   },
   "MB-7044": {
     mark: "Adidas",
     label: "Adidas",
-    src: "https://cdn.simpleicons.org/adidas/000000",
-    className: "bg-white text-black",
+    src: "https://upload.wikimedia.org/wikipedia/commons/2/20/Adidas_Logo.svg",
+    className: "bg-white",
   },
   "MB-6890": {
     mark: "Spotify",
@@ -145,9 +144,10 @@ const payeeLogoByInvoiceId: Record<
     className: "bg-black text-white",
   },
   "MB-6815": {
-    mark: "JB",
-    label: "Jessica Bailey",
-    className: "bg-[#27272a] text-white",
+    mark: "Netflix",
+    label: "Netflix",
+    src: "https://cdn.simpleicons.org/netflix/E50914",
+    className: "bg-black text-white",
   },
 };
 
@@ -185,6 +185,16 @@ function Panel({
   return <section className={cn("rounded-[13px] border border-[#3a3a3a] bg-[#050505]", className)}>{children}</section>;
 }
 
+function ALogoIcon({ className }: { className?: string }) {
+  return (
+    <img
+      src="/Alogo.jpg"
+      alt="A"
+      className={cn("inline-block object-contain invert mix-blend-screen", className)}
+    />
+  );
+}
+
 function StatusPill({ status }: { status: string }) {
   const normalized = status.toLowerCase();
   const colorClass =
@@ -197,17 +207,25 @@ function StatusPill({ status }: { status: string }) {
           : "border-[#3f3f3f] bg-[#0f0f0f] text-[#d7d7d7]";
 
   return (
-    <span className={cn("inline-flex h-7 items-center rounded-[7px] border px-3 text-[12px] font-semibold", colorClass)}>
-      {status}
+    <span className={cn("inline-flex h-7 items-center gap-1.5 rounded-[7px] border px-2.5 text-[12px] font-semibold", colorClass)}>
+      {normalized === "paid" ? (
+        <>
+          <ALogoIcon className="h-4 w-4 rounded-[3px]" />
+          <span>Paid</span>
+        </>
+      ) : (
+        status
+      )}
     </span>
   );
 }
 
 function RequestPayPill() {
   return (
-    <span className="inline-flex h-9 min-w-[150px] items-center justify-center gap-1.5 rounded-full border-2 border-[#ff3b30] bg-black px-4 text-[13px] font-black text-white shadow-[0_0_0_1px_rgba(255,59,48,0.14)]">
+    <span className="inline-flex h-9 min-w-[155px] items-center justify-center gap-1.5 rounded-full border-2 border-[#ff3b30] bg-black px-4 text-[13px] font-black text-white shadow-[0_0_0_1px_rgba(255,59,48,0.14)]">
       <span>Request</span>
-      <AgncyPayLogo className="h-[16px] w-[40px]" imageClassName="h-full w-full" />
+      <ALogoIcon className="h-[18px] w-[18px] rounded-[3px]" />
+      <span>Pay</span>
     </span>
   );
 }
@@ -215,6 +233,25 @@ function RequestPayPill() {
 function InvoiceStatusPill({ invoice }: { invoice: (typeof dashboardInvoices)[number] }) {
   if (invoice.id === "MB-6984" && invoice.status.toLowerCase() === "ready") {
     return <RequestPayPill />;
+  }
+
+  if (invoice.id === "MB-7044") {
+    const normalized = invoice.status.toLowerCase();
+    const colorClass =
+      normalized === "paid"
+        ? "border-[#10b95f] bg-[#082315] text-[#70ff9e]"
+        : normalized === "processing"
+          ? "border-[#ff8a00] bg-[#261603] text-[#ffb866]"
+          : normalized === "needs approval"
+            ? "border-[#ff3b30] bg-[#250706] text-[#ff9088]"
+            : "border-[#3f3f3f] bg-[#0f0f0f] text-[#d7d7d7]";
+
+    return (
+      <span className={cn("inline-flex h-7 items-center gap-1.5 rounded-[7px] border px-2.5 text-[12px] font-semibold", colorClass)}>
+        <ALogoIcon className="h-4 w-4 rounded-[3px]" />
+        <span>{normalized === "needs approval" ? "Pay" : invoice.status}</span>
+      </span>
+    );
   }
 
   return <StatusPill status={invoice.status} />;
@@ -277,17 +314,13 @@ function BrandTile({
   search,
 }: {
   label: string;
-  href: string;
+  href?: string;
   src?: string;
   fallback: string;
   search?: boolean;
 }) {
   return (
-    <Link
-      href={href}
-      className="flex min-w-0 flex-col items-center gap-2 text-center"
-      aria-label={label}
-    >
+    <div className="flex min-w-0 flex-col items-center gap-2 text-center" aria-label={label}>
       <div className="flex h-[68px] w-[68px] items-center justify-center overflow-hidden rounded-[12px] border border-[#5a5a5a] bg-white p-3 shadow-[0_0_0_1px_rgba(255,255,255,0.02)]">
         {search ? (
           <Search className="h-6 w-6 text-black" />
@@ -304,7 +337,7 @@ function BrandTile({
         )}
       </div>
       <span className="max-w-[78px] text-[12px] leading-4 text-[#b8b8b8]">{label}</span>
-    </Link>
+    </div>
   );
 }
 
@@ -480,7 +513,7 @@ function DashboardFooter() {
   return (
     <footer className="mt-8 border-y border-[#343434]">
       <div className="mx-auto flex max-w-[1040px] flex-wrap items-center justify-center gap-8 px-4 py-8 text-[12px] font-bold text-white">
-        <AgncyPayLogo className="h-[20px] w-[50px]" imageClassName="h-full w-full" />
+        <img src="/agncypaybrand.png" alt="AgncyPay" className="h-9 w-auto object-contain" />
         <Link href="/dashboard/support">Help</Link>
         <Link href="/dashboard/support">Contact Us</Link>
         <Link href="/dashboard/verification">Security</Link>
@@ -524,6 +557,9 @@ export default function DashboardHomePage() {
       <div className="mx-auto max-w-[1520px] px-4 py-4 sm:px-6 lg:px-8">
         <div className="flex flex-nowrap items-center justify-between gap-4 pb-4">
           <div className="flex min-w-0 flex-nowrap items-center gap-2 overflow-x-auto">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[4px] bg-[#22a92d] text-white" title="QuickBooks Sync Active">
+              <span className="rounded-full bg-[#1a8f25] px-1.5 py-1 text-[13px] font-black leading-none">qb</span>
+            </div>
             <Link
               href="/dashboard/booking"
               className="inline-flex h-9 shrink-0 items-center rounded-[4px] border border-white bg-white px-4 text-[12px] font-semibold uppercase text-[#1a1a1a]"
@@ -544,61 +580,17 @@ export default function DashboardHomePage() {
               <Settings className="h-5 w-5" />
             </Link>
           </div>
-          <AgncyPayLogo className="h-[28px] w-[72px] shrink-0" imageClassName="h-full w-full" />
+          <img src="/agncypaybrand.png" alt="AgncyPay" className="h-10 w-auto shrink-0 object-contain" />
         </div>
 
         <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(360px,0.85fr)]">
           <div className="space-y-5">
-            <Panel className="p-4 sm:p-5">
-              <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-                <div className="relative overflow-hidden rounded-[10px] border border-[#3a3a3a] bg-black">
-                  <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.05)_0%,rgba(255,255,255,0.02)_42%,rgba(255,255,255,0)_100%)]" />
-                  <div className="relative h-[260px] sm:h-[280px]">
-                    <Image
-                      src="/heroimage.png"
-                      alt="AgncyPay payment card visual"
-                      fill
-                      priority
-                      className="object-contain object-left-bottom"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex flex-col justify-between rounded-[10px] border border-[#3a3a3a] bg-[#060606] p-4 sm:p-5">
-                  <div>
-                    <AgncyPayLogo imageClassName="h-5" />
-                    <h1 className="mt-2 max-w-[340px] text-[30px] font-semibold leading-[0.96] text-white sm:text-[38px]">
-                      For Those Who Create
-                    </h1>
-                    <p className="mt-3 max-w-[350px] text-[14px] leading-6 text-[#949494]">
-                      A clean post-login home for payouts, invoices, cards, and bank setup.
-                    </p>
-                  </div>
-
-                  <div className="mt-5 flex flex-wrap gap-2">
-                    <button className="inline-flex h-9 items-center gap-2 rounded-[7px] border border-white bg-white px-3 text-[12px] font-semibold text-black">
-                      <img
-                        src="https://www.google.com/s2/favicons?domain=play.google.com&sz=64"
-                        alt="Google Play"
-                        className="h-4 w-4 rounded-[3px] object-contain"
-                        loading="lazy"
-                        referrerPolicy="no-referrer"
-                      />
-                      Google Play
-                    </button>
-                    <button className="inline-flex h-9 items-center gap-2 rounded-[7px] border border-[#2f2f2f] bg-[#0b0b0b] px-3 text-[12px] font-semibold text-white">
-                      <img
-                        src="https://www.google.com/s2/favicons?domain=apple.com&sz=64"
-                        alt="App Store"
-                        className="h-4 w-4 rounded-[3px] object-contain"
-                        loading="lazy"
-                        referrerPolicy="no-referrer"
-                      />
-                      App Store
-                    </button>
-                  </div>
-                </div>
-              </div>
+            <Panel className="overflow-hidden p-0">
+              <img
+                src="/dashboard_hero.jpg"
+                alt="For Those Who Create"
+                className="w-full h-auto block rounded-[12px]"
+              />
             </Panel>
 
             <Panel className="p-4 sm:p-5">
@@ -764,50 +756,9 @@ export default function DashboardHomePage() {
                 </div>
               </Panel>
 
-              <Panel className="overflow-hidden p-4 sm:p-5">
-                <div className="flex min-h-[190px] flex-col justify-between">
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-[#777]">Primary card</p>
-                      <h3 className="mt-2 text-[22px] font-semibold text-white">Workspace Mastercard</h3>
-                      <p className="mt-2 text-[12px] font-semibold text-[#8f8f8f]">•••• 0001 · Monthly controls enabled</p>
-                    </div>
-                    <div className="h-[118px] w-[188px] shrink-0 overflow-hidden rounded-[11px] border border-[#333] bg-[#101010] p-3 shadow-[0_18px_42px_rgba(0,0,0,0.42)]">
-                      <div className="h-full w-full rounded-[9px] bg-[linear-gradient(135deg,#171717_0%,#2a2440_52%,#111_100%)] p-3">
-                        <div className="flex items-start justify-between">
-                          <AgncyPayLogo imageClassName="w-[48px]" />
-                          <img
-                            src="https://cdn.simpleicons.org/mastercard/FFFFFF"
-                            alt="Mastercard"
-                            className="h-4 w-4 object-contain"
-                            loading="lazy"
-                            referrerPolicy="no-referrer"
-                          />
-                        </div>
-                        <div className="mt-8 space-y-1.5">
-                          <div className="h-1.5 w-20 rounded-full bg-white/20" />
-                          <div className="h-1.5 w-14 rounded-full bg-white/12" />
-                        </div>
-                        <div className="mt-6 flex items-end justify-between">
-                          <p className="text-[9px] font-black uppercase tracking-[0.14em] text-white/55">Virtual</p>
-                          <p className="text-[10px] font-black text-white/75">0001</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="mt-5 grid grid-cols-3 gap-2">
-                    {[
-                      ["Limit", "$10k"],
-                      ["Spent", "$1.2k"],
-                      ["Review", "2"],
-                    ].map(([label, value]) => (
-                      <div key={label} className="rounded-[8px] border border-[#2f2f2f] bg-black px-3 py-2">
-                        <p className="text-[10px] font-semibold text-[#777]">{label}</p>
-                        <p className="mt-1 text-[14px] font-black text-white">{value}</p>
-                      </div>
-                    ))}
-                  </div>
+              <Panel className="overflow-hidden p-0">
+                <div className="flex w-full bg-black">
+                  <img src="/card-promo.jpg" alt="AgncyPay Card Promo" className="w-full h-auto object-contain" />
                 </div>
               </Panel>
             </div>

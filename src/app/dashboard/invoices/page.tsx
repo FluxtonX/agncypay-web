@@ -1085,7 +1085,7 @@ export default function InvoicesPortalPage() {
                         className="flex w-full items-center gap-2 rounded-[5px] px-2 py-2 text-left text-[13px] text-[#d7d7d7] hover:bg-white/[0.06] hover:text-white"
                       >
                         <Download className="h-4 w-4" />
-                        Download PDF
+                        View PDF
                       </button>
                       <button
                         type="button"

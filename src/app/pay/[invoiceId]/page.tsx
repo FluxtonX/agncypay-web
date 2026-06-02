@@ -161,7 +161,7 @@ function SummaryCard({
           </button>
           <button type="button" onClick={onDownload} className="flex flex-col items-center gap-2 text-[12px] font-semibold text-[#d7d7d7] hover:text-white">
             <FileText className="h-6 w-6" />
-            Download PDF
+            View PDF
           </button>
         </div>
       </section>

@@ -3,7 +3,6 @@
 import React, { useMemo, useState } from "react";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Menu, Settings } from "lucide-react";
-import { AgncyPayLogo } from "../../../components/payment/AgncyPayLogo";
 import { cn } from "../../../lib/utils";
 
 const birthdays = [
@@ -57,7 +56,6 @@ function TopNav() {
             <Settings className="h-5 w-5" />
           </Link>
         </div>
-        <AgncyPayLogo className="h-[28px] w-[72px] shrink-0" imageClassName="h-full w-full" />
       </div>
     </header>
   );

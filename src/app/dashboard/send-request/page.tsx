@@ -206,29 +206,32 @@ function RecipientAvatar({ recipient, size = "md" }: { recipient: Recipient; siz
 
 function TopBar() {
   return (
-    <header className="flex items-center justify-between gap-4">
-      <div className="flex flex-wrap items-center gap-2">
+    <header className="flex flex-nowrap items-center justify-between gap-4 pb-4">
+      <div className="flex min-w-0 flex-nowrap items-center gap-2 overflow-x-auto">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[4px] bg-[#22a92d] text-white" title="QuickBooks Sync Active">
+          <span className="rounded-full bg-[#1a8f25] px-1.5 py-1 text-[13px] font-black leading-none">qb</span>
+        </div>
         <Link
           href="/dashboard/booking"
-          className="inline-flex h-9 items-center rounded-[4px] border border-white bg-white px-4 text-[12px] font-semibold uppercase text-[#1a1a1a]"
+          className="inline-flex h-9 shrink-0 items-center rounded-[4px] border border-white bg-white px-4 text-[12px] font-semibold uppercase text-[#1a1a1a]"
         >
           Booking Dashboard
         </Link>
         <Link
           href="/dashboard"
-          className="inline-flex h-9 items-center rounded-[4px] border border-white bg-white px-4 text-[12px] font-semibold uppercase text-[#3971b6]"
+          className="inline-flex h-9 shrink-0 items-center rounded-[4px] border border-white bg-white px-4 text-[12px] font-semibold uppercase text-[#3971b6]"
         >
           Finance Dashboard
         </Link>
         <Link
           href="/dashboard/settings"
-          className="inline-flex h-9 w-11 items-center justify-center rounded-[4px] border border-white bg-white text-[#3971b6]"
+          className="inline-flex h-9 w-11 shrink-0 items-center justify-center rounded-[4px] border border-white bg-white text-[#3971b6]"
           aria-label="Settings"
         >
           <Settings className="h-5 w-5" />
         </Link>
       </div>
-      <AgncyPayLogo imageClassName="h-6 sm:h-7" />
+      <img src="/agncypaybrand.png" alt="AgncyPay" className="h-10 w-auto shrink-0 object-contain" />
     </header>
   );
 }
@@ -402,17 +405,18 @@ function BatchPaymentModal({
                 <span>
                   {invoice.requested === "paid" ? (
                     <span className="inline-flex h-9 min-w-[76px] items-center justify-center rounded-full border border-[#10b95f] bg-[#082315] px-3 text-[#70ff9e]">
-                      <AgncyPayLogo imageClassName="h-4 w-auto" />
-                      <span className="ml-1 text-[10px]">Paid</span>
+                      <img src="/Alogo.jpg" alt="A" className="h-4 w-4 rounded-[3px] object-contain invert mix-blend-screen" />
+                      <span className="ml-1 text-[11px] font-black uppercase">Paid</span>
                     </span>
                   ) : (
                     <button
                       type="button"
                       onClick={() => onToggle(invoice.id)}
-                      className="inline-flex h-9 min-w-[138px] items-center justify-center rounded-full border border-[#ff3b30] bg-[#250706] px-4 text-[11px] font-black text-white hover:bg-[#3a0c0a]"
+                      className="inline-flex h-9 min-w-[138px] items-center justify-center gap-1.5 rounded-full border border-[#ff3b30] bg-[#250706] px-4 text-[11px] font-black uppercase text-white hover:bg-[#3a0c0a]"
                     >
-                      Request Pay
-                      <AgncyPayLogo imageClassName="ml-1 h-3.5 w-auto" />
+                      Request
+                      <img src="/Alogo.jpg" alt="A" className="h-4 w-4 rounded-[3px] object-contain invert mix-blend-screen" />
+                      Pay
                     </button>
                   )}
                 </span>
