@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import type { ReactNode } from "react";
@@ -17,14 +16,31 @@ import {
 import { cn } from "../../../../lib/utils";
 import { findMainboardInvoice, MainboardInvoice } from "../../../../lib/mainboard";
 import { downloadTableReportPdf } from "../../../../lib/pdfExport";
+import { AgncyPayLogo } from "../../../../components/payment/AgncyPayLogo";
 
 const supportedCurrencies = [
-  { code: "USD", label: "United States Dollars", flag: "US", rate: 1 },
-  { code: "EUR", label: "Euro", flag: "EU", rate: 0.92 },
-  { code: "GBP", label: "British Pound", flag: "GB", rate: 0.78 },
-  { code: "CAD", label: "Canadian Dollar", flag: "CA", rate: 1.37 },
-  { code: "AUD", label: "Australian Dollar", flag: "AU", rate: 1.52 },
-  { code: "AED", label: "UAE Dirham", flag: "AE", rate: 3.67 },
+  { code: "USD", label: "United States Dollars", countryCode: "us", rate: 1 },
+  { code: "EUR", label: "Euro", countryCode: "eu", rate: 0.92 },
+  { code: "GBP", label: "British Pound", countryCode: "gb", rate: 0.78 },
+  { code: "CAD", label: "Canadian Dollar", countryCode: "ca", rate: 1.37 },
+  { code: "AUD", label: "Australian Dollar", countryCode: "au", rate: 1.52 },
+  { code: "AED", label: "UAE Dirham", countryCode: "ae", rate: 3.67 },
+  { code: "JPY", label: "Japanese Yen", countryCode: "jp", rate: 156.8 },
+  { code: "CHF", label: "Swiss Franc", countryCode: "ch", rate: 0.9 },
+  { code: "CNY", label: "Chinese Yuan", countryCode: "cn", rate: 7.24 },
+  { code: "HKD", label: "Hong Kong Dollar", countryCode: "hk", rate: 7.82 },
+  { code: "SGD", label: "Singapore Dollar", countryCode: "sg", rate: 1.35 },
+  { code: "NZD", label: "New Zealand Dollar", countryCode: "nz", rate: 1.66 },
+  { code: "MXN", label: "Mexican Peso", countryCode: "mx", rate: 18.1 },
+  { code: "BRL", label: "Brazilian Real", countryCode: "br", rate: 5.3 },
+  { code: "INR", label: "Indian Rupee", countryCode: "in", rate: 83.4 },
+  { code: "KRW", label: "South Korean Won", countryCode: "kr", rate: 1372 },
+  { code: "ZAR", label: "South African Rand", countryCode: "za", rate: 18.4 },
+  { code: "SAR", label: "Saudi Riyal", countryCode: "sa", rate: 3.75 },
+  { code: "QAR", label: "Qatari Riyal", countryCode: "qa", rate: 3.64 },
+  { code: "SEK", label: "Swedish Krona", countryCode: "se", rate: 10.6 },
+  { code: "NOK", label: "Norwegian Krone", countryCode: "no", rate: 10.8 },
+  { code: "DKK", label: "Danish Krone", countryCode: "dk", rate: 6.86 },
 ] as const;
 
 type SupportedCurrency = (typeof supportedCurrencies)[number];
@@ -38,16 +54,22 @@ function formatCurrencyValue(value: number, currency: SupportedCurrency) {
   }).format(value * currency.rate);
 }
 
+function FlagIcon({ countryCode, className }: { countryCode: string; className?: string }) {
+  return (
+    <img
+      src={`https://flagcdn.com/w40/${countryCode}.png`}
+      srcSet={`https://flagcdn.com/w80/${countryCode}.png 2x`}
+      alt={`${countryCode.toUpperCase()} flag`}
+      className={cn("h-5 w-7 rounded-[3px] object-cover", className)}
+      loading="lazy"
+    />
+  );
+}
+
 function PayNowMark({ className }: { className?: string }) {
   return (
-    <span className={cn("inline-flex items-center justify-center gap-1.5 overflow-hidden whitespace-nowrap", className)}>
-      <Image
-        src="/agncypayLogo.png"
-        alt="AgncyPay"
-        width={140}
-        height={64}
-        className="h-[25px] w-auto object-contain"
-      />
+    <span className={cn("inline-flex items-center justify-center gap-1.5 whitespace-nowrap", className)}>
+      <AgncyPayLogo className="h-[16px] w-[42px]" imageClassName="h-full w-full" />
       <span>Now</span>
     </span>
   );
@@ -219,7 +241,7 @@ function InvoiceDocument({
               href={`/pay/${invoice.id}?mode=logged_in&returnTo=dashboard&currency=${currency.code}`}
               className="inline-flex h-[38px] items-center justify-center overflow-hidden rounded-[12px] bg-black px-4 text-[15px] font-black text-white"
             >
-              <PayNowMark className="[&>img]:h-[25px]" />
+              <PayNowMark />
             </Link>
           </div>
         </div>
@@ -263,6 +285,7 @@ export default function DashboardPayFlowPage() {
   const [isNoteOpen, setIsNoteOpen] = useState(false);
   const [note, setNote] = useState("");
   const [currencyCode, setCurrencyCode] = useState<SupportedCurrency["code"]>("USD");
+  const [isCurrencyOpen, setIsCurrencyOpen] = useState(false);
   const invoice = useMemo(() => findMainboardInvoice(params.invoiceId), [params.invoiceId]);
 
   if (!invoice) {
@@ -537,25 +560,53 @@ export default function DashboardPayFlowPage() {
                 <label className="block">
                   <span className="text-[14px] font-bold text-white">Currency *</span>
                   <div className="relative mt-2">
-                    <span className="pointer-events-none absolute left-3 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full bg-[#1e4595] text-[10px] font-black">
-                      {currency.flag}
-                    </span>
-                    <select
-                      value={currencyCode}
-                      onChange={(event) => {
-                        setCurrencyCode(event.target.value as SupportedCurrency["code"]);
-                        const nextCurrency = supportedCurrencies.find((item) => item.code === event.target.value);
-                        showActionMessage(`Currency changed to ${nextCurrency?.code || event.target.value}.`);
-                      }}
-                      className="h-[34px] w-full appearance-none rounded-[6px] border border-[#3a3a3a] bg-[#1b1b1b] pl-11 pr-10 text-[12px] font-semibold text-[#d5d5d5] outline-none focus:border-[#6a6a6a]"
+                    <button
+                      type="button"
+                      onClick={() => setIsCurrencyOpen((open) => !open)}
+                      className="flex h-[38px] w-full items-center justify-between rounded-[6px] border border-[#3a3a3a] bg-[#1b1b1b] px-3 text-left outline-none hover:border-[#5a5a5a] focus:border-[#6a6a6a]"
+                      aria-expanded={isCurrencyOpen}
                     >
-                      {supportedCurrencies.map((item) => (
-                        <option key={item.code} value={item.code}>
-                          {item.code} {item.label}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#cfcfcf]" />
+                      <span className="flex min-w-0 items-center gap-3">
+                        <FlagIcon countryCode={currency.countryCode} className="h-5 w-7" />
+                        <span className="min-w-0">
+                          <span className="block text-[12px] font-black text-white">{currency.code}</span>
+                          <span className="block truncate text-[11px] font-semibold text-[#9f9f9f]">{currency.label}</span>
+                        </span>
+                      </span>
+                      <ChevronDown className={cn("h-4 w-4 shrink-0 text-[#cfcfcf] transition-transform", isCurrencyOpen && "rotate-180")} />
+                    </button>
+                    {isCurrencyOpen && (
+                      <div className="absolute left-0 right-0 top-[44px] z-30 max-h-[260px] overflow-y-auto rounded-[7px] border border-[#3a3a3a] bg-[#111] p-1 shadow-2xl">
+                        {supportedCurrencies.map((item) => {
+                          const selected = item.code === currencyCode;
+
+                          return (
+                            <button
+                              key={item.code}
+                              type="button"
+                              onClick={() => {
+                                setCurrencyCode(item.code);
+                                setIsCurrencyOpen(false);
+                                showActionMessage(`Currency changed to ${item.code}.`);
+                              }}
+                              className={cn(
+                                "flex min-h-[48px] w-full items-center justify-between gap-3 rounded-[5px] px-3 text-left hover:bg-white/[0.07]",
+                                selected && "bg-white/[0.1]"
+                              )}
+                            >
+                              <span className="flex min-w-0 items-center gap-3">
+                                <FlagIcon countryCode={item.countryCode} className="h-6 w-8" />
+                                <span className="min-w-0">
+                                  <span className="block text-[12px] font-black text-white">{item.code}</span>
+                                  <span className="block truncate text-[11px] font-semibold text-[#a8a8a8]">{item.label}</span>
+                                </span>
+                              </span>
+                              {selected && <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-[#19d36b]" />}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 </label>
               </div>
@@ -567,7 +618,7 @@ export default function DashboardPayFlowPage() {
                 <span>Item/Job</span>
                 <span>Qty</span>
                 <span>Rate</span>
-                <span>Wallet ID</span>
+                <span>%</span>
               </div>
               <div className="mt-1 grid min-h-[51px] grid-cols-[1fr_54px_62px_88px] items-center gap-2 rounded-[6px] border border-[#3a3a3a] bg-[#1d1d1d] px-2 text-[11px]">
                 <div className="flex min-w-0 items-center gap-3">
@@ -580,7 +631,7 @@ export default function DashboardPayFlowPage() {
                 <span className="flex h-8 items-center justify-center rounded-[2px] border border-[#444] bg-[#202020] text-white">{product?.qty || 1}</span>
                 <span className="text-[10px] font-bold">{displayMoney(product?.rate || invoice.amount)}</span>
                 <span className="flex items-center justify-between rounded-[2px] border border-[#444] bg-[#202020] px-2 py-2 font-black">
-                  1
+                  80%
                   <button
                     type="button"
                     onClick={() => showActionMessage("Line item is locked for this synced invoice.")}
@@ -659,16 +710,16 @@ export default function DashboardPayFlowPage() {
                 <div className="flex gap-3">
                   <Link
                     href="/dashboard"
-                    className="inline-flex h-11 min-w-[104px] items-center justify-center rounded-[6px] bg-[#ff4e2f] text-[14px] font-black text-white"
+                    className="inline-flex h-11 min-w-[104px] items-center justify-center rounded-[6px] bg-[#ff4e2f] text-[14px] font-black text-white hover:bg-[#ff684d]"
                   >
                     Cancel
                   </Link>
                   <button
                     type="button"
                     onClick={() => setShowPreview(true)}
-                    className="inline-flex h-11 min-w-[104px] items-center justify-center overflow-hidden rounded-[6px] border border-[#444] bg-black px-3 text-[13px] font-black text-white"
+                    className="inline-flex h-11 min-w-[104px] items-center justify-center overflow-hidden rounded-[6px] border border-[#3a3a3a] bg-black px-3 text-[13px] font-black text-white hover:border-[#666] hover:bg-[#111]"
                   >
-                    <PayNowMark className="[&>img]:h-[24px]" />
+                    <PayNowMark />
                   </button>
                 </div>
               </div>

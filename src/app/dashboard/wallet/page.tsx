@@ -301,7 +301,7 @@ export default function WalletPage() {
   };
 
   return (
-    <div className="w-full max-w-[1048px]">
+    <main className="mx-auto w-full max-w-[1180px] px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
       <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
         <div>
           <h1 className="text-[34px] font-semibold leading-none text-white">
@@ -504,6 +504,6 @@ export default function WalletPage() {
           </form>
         </div>
       )}
-    </div>
+    </main>
   );
 }

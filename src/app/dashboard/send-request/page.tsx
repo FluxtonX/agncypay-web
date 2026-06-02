@@ -26,6 +26,9 @@ import { cn } from "../../../lib/utils";
 type TransferMode = "send" | "request";
 type TransferStage = "search" | "amount" | "success";
 
+const BOFA_BUSINESS_DEBIT_VISA_IMAGE =
+  "https://business.bankofamerica.com/content/dam/consumer/business/deposits/checking-accounts/debit-cards/bofa_busdbtcm_v.png";
+
 type Recipient = {
   id: string;
   name: string;
@@ -126,18 +129,18 @@ const moreOptions = [
 ] as const;
 
 const currencies = [
-  { code: "GBP", name: "British Pound", flag: "🇬🇧", rate: 0.78 },
-  { code: "AED", name: "United Arab Emirates Dirham", flag: "🇦🇪", rate: 3.67 },
-  { code: "EUR", name: "Euro", flag: "🇪🇺", rate: 0.92 },
-  { code: "USD", name: "United States Dollar", flag: "🇺🇸", rate: 1 },
-  { code: "AUD", name: "Australian Dollar", flag: "🇦🇺", rate: 1.52 },
-  { code: "BAM", name: "Bosnia-Herzegovina Convertible Mark", flag: "🇧🇦", rate: 1.8 },
-  { code: "BGN", name: "Bulgarian Lev", flag: "🇧🇬", rate: 1.8 },
-  { code: "BHD", name: "Bahraini Dinar", flag: "🇧🇭", rate: 0.38 },
-  { code: "BIF", name: "Burundian Franc", flag: "🇧🇮", rate: 2870 },
-  { code: "BOB", name: "Bolivian Boliviano", flag: "🇧🇴", rate: 6.91 },
-  { code: "BRL", name: "Brazilian Real", flag: "🇧🇷", rate: 5.3 },
-  { code: "ARS", name: "Argentine Peso", flag: "🇦🇷", rate: 894 },
+  { code: "GBP", name: "British Pound", countryCode: "gb", rate: 0.78 },
+  { code: "AED", name: "United Arab Emirates Dirham", countryCode: "ae", rate: 3.67 },
+  { code: "EUR", name: "Euro", countryCode: "eu", rate: 0.92 },
+  { code: "USD", name: "United States Dollar", countryCode: "us", rate: 1 },
+  { code: "AUD", name: "Australian Dollar", countryCode: "au", rate: 1.52 },
+  { code: "BAM", name: "Bosnia-Herzegovina Convertible Mark", countryCode: "ba", rate: 1.8 },
+  { code: "BGN", name: "Bulgarian Lev", countryCode: "bg", rate: 1.8 },
+  { code: "BHD", name: "Bahraini Dinar", countryCode: "bh", rate: 0.38 },
+  { code: "BIF", name: "Burundian Franc", countryCode: "bi", rate: 2870 },
+  { code: "BOB", name: "Bolivian Boliviano", countryCode: "bo", rate: 6.91 },
+  { code: "BRL", name: "Brazilian Real", countryCode: "br", rate: 5.3 },
+  { code: "ARS", name: "Argentine Peso", countryCode: "ar", rate: 894 },
 ] as const;
 
 type Currency = (typeof currencies)[number];
@@ -161,6 +164,18 @@ function formatAmount(value: number, currency: CurrencyCode) {
     currency,
     maximumFractionDigits: 2,
   }).format(value * selectedCurrency.rate);
+}
+
+function FlagIcon({ countryCode, className }: { countryCode: string; className?: string }) {
+  return (
+    <img
+      src={`https://flagcdn.com/w40/${countryCode}.png`}
+      srcSet={`https://flagcdn.com/w80/${countryCode}.png 2x`}
+      alt={`${countryCode.toUpperCase()} flag`}
+      className={cn("h-6 w-8 rounded-[3px] object-cover", className)}
+      loading="lazy"
+    />
+  );
 }
 
 function RecipientAvatar({ recipient, size = "md" }: { recipient: Recipient; size?: "sm" | "md" | "lg" }) {
@@ -194,7 +209,7 @@ function TopBar() {
     <header className="flex items-center justify-between gap-4">
       <div className="flex flex-wrap items-center gap-2">
         <Link
-          href="/dashboard"
+          href="/dashboard/booking"
           className="inline-flex h-9 items-center rounded-[4px] border border-white bg-white px-4 text-[12px] font-semibold uppercase text-[#1a1a1a]"
         >
           Booking Dashboard
@@ -222,7 +237,7 @@ function FooterBar() {
   return (
     <footer className="mt-16 border-y border-[#343434]">
       <div className="mx-auto flex max-w-[1040px] flex-wrap items-center justify-center gap-8 px-4 py-8 text-[12px] font-bold text-white">
-        <AgncyPayLogo imageClassName="h-7" />
+        <AgncyPayLogo className="h-[20px] w-[50px]" imageClassName="h-full w-full" />
         <Link href="/dashboard/support">Help</Link>
         <Link href="/dashboard/support">Contact Us</Link>
         <Link href="/dashboard/verification">Security</Link>
@@ -288,7 +303,7 @@ function CurrencyPickerModal({
                   )}
                 >
                   <span className="flex min-w-0 items-center gap-4">
-                    <span className="text-[30px] leading-none">{currency.flag}</span>
+                    <FlagIcon countryCode={currency.countryCode} className="h-8 w-11" />
                     <span className="min-w-0">
                       <span className="block truncate text-[14px] font-black text-white">{currency.name}</span>
                       <span className="block text-[13px] font-black text-white">{currency.code}</span>
@@ -386,17 +401,17 @@ function BatchPaymentModal({
                 <span className="truncate pr-4">{invoice.id}</span>
                 <span>
                   {invoice.requested === "paid" ? (
-                    <span className="inline-flex h-9 min-w-[76px] items-center justify-center rounded-full border border-[#303030] bg-black px-3">
+                    <span className="inline-flex h-9 min-w-[76px] items-center justify-center rounded-full border border-[#10b95f] bg-[#082315] px-3 text-[#70ff9e]">
                       <AgncyPayLogo imageClassName="h-4 w-auto" />
-                      <span className="ml-1 text-[10px]">paid</span>
+                      <span className="ml-1 text-[10px]">Paid</span>
                     </span>
                   ) : (
                     <button
                       type="button"
                       onClick={() => onToggle(invoice.id)}
-                      className="inline-flex h-9 min-w-[138px] items-center justify-center rounded-full border border-[#05d66c] bg-black px-4 text-[11px] font-black text-white hover:bg-[#07150e]"
+                      className="inline-flex h-9 min-w-[138px] items-center justify-center rounded-full border border-[#ff3b30] bg-[#250706] px-4 text-[11px] font-black text-white hover:bg-[#3a0c0a]"
                     >
-                      Request
+                      Request Pay
                       <AgncyPayLogo imageClassName="ml-1 h-3.5 w-auto" />
                     </button>
                   )}
@@ -430,7 +445,7 @@ function BatchPaymentModal({
             <button
               type="button"
               onClick={onClose}
-              className="h-9 rounded-[6px] border border-[#444] px-4 text-[12px] font-black text-white hover:border-[#777]"
+              className="h-9 rounded-[6px] border border-[#ff4e2f] bg-[#ff4e2f] px-4 text-[12px] font-black text-white hover:bg-[#ff684d]"
             >
               Cancel
             </button>
@@ -470,9 +485,11 @@ export default function SendRequestPage() {
   const selectedRecipient = recipients.find((recipient) => recipient.id === selectedId) || recipients[0];
   const selectedCurrency = currencies.find((item) => item.code === currency) || currencies[0];
   const amountValue = Number(amount) || 0;
+  const splitPercent = 80;
+  const talentAmount = amountValue * (splitPercent / 100);
   const fee = Math.max(3.25, amountValue * 0.00042);
-  const total = mode === "send" ? amountValue + fee : amountValue;
-  const recipientGets = mode === "send" ? amountValue - fee : amountValue;
+  const total = amountValue;
+  const recipientGets = mode === "send" ? Math.max(0, talentAmount - fee) : talentAmount;
 
   const filteredRecipients = useMemo(() => {
     const normalized = query.trim().toLowerCase();
@@ -645,7 +662,7 @@ export default function SendRequestPage() {
                   className="inline-flex h-10 shrink-0 items-center gap-2 rounded-[7px] border border-[#484848] bg-[#181818] px-4 text-[14px] font-black text-white hover:border-[#777]"
                   aria-label="Select currency"
                 >
-                  <span className="text-[18px] leading-none">{selectedCurrency.flag}</span>
+                  <FlagIcon countryCode={selectedCurrency.countryCode} className="h-5 w-7" />
                   {selectedCurrency.code}
                   <ChevronDown className="h-4 w-4 text-white" />
                 </button>
@@ -657,7 +674,7 @@ export default function SendRequestPage() {
                 <span className="text-center">Name/Total</span>
                 <span>Qty</span>
                 <span>Rate</span>
-                <span>Wallet ID</span>
+                <span>%</span>
                 <span />
               </div>
 
@@ -671,7 +688,7 @@ export default function SendRequestPage() {
                 </div>
                 <span className="flex h-7 items-center justify-center rounded-[2px] border border-[#444] text-[11px]">1</span>
                 <span className="rounded-[2px] border border-[#444] px-1 py-2 text-[8px] font-black">{selectedRecipient.rate}</span>
-                <span className="flex h-7 items-center justify-center rounded-[2px] border border-[#444] text-[11px]">1</span>
+                <span className="flex h-7 items-center justify-center rounded-[2px] border border-[#444] text-[11px]">{splitPercent}%</span>
                 <button
                   type="button"
                   onClick={() => showMessage("This synced recipient cannot be removed from the draft.")}
@@ -687,7 +704,15 @@ export default function SendRequestPage() {
                 className="mt-4 flex h-12 w-full items-center justify-between rounded-[5px] bg-[#2d2d2d] px-4 text-left"
               >
                 <span className="flex min-w-0 items-center gap-3">
-                  <span className="flex h-8 w-12 items-center justify-center rounded-[4px] bg-[#154a91] text-[9px] font-black">VISA</span>
+                  <span className="flex h-8 w-12 shrink-0 items-center justify-center overflow-hidden rounded-[4px] bg-white">
+                    <img
+                      src={BOFA_BUSINESS_DEBIT_VISA_IMAGE}
+                      alt="Bank of America Business Debit Visa"
+                      className="h-full w-full object-cover"
+                      loading="lazy"
+                      referrerPolicy="no-referrer"
+                    />
+                  </span>
                   <span className="min-w-0">
                     <span className="block truncate text-[15px] font-black">Bank of America Business Debit Visa</span>
                     <span className="block text-[10px] font-black">Debit ****88</span>
@@ -754,6 +779,10 @@ export default function SendRequestPage() {
                   <span>{formatAmount(total, currency)}</span>
                 </div>
                 <div className="flex justify-between">
+                  <span>Talent split:</span>
+                  <span>{splitPercent}% - {formatAmount(talentAmount, currency)}</span>
+                </div>
+                <div className="flex justify-between">
                   <span>Estimated delivery:</span>
                   <span>In seconds</span>
                 </div>
@@ -783,7 +812,12 @@ export default function SendRequestPage() {
                   type="button"
                   onClick={() => setStage("success")}
                   aria-label={mode === "send" ? "Pay Now" : "Request Now"}
-                  className="inline-flex h-9 w-[94px] items-center justify-center gap-1 overflow-hidden rounded-[6px] border border-[#444] bg-black text-[13px] font-black text-white hover:border-[#777] hover:bg-[#111]"
+                  className={cn(
+                    "inline-flex h-9 w-[94px] items-center justify-center gap-1 overflow-hidden rounded-[6px] border text-[13px] font-black",
+                    mode === "send"
+                      ? "border-[#333] bg-black text-white hover:border-[#666] hover:bg-[#111]"
+                      : "border-[#ff3b30] bg-[#ff3b30] text-white hover:bg-[#ff5a4f]"
+                  )}
                 >
                   <AgncyPayLogo imageClassName="h-3.5 w-auto" />
                   Now

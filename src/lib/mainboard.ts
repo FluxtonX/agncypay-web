@@ -42,7 +42,7 @@ export const mainboardInvoices: MainboardInvoice[] = [
     id: "MB-6984",
     invoiceNumber: "6984",
     recipient: "M Models",
-    email: "billing@mmodels.com",
+    email: "AgncyID4235",
     walletId: "AGNCY-9024",
     mobile: "+1 (555) 222-0902",
     brand: "Mainboard",

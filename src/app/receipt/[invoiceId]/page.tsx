@@ -106,7 +106,7 @@ export default function ReceiptPage() {
             <ArrowLeft className="h-4 w-4" />
             {returnLabel}
           </Link>
-          <AgncyPayLogo imageClassName="h-8" />
+          <AgncyPayLogo imageClassName="w-[92px] sm:w-[104px]" />
           <span className="inline-flex h-11 items-center rounded-[7px] border border-white bg-white px-4 text-[13px] font-semibold text-black">
             {formatMainboardMoney(total)}
           </span>

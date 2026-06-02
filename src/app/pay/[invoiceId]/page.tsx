@@ -20,74 +20,79 @@ import {
   mainboardInvoices,
   type MainboardInvoice,
 } from "../../../lib/mainboard";
+import { AgncyPayLogo } from "../../../components/payment/AgncyPayLogo";
 
 type CheckoutStage = "payment" | "processing" | "success";
 type CardRail = "agncypay" | "visa" | "mastercard" | "discover" | "amex" | "plaid";
 
 const cardRails: CardRail[] = ["agncypay", "visa", "mastercard", "discover", "amex", "plaid"];
-const paymentMethods = [
-  ["usa", "Fedwire", "Bank transfer"],
-  ["global", "SWIFT", "International"],
-  ["brazil", "PIX", "Instant"],
-  ["eurozone", "SEPA Instant", "Instant"],
-  ["usa", "FedNow", "Instant"],
-  ["brazil", "TED", "Transfer"],
-  ["usa", "RTP", "Instant"],
-  ["uk", "RTGS", "FPS"],
-  ["mexico", "SPEI", "Instant"],
-  ["stablecoin", "USDC", "Instant"],
-  ["stablecoin", "USDT", "Instant"],
-  ["stablecoin", "USDH", "Instant"],
-] as const;
 
 function CardRailLogo({ rail }: { rail: CardRail }) {
   if (rail === "visa") {
-    return <span className="text-[20px] font-black italic tracking-[0.08em] text-[#1434cb]">VISA</span>;
+    return (
+      <Image
+        src="/visa-logo.svg"
+        alt="Visa"
+        width={512}
+        height={166}
+        className="h-5 w-auto object-contain"
+      />
+    );
   }
 
   if (rail === "mastercard") {
     return (
-      <span className="flex items-center">
-        <span className="h-8 w-8 rounded-full bg-[#eb001b]" />
-        <span className="-ml-3 h-8 w-8 rounded-full bg-[#f79e1b] mix-blend-screen" />
-      </span>
+      <Image
+        src="/mastercard-logo.svg"
+        alt="Mastercard"
+        width={152}
+        height={118}
+        className="h-7 w-auto object-contain"
+      />
     );
   }
 
   if (rail === "discover") {
     return (
-      <span className="relative flex h-full w-full items-center justify-center overflow-hidden rounded-[3px] bg-white px-2">
-        <span className="absolute bottom-0 right-0 h-9 w-12 rounded-tl-full bg-[#ff7a00]" />
-        <span className="relative text-[13px] font-black uppercase tracking-[0.02em] text-[#222]">DISCOVER</span>
-      </span>
+      <Image
+        src="/discover-logo.svg"
+        alt="Discover"
+        width={512}
+        height={113}
+        className="h-6 w-auto object-contain"
+      />
     );
   }
 
   if (rail === "amex") {
     return (
-      <span className="flex h-full w-full items-center justify-center rounded-[3px] bg-[#2e77bc] px-2 text-center text-[10px] font-black uppercase leading-[0.95] text-white">
-        American<br />Express
-      </span>
+      <Image
+        src="/american-express-logo.svg"
+        alt="American Express"
+        width={512}
+        height={512}
+        className="h-7 w-auto object-contain"
+      />
     );
   }
 
   if (rail === "plaid") {
     return (
-      <span className="flex items-center gap-2 text-[#f4f4f4]">
-        <span className="grid h-5 w-5 grid-cols-2 gap-[2px]">
-          {Array.from({ length: 4 }).map((_, index) => (
-            <span key={index} className="rounded-[2px] bg-white" />
-          ))}
-        </span>
-        <span className="text-[12px] font-black uppercase tracking-[0.08em]">Plaid</span>
+      <span className="flex items-center justify-center">
+        <Image
+          src="/plaid-logo.svg"
+          alt="Plaid"
+          width={126}
+          height={48}
+          className="h-5 w-auto object-contain"
+        />
       </span>
     );
   }
 
   return (
-    <span className="flex items-center gap-2 text-black">
-      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-black text-[13px] font-black text-white">A</span>
-      <span className="text-[13px] font-black">AgncyPay</span>
+    <span className="flex items-center justify-center">
+      <AgncyPayLogo className="h-[18px] w-[48px]" imageClassName="h-full w-full" />
     </span>
   );
 }
@@ -95,12 +100,12 @@ function CardRailLogo({ rail }: { rail: CardRail }) {
 function cardRailClasses(rail: CardRail, selected: boolean) {
   const base = "relative flex h-11 min-w-[88px] items-center justify-center overflow-hidden rounded-[4px] border px-3 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80";
   const palette: Record<CardRail, string> = {
-    agncypay: "bg-white text-black",
+    agncypay: "bg-black text-white",
     visa: "bg-white",
     mastercard: "bg-white",
     discover: "bg-white",
-    amex: "bg-[#2e77bc]",
-    plaid: "bg-[#111]",
+    amex: "bg-white",
+    plaid: "bg-white",
   };
 
   return cn(
@@ -200,7 +205,6 @@ export default function PayRequestPage() {
 
   const [stage, setStage] = useState<CheckoutStage>("payment");
   const [activeRail, setActiveRail] = useState<CardRail>("agncypay");
-  const [activeMethod, setActiveMethod] = useState("Fedwire");
   const [cardNumber, setCardNumber] = useState("1234 5678 9000 0000");
   const [expiry, setExpiry] = useState("MM/YY");
   const [cvc, setCvc] = useState("123");
@@ -266,7 +270,7 @@ export default function PayRequestPage() {
 
       <main className="mx-auto grid max-w-[1480px] grid-cols-1 gap-7 px-4 py-8 sm:px-6 lg:px-8 xl:grid-cols-[minmax(0,1.35fr)_minmax(390px,0.65fr)]">
         <section className="rounded-[10px] border border-[#151515] bg-black p-5 sm:p-7">
-          <p className="text-[13px] font-semibold text-white">Payment Method</p>
+          <p className="text-[13px] font-semibold text-white">Full Invoice Amount</p>
           <div className="mt-6 flex flex-wrap items-end gap-3">
             <h1 className="text-[34px] font-bold tracking-[-0.02em] text-white">{formatMainboardMoney(invoice.amount)}</h1>
             <span className="pb-2 text-[13px] font-semibold text-[#d7d7d7]">Due Date</span>
@@ -313,30 +317,6 @@ export default function PayRequestPage() {
                 </div>
               </div>
 
-              <div>
-                <span className="text-[14px] font-semibold text-white">Payment method</span>
-                <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
-                  {paymentMethods.map(([region, title, detail]) => {
-                    const selected = activeMethod === title;
-                    return (
-                      <button
-                        key={title}
-                        type="button"
-                        onClick={() => setActiveMethod(title)}
-                        className={cn(
-                          "flex min-h-[64px] flex-col justify-center rounded-[7px] border px-3 py-2 text-left",
-                          selected ? "border-white bg-white text-black" : "border-[#2a2a2a] bg-[#242121] text-white hover:border-[#555]"
-                        )}
-                      >
-                        <p className={cn("text-[9px] font-black lowercase leading-none", selected ? "text-black/55" : "text-[#36d16d]")}>{region}</p>
-                        <p className="mt-1.5 truncate text-[13px] font-bold leading-none">{title}</p>
-                        <p className={cn("mt-1 truncate text-[9px] font-semibold leading-none", selected ? "text-black/55" : "text-[#a7a7a7]")}>{detail}</p>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
               <div className="grid grid-cols-1 gap-6 md:grid-cols-[1fr_174px_130px]">
                 <label className="block">
                   <span className="text-[14px] font-semibold text-white">Card Number</span>
@@ -377,9 +357,9 @@ export default function PayRequestPage() {
                 <button
                   type="button"
                   onClick={submitPayment}
-                  className="inline-flex h-12 flex-1 items-center justify-center gap-2 overflow-hidden rounded-[7px] border border-[#2a2a2a] bg-black px-5 text-[14px] font-bold text-white hover:border-[#555] hover:bg-[#111]"
+                  className="inline-flex h-12 flex-1 items-center justify-center gap-2 overflow-hidden rounded-[7px] border border-[#333] bg-black px-5 text-[14px] font-bold text-white hover:border-[#666] hover:bg-[#111]"
                 >
-                  <Image src="/agncypayLogo.png" alt="AgncyPay" width={170} height={78} className="h-[32px] w-auto object-contain" />
+                  <AgncyPayLogo className="h-[18px] w-[50px]" imageClassName="h-full w-full" />
                   <span>Now</span>
                 </button>
                 <span className="text-[12px] font-semibold text-[#8f8f8f]">{paymentLabel}</span>
@@ -404,16 +384,16 @@ export default function PayRequestPage() {
               </>
             ) : (
               <>
-                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-white text-black">
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#16c95f] text-white shadow-[0_0_28px_rgba(22,201,95,0.32)]">
                   <CheckCircle2 className="h-9 w-9" />
                 </div>
-                <h2 className="mt-5 text-[25px] font-bold tracking-[-0.04em] text-white">payment successful</h2>
-                <p className="mt-2 text-[11px] leading-5 text-[#bdbdbd]">
+                <h2 className="mt-5 text-[25px] font-bold tracking-[-0.04em] text-[#69f39b]">payment successful</h2>
+                <p className="mt-2 text-[11px] leading-5 text-[#c8f5d5]">
                   Transaction {transactionId} was submitted successfully.
                 </p>
                 <Link
                   href={`/receipt/${invoice.id}?tx=${transactionId}&mode=${isLoggedInMode ? "logged_in" : "guest"}&returnTo=${returnTo}`}
-                  className="mt-5 inline-flex h-10 items-center justify-center rounded-[5px] border border-white bg-white px-4 text-[12px] font-bold text-black hover:bg-[#ededed]"
+                  className="mt-5 inline-flex h-10 items-center justify-center rounded-[5px] border border-[#16c95f] bg-[#16c95f] px-4 text-[12px] font-bold text-white hover:bg-[#28df73]"
                 >
                   View receipt
                 </Link>

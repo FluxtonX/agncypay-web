@@ -211,7 +211,7 @@ export default function RequestPage() {
               href={payLink}
               className="inline-flex h-[54px] items-center justify-center gap-2 overflow-hidden rounded-[16px] bg-black px-8 text-[19px] font-black text-white hover:bg-[#1a1a1a]"
             >
-              <Image src="/agncypayLogo.png" alt="AgncyPay" width={180} height={82} className="h-[34px] w-auto object-contain" />
+              <Image src="/agncypayLogo.png" alt="AgncyPay" width={180} height={82} className="w-[62px] max-h-[22px] object-contain" />
               <span>Now</span>
             </Link>
           </div>

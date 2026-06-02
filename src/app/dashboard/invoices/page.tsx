@@ -1431,7 +1431,7 @@ export default function InvoicesPortalPage() {
                       className="inline-flex h-[42px] items-center justify-center gap-2 rounded-[7px] border border-white bg-white px-[22px] text-[15px] font-semibold text-black transition-colors hover:bg-[#e8e8e8]"
                     >
                       <AgncyPayLogo imageClassName="h-4" />
-                      <span>AgncyPay now</span>
+                      <span>Now</span>
                     </button>
                   </div>
                 </div>

@@ -3,20 +3,27 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ArrowUpRight,
   ChevronRight,
   CreditCard,
   EllipsisVertical,
-  Landmark,
   Search,
   Send,
   Settings,
   Users,
+  X,
 } from "lucide-react";
 import { AgncyPayLogo } from "../../components/payment/AgncyPayLogo";
 import { cn } from "../../lib/utils";
 import { mainboardInvoices, formatMainboardMoney } from "../../lib/mainboard";
+
+const BOFA_BUSINESS_DEBIT_VISA_IMAGE =
+  "https://business.bankofamerica.com/content/dam/consumer/business/deposits/checking-accounts/debit-cards/bofa_busdbtcm_v.png";
+const CHASE_INK_BUSINESS_UNLIMITED_IMAGE = "/chase-ink-business-unlimited.png";
+const MERCURY_IO_CARD_IMAGE = "/mercurycard.png";
+const LAND_ROVER_LOGO_IMAGE = "/land-rover-logo.svg";
 
 type RemoteBrandImageProps = {
   src: string;
@@ -32,7 +39,7 @@ function RemoteBrandImage({ src, alt, fallback, className, imageClassName }: Rem
   return (
     <div className={cn("relative overflow-hidden", className)}>
       {failed ? (
-        <div className="flex h-full w-full items-center justify-center rounded-[inherit] border border-[#3f3f3f] bg-[#f1e0b9] px-1 text-center text-[10px] font-semibold leading-[1.05] text-black">
+        <div className="flex h-full w-full items-center justify-center rounded-[inherit] border border-[#3f3f3f] bg-white px-1 text-center text-[10px] font-semibold leading-[1.05] text-black">
           <span className="block max-w-full truncate">{fallback}</span>
         </div>
       ) : (
@@ -51,71 +58,120 @@ function RemoteBrandImage({ src, alt, fallback, className, imageClassName }: Rem
 
 const quickActions = [
   { label: "Send / Request", icon: Send, href: "/dashboard/send-request" },
-  { label: "Direct to bank", icon: Landmark, href: "/dashboard/wallet" },
   { label: "Add card or bank", icon: CreditCard, href: "/dashboard/wallet" },
   { label: "Wallet ID contacts", icon: Users, href: "/dashboard/profile" },
   { label: "More", icon: EllipsisVertical, href: "/dashboard/settings" },
 ] as const;
 
 const brandShortcuts = [
-  { label: "Airbnb", href: "/dashboard/invoices", src: "https://www.google.com/s2/favicons?domain=airbnb.com&sz=128", fallback: "Airbnb" },
-  { label: "The North Face", href: "/dashboard/invoices", src: "https://www.google.com/s2/favicons?domain=thenorthface.com&sz=128", fallback: "The North Face" },
-  { label: "Land Rover", href: "/dashboard/invoices", src: "https://www.google.com/s2/favicons?domain=landrover.com&sz=128", fallback: "Land Rover" },
-  { label: "Adidas", href: "/dashboard/invoices", src: "https://www.google.com/s2/favicons?domain=adidas.com&sz=128", fallback: "Adidas" },
+  { label: "Airbnb", href: "/dashboard/invoices", src: "https://cdn.simpleicons.org/airbnb/FF5A5F", fallback: "Airbnb" },
+  { label: "The North Face", href: "/dashboard/invoices", src: "https://cdn.simpleicons.org/thenorthface/E31837", fallback: "The North Face" },
+  { label: "Land Rover", href: "/dashboard/invoices", src: LAND_ROVER_LOGO_IMAGE, fallback: "Land Rover" },
+  { label: "Adidas", href: "/dashboard/invoices", src: "https://cdn.simpleicons.org/adidas/000000", fallback: "Adidas" },
   { label: "Search", href: "/dashboard/invoices", search: true, fallback: "S" },
 ] as const;
 
-const payoutItems = [
-  {
-    name: "Spotify",
-    detail: "Ad social campaign",
-    date: "Today, 10:24 AM",
-    amount: "$5,800.00",
-    src: "https://www.google.com/s2/favicons?domain=spotify.com&sz=128",
-    fallback: "Spotify",
-  },
-  {
-    name: "Adidas",
-    detail: "S/S comms web",
-    date: "Yesterday",
-    amount: "$3,200.00",
-    src: "https://www.google.com/s2/favicons?domain=adidas.com&sz=128",
-    fallback: "Adidas",
-  },
-  {
-    name: "Land Rover",
-    detail: "Ad domestic socials",
-    date: "Oct 12",
-    amount: "$1,200.00",
-    src: "https://www.google.com/s2/favicons?domain=landrover.com&sz=128",
-    fallback: "Land Rover",
-  },
-  {
-    name: "The North Face",
-    detail: "S/S global campaign",
-    date: "Oct 11",
-    amount: "$52,000.00",
-    src: "https://www.google.com/s2/favicons?domain=thenorthface.com&sz=128",
-    fallback: "The North Face",
-  },
-  {
-    name: "Airbnb",
-    detail: "Global socials",
-    date: "Oct 10",
-    amount: "$12,600.00",
-    src: "https://www.google.com/s2/favicons?domain=airbnb.com&sz=128",
-    fallback: "Airbnb",
-  },
-] as const;
-
 const bankCards = [
-  { name: "Chase Business Debit", detail: "Debit ****86", tone: "from-[#1f2f59] to-[#0d1226]", src: "https://www.google.com/s2/favicons?domain=chase.com&sz=128", fallback: "Chase" },
-  { name: "Mercury Business IO Mastercard", detail: "Debit ****57", tone: "from-[#3b274c] to-[#17111f]", src: "https://www.google.com/s2/favicons?domain=mercury.com&sz=128", fallback: "Mercury" },
-  { name: "Bank of America Business Debit Visa", detail: "Debit ****88", tone: "from-[#132c63] to-[#10131b]", src: "https://www.google.com/s2/favicons?domain=bankofamerica.com&sz=128", fallback: "Bank of America" },
-  { name: "Mercury Debit Mastercard", detail: "Debit ****86", tone: "from-[#272727] to-[#101010]", src: "https://www.google.com/s2/favicons?domain=mastercard.com&sz=128", fallback: "Mastercard" },
+  {
+    name: "Chase Ink Business Unlimited Visa",
+    detail: "Visa ****86",
+    cardImage: CHASE_INK_BUSINESS_UNLIMITED_IMAGE,
+    fallback: "Chase",
+  },
+  {
+    name: "Mercury Business IO Mastercard",
+    detail: "Mastercard ****57",
+    cardImage: MERCURY_IO_CARD_IMAGE,
+    fallback: "Mercury",
+  },
+  {
+    name: "Bank of America Business Debit Visa",
+    detail: "Debit ****88",
+    cardImage: BOFA_BUSINESS_DEBIT_VISA_IMAGE,
+    fallback: "Bank of America",
+  },
+  {
+    name: "Mercury Debit Mastercard",
+    detail: "Debit ****86",
+    cardImage: MERCURY_IO_CARD_IMAGE,
+    fallback: "Mercury",
+  },
 ] as const;
 
 const dashboardInvoices = mainboardInvoices.slice(0, 5);
+
+const dashboardPeopleByInvoiceId: Record<string, string> = {
+  "MB-6984": "Anthea Smith",
+  "MB-7012": "John Adams",
+  "MB-7044": "Amy Holland",
+  "MB-6890": "Lucy Che",
+  "MB-6815": "Jessica Bailey",
+};
+
+const payeeLogoByInvoiceId: Record<
+  string,
+  {
+    mark: string;
+    label: string;
+    detail?: string;
+    className: string;
+    markClassName?: string;
+  }
+> = {
+  "MB-6984": {
+    mark: "M",
+    label: "M Models",
+    detail: "MODELS",
+    className: "bg-white text-[#2476c9]",
+    markClassName: "font-black",
+  },
+  "MB-7012": {
+    mark: "NS",
+    label: "North Studio Agency",
+    detail: "STUDIO",
+    className: "bg-[#f4f4f4] text-black",
+  },
+  "MB-7044": {
+    mark: "AT",
+    label: "Atlas Talent Group",
+    detail: "TALENT",
+    className: "bg-[#111827] text-white",
+  },
+  "MB-6890": {
+    mark: "LC",
+    label: "Lucy Che",
+    className: "bg-[#1f2937] text-white",
+  },
+  "MB-6815": {
+    mark: "JB",
+    label: "Jessica Bailey",
+    className: "bg-[#27272a] text-white",
+  },
+};
+
+const activityDates = ["Today, 10:24 AM", "Today, 9:42 AM", "Yesterday", "May 31", "May 24"];
+
+function getInvoicePersonName(invoice: (typeof dashboardInvoices)[number]) {
+  return dashboardPeopleByInvoiceId[invoice.id] || invoice.talentRealName || invoice.talentName || invoice.recipient;
+}
+
+const payoutItems = dashboardInvoices.map((invoice, index) => ({
+  invoice,
+  invoiceId: invoice.id,
+  name: getInvoicePersonName(invoice),
+  detail: `${invoice.recipient} - ${invoice.jobType}`,
+  date: activityDates[index] || invoice.invoiceDate,
+  amount: formatMainboardMoney(invoice.amount + invoice.fee),
+  status: invoice.status,
+}));
+
+const walletContacts = [
+  { id: "john-adams", name: "John Adams", handle: "@agncy11174" },
+  { id: "amy-holland", name: "Amy Holland", handle: "@agncy66122" },
+  { id: "lucy-che", name: "Lucy Che", handle: "@agncy88179" },
+  { id: "jessica-bailey", name: "Jessica Bailey", handle: "@agncy67171" },
+  { id: "lola-durant", name: "Lola Durant", handle: "@agncy72176" },
+] as const;
 
 function Panel({
   children,
@@ -128,10 +184,76 @@ function Panel({
 }
 
 function StatusPill({ status }: { status: string }) {
+  const normalized = status.toLowerCase();
+  const colorClass =
+    normalized === "paid"
+      ? "border-[#10b95f] bg-[#082315] text-[#70ff9e]"
+      : normalized === "processing"
+        ? "border-[#ff8a00] bg-[#261603] text-[#ffb866]"
+        : normalized === "needs approval"
+          ? "border-[#ff3b30] bg-[#250706] text-[#ff9088]"
+          : "border-[#3f3f3f] bg-[#0f0f0f] text-[#d7d7d7]";
+
   return (
-    <span className="inline-flex h-7 items-center rounded-[7px] border border-[#3f3f3f] bg-[#0f0f0f] px-3 text-[12px] font-semibold text-[#d7d7d7]">
+    <span className={cn("inline-flex h-7 items-center rounded-[7px] border px-3 text-[12px] font-semibold", colorClass)}>
       {status}
     </span>
+  );
+}
+
+function RequestPayPill() {
+  return (
+    <span className="inline-flex h-9 min-w-[150px] items-center justify-center gap-1.5 rounded-full border-2 border-[#10d874] bg-black px-4 text-[13px] font-black text-white shadow-[0_0_0_1px_rgba(16,216,116,0.12)]">
+      <span>Request</span>
+      <AgncyPayLogo className="h-[16px] w-[40px]" imageClassName="h-full w-full" />
+    </span>
+  );
+}
+
+function InvoiceStatusPill({ invoice }: { invoice: (typeof dashboardInvoices)[number] }) {
+  if (invoice.id === "MB-6984" && invoice.status.toLowerCase() === "ready") {
+    return <RequestPayPill />;
+  }
+
+  return <StatusPill status={invoice.status} />;
+}
+
+function PayeeLogoTile({
+  invoice,
+  size = "md",
+}: {
+  invoice: (typeof dashboardInvoices)[number];
+  size?: "sm" | "md";
+}) {
+  const config = payeeLogoByInvoiceId[invoice.id];
+  const name = getInvoicePersonName(invoice);
+  const initials = name
+    .split(" ")
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+  const mark = config?.mark || initials;
+
+  return (
+    <div
+      className={cn(
+        "flex shrink-0 flex-col items-center justify-center overflow-hidden rounded-[9px] border border-[#444] leading-none shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]",
+        size === "sm" ? "h-9 w-9" : "h-12 w-12",
+        config?.className || "bg-[#161616] text-white"
+      )}
+      aria-label={config?.label || name}
+      title={config?.label || name}
+    >
+      <span className={cn(size === "sm" ? "text-[12px]" : "text-[15px]", "font-black", config?.markClassName)}>
+        {mark}
+      </span>
+      {config?.detail && size === "md" ? (
+        <span className="mt-1 max-w-full px-1 text-[6px] font-black tracking-[0.12em] opacity-75">
+          {config.detail}
+        </span>
+      ) : null}
+    </div>
   );
 }
 
@@ -154,7 +276,7 @@ function BrandTile({
       className="flex min-w-0 flex-col items-center gap-2 text-center"
       aria-label={label}
     >
-      <div className="flex h-[68px] w-[68px] items-center justify-center overflow-hidden rounded-[12px] border border-[#5a5a5a] bg-[#f1e0b9] p-2 shadow-[0_0_0_1px_rgba(255,255,255,0.02)]">
+      <div className="flex h-[68px] w-[68px] items-center justify-center overflow-hidden rounded-[12px] border border-[#5a5a5a] bg-white p-3 shadow-[0_0_0_1px_rgba(255,255,255,0.02)]">
         {search ? (
           <Search className="h-6 w-6 text-black" />
         ) : src ? (
@@ -163,7 +285,7 @@ function BrandTile({
             alt={label}
             fallback={fallback}
             className="h-full w-full"
-            imageClassName="object-contain p-0.5"
+            imageClassName="object-contain"
           />
         ) : (
           <span className="text-[12px] font-semibold text-black">{fallback}</span>
@@ -174,18 +296,170 @@ function BrandTile({
   );
 }
 
-function RequestedBadge({ invoiceId }: { invoiceId: string }) {
+function BankCardFace({ card }: { card: (typeof bankCards)[number] }) {
   return (
-    <div className="inline-flex items-center gap-1 rounded-full border border-[#444] bg-[#090909] px-2 py-1 text-white">
-      <span className="flex h-4 w-4 items-center justify-center overflow-hidden rounded-full border border-[#333] bg-black">
-        <AgncyPayLogo imageClassName="h-[8px] w-auto" />
-      </span>
-      <Link
-        href={`/dashboard/pay-flow/${invoiceId}`}
-        className="inline-flex h-4 items-center rounded-full border border-white bg-white px-1.5 text-[8px] font-semibold leading-none text-black hover:bg-[#e8e8e8]"
+    <div className="relative h-16 w-[104px] shrink-0 overflow-hidden rounded-[8px] bg-black">
+      <RemoteBrandImage
+        src={card.cardImage}
+        alt={card.name}
+        fallback={card.fallback}
+        className="h-full w-full rounded-[inherit] bg-black"
+        imageClassName="h-full w-full object-cover"
+      />
+    </div>
+  );
+}
+
+function AutoSplitToggle({
+  active,
+  onToggle,
+  label = "Autosplit",
+}: {
+  active: boolean;
+  onToggle: () => void;
+  label?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={(event) => {
+        event.stopPropagation();
+        onToggle();
+      }}
+      className="inline-flex h-8 items-center gap-2 rounded-full border border-[#444] bg-black px-2.5 text-[11px] font-black text-white hover:border-[#777]"
+      aria-pressed={active}
+    >
+      <span
+        className={cn(
+          "relative h-5 w-10 overflow-hidden rounded-full border transition-colors",
+          active ? "border-[#13e56d] bg-[#13e56d]" : "border-[#555] bg-[#151515]"
+        )}
       >
-        Pay
-      </Link>
+        <span
+          className={cn(
+            "absolute left-1 top-1/2 h-3.5 w-3.5 -translate-y-1/2 rounded-full bg-white transition-transform",
+            active ? "translate-x-5" : "translate-x-0"
+          )}
+        />
+      </span>
+      {label}
+    </button>
+  );
+}
+
+function AutoSplitNotice({
+  onClose,
+}: {
+  onClose: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 px-4 backdrop-blur-[1px]">
+      <div className="w-full max-w-[430px] rounded-[9px] border border-[#3a3a3a] bg-[#101010] p-6 text-white shadow-2xl">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-[22px] font-black">Autosplit enabled</h2>
+            <p className="mt-3 text-[14px] font-semibold leading-6 text-[#bdbdbd]">
+              AgncyPay will include a $5 autosplit fee when this invoice or contact is paid.
+            </p>
+          </div>
+          <button type="button" onClick={onClose} aria-label="Close autosplit notice">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="mt-6 h-10 w-full rounded-[7px] border border-white bg-white text-[13px] font-black text-black hover:bg-[#e8e8e8]"
+        >
+          Got it
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function WalletContactsOverlay({
+  query,
+  autosplitContactIds,
+  onQueryChange,
+  onClose,
+  onToggleContact,
+  onEnableAll,
+}: {
+  query: string;
+  autosplitContactIds: string[];
+  onQueryChange: (value: string) => void;
+  onClose: () => void;
+  onToggleContact: (contactId: string) => void;
+  onEnableAll: () => void;
+}) {
+  const normalized = query.trim().toLowerCase();
+  const filteredContacts = normalized
+    ? walletContacts.filter((contact) =>
+        [contact.name, contact.handle].join(" ").toLowerCase().includes(normalized)
+      )
+    : walletContacts;
+
+  return (
+    <div className="fixed inset-0 z-40 bg-black/55 px-4 py-16 backdrop-blur-[1px]">
+      <div className="mx-auto w-full max-w-[760px]">
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-5 top-1/2 h-5 w-5 -translate-y-1/2 text-[#8b8b8b]" />
+          <input
+            autoFocus
+            value={query}
+            onChange={(event) => onQueryChange(event.target.value)}
+            placeholder="Name, Agncy ID, email, mobile"
+            className="h-[58px] w-full rounded-full border border-[#555] bg-[#2b2929] pl-14 pr-14 text-[14px] font-black text-white outline-none placeholder:text-[#a7a7a7]"
+          />
+          <button
+            type="button"
+            onClick={onClose}
+            className="absolute right-5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full text-white hover:bg-white/[0.08]"
+            aria-label="Close wallet contacts"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="mt-2 rounded-[7px] border border-[#343434] bg-black px-8 py-8">
+          <p className="text-[14px] font-black text-white">Recent searches</p>
+          <div className="mt-6 space-y-4">
+            {filteredContacts.map((contact) => {
+              const active = autosplitContactIds.includes(contact.id);
+              return (
+                <div key={contact.id} className="flex items-center justify-between gap-4">
+                  <div className="min-w-0">
+                    <p className="truncate text-[20px] font-black text-white">{contact.name}</p>
+                    <p className="mt-1 truncate text-[13px] font-semibold text-[#9b9b9b]">{contact.handle}</p>
+                  </div>
+                  <AutoSplitToggle
+                    active={active}
+                    label="Autosplit"
+                    onToggle={() => onToggleContact(contact.id)}
+                  />
+                </div>
+              );
+            })}
+          </div>
+          <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <button
+              type="button"
+              onClick={() => onQueryChange("")}
+              className="text-[13px] font-black text-[#22e03b] underline"
+            >
+              Clear all
+            </button>
+            <button
+              type="button"
+              onClick={onEnableAll}
+              className="h-10 rounded-[7px] border border-[#13e56d] bg-[#0d2b18] px-4 text-[13px] font-black text-white"
+            >
+              Autosplit all talent invoices
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -194,7 +468,7 @@ function DashboardFooter() {
   return (
     <footer className="mt-8 border-y border-[#343434]">
       <div className="mx-auto flex max-w-[1040px] flex-wrap items-center justify-center gap-8 px-4 py-8 text-[12px] font-bold text-white">
-        <AgncyPayLogo imageClassName="h-7" />
+        <AgncyPayLogo className="h-[20px] w-[50px]" imageClassName="h-full w-full" />
         <Link href="/dashboard/support">Help</Link>
         <Link href="/dashboard/support">Contact Us</Link>
         <Link href="/dashboard/verification">Security</Link>
@@ -205,42 +479,60 @@ function DashboardFooter() {
 }
 
 export default function DashboardHomePage() {
-  const [selectedInvoiceId, setSelectedInvoiceId] = useState(dashboardInvoices[0]?.id || "");
-  const [selectedInvoiceIds, setSelectedInvoiceIds] = useState<string[]>([]);
-  const selectedInvoice = dashboardInvoices.find((invoice) => invoice.id === selectedInvoiceId) || dashboardInvoices[0];
+  const router = useRouter();
+  const [autosplitInvoiceIds, setAutosplitInvoiceIds] = useState<string[]>([dashboardInvoices[0]?.id || ""]);
+  const [autosplitContactIds, setAutosplitContactIds] = useState<string[]>([]);
+  const [isAutosplitNoticeOpen, setIsAutosplitNoticeOpen] = useState(false);
+  const [isWalletContactsOpen, setIsWalletContactsOpen] = useState(false);
+  const [walletContactQuery, setWalletContactQuery] = useState("");
 
-  const toggleInvoiceSelection = (invoiceId: string) => {
-    setSelectedInvoiceIds((current) =>
-      current.includes(invoiceId) ? current.filter((id) => id !== invoiceId) : [...current, invoiceId]
+  const toggleAutosplitInvoice = (invoiceId: string) => {
+    const isActive = autosplitInvoiceIds.includes(invoiceId);
+    if (!isActive) setIsAutosplitNoticeOpen(true);
+    setAutosplitInvoiceIds((current) =>
+      isActive ? current.filter((id) => id !== invoiceId) : [...current, invoiceId]
     );
+  };
+
+  const toggleAutosplitContact = (contactId: string) => {
+    const isActive = autosplitContactIds.includes(contactId);
+    if (!isActive) setIsAutosplitNoticeOpen(true);
+    setAutosplitContactIds((current) =>
+      isActive ? current.filter((id) => id !== contactId) : [...current, contactId]
+    );
+  };
+
+  const enableAllContactAutosplit = () => {
+    setAutosplitContactIds(walletContacts.map((contact) => contact.id));
+    setIsAutosplitNoticeOpen(true);
   };
 
   return (
     <main className="min-h-screen bg-black text-white">
       <div className="mx-auto max-w-[1520px] px-4 py-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between gap-4 pb-4">
-          <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-nowrap items-center justify-between gap-4 pb-4">
+          <div className="flex min-w-0 flex-nowrap items-center gap-2 overflow-x-auto">
             <Link
-              href="/dashboard"
-              className="inline-flex h-9 items-center rounded-[4px] border border-white bg-white px-4 text-[12px] font-semibold uppercase text-[#1a1a1a]"
+              href="/dashboard/booking"
+              className="inline-flex h-9 shrink-0 items-center rounded-[4px] border border-white bg-white px-4 text-[12px] font-semibold uppercase text-[#1a1a1a]"
             >
               Booking Dashboard
             </Link>
             <Link
               href="/dashboard"
-              className="inline-flex h-9 items-center rounded-[4px] border border-white bg-white px-4 text-[12px] font-semibold uppercase text-[#3971b6]"
+              className="inline-flex h-9 shrink-0 items-center rounded-[4px] border border-white bg-white px-4 text-[12px] font-semibold uppercase text-[#3971b6]"
             >
               Finance Dashboard
             </Link>
             <Link
               href="/dashboard/settings"
-              className="inline-flex h-9 w-11 items-center justify-center rounded-[4px] border border-white bg-white text-[#3971b6]"
+              className="inline-flex h-9 w-11 shrink-0 items-center justify-center rounded-[4px] border border-white bg-white text-[#3971b6]"
               aria-label="Settings"
             >
               <Settings className="h-5 w-5" />
             </Link>
           </div>
-          <AgncyPayLogo imageClassName="h-6 sm:h-7" />
+          <AgncyPayLogo className="h-[28px] w-[72px] shrink-0" imageClassName="h-full w-full" />
         </div>
 
         <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(360px,0.85fr)]">
@@ -262,9 +554,7 @@ export default function DashboardHomePage() {
 
                 <div className="flex flex-col justify-between rounded-[10px] border border-[#3a3a3a] bg-[#060606] p-4 sm:p-5">
                   <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#777]">
-                      AgncyPay home
-                    </p>
+                    <AgncyPayLogo imageClassName="h-5" />
                     <h1 className="mt-2 max-w-[340px] text-[30px] font-semibold leading-[0.96] text-white sm:text-[38px]">
                       For Those Who Create
                     </h1>
@@ -316,17 +606,12 @@ export default function DashboardHomePage() {
 
               <div className="mt-4 space-y-2">
                 {payoutItems.map((item) => (
-                  <div
+                  <Link
                     key={`${item.name}-${item.date}`}
-                    className="flex items-center gap-3 rounded-[8px] border border-[#333] bg-black px-3 py-2"
+                    href={`/dashboard/pay-flow/${item.invoiceId}`}
+                    className="flex items-center gap-3 rounded-[8px] border border-[#333] bg-black px-3 py-2 transition-colors hover:border-[#555] hover:bg-white/[0.04]"
                   >
-                    <RemoteBrandImage
-                      src={item.src}
-                      alt={item.name}
-                      fallback={item.fallback}
-                      className="h-12 w-12 shrink-0 rounded-[9px]"
-                      imageClassName="h-full w-full rounded-[9px] border border-[#444] bg-[#f1e0b9] object-contain p-1"
-                    />
+                    <PayeeLogoTile invoice={item.invoice} />
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-[13px] font-semibold text-white">{item.name}</p>
                       <p className="truncate text-[11px] text-[#7f7f7f]">{item.detail}</p>
@@ -335,10 +620,10 @@ export default function DashboardHomePage() {
                     <div className="min-w-[92px] text-right text-[13px] font-semibold text-white">
                       {item.amount}
                     </div>
-                    <button className="flex h-8 w-8 items-center justify-center rounded-full text-[#7f7f7f] hover:text-white">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full text-[#7f7f7f]">
                       <EllipsisVertical className="h-4 w-4" />
-                    </button>
-                  </div>
+                    </span>
+                  </Link>
                 ))}
               </div>
             </Panel>
@@ -348,120 +633,80 @@ export default function DashboardHomePage() {
                 <div>
                   <h2 className="text-[18px] font-semibold text-white">Invoices</h2>
                   <p className="mt-1 text-[13px] text-[#8f8f8f]">
-                    Requested, status, due, amount, client. Select an invoice to inspect or pay.
+                    Autosplit, status, due, amount, client. Select an invoice to inspect or pay.
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
                   <Link
-                    href={selectedInvoice ? `/dashboard/pay-flow/${selectedInvoice.id}` : "/dashboard/invoices"}
-                    className="inline-flex items-center gap-2 rounded-[7px] border border-white bg-white px-3 py-2 text-[12px] font-semibold text-black"
-                  >
-                    Pay Selected
-                  </Link>
-                  <Link
                     href="/dashboard/invoices"
                     className="inline-flex items-center gap-2 rounded-[7px] border border-[#333] bg-[#0b0b0b] px-3 py-2 text-[12px] font-semibold text-white"
                   >
-                    Open
+                    Open invoices
                     <ArrowUpRight className="h-4 w-4" />
                   </Link>
                 </div>
               </div>
 
-              {selectedInvoiceIds.length > 0 && (
-                <div className="flex items-center justify-between gap-3 border-b border-[#333] bg-white/[0.02] px-4 py-3 text-[13px]">
-                  <span className="font-semibold text-white">
-                    {selectedInvoiceIds.length} invoice{selectedInvoiceIds.length === 1 ? "" : "s"} selected
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedInvoiceIds([])}
-                    className="h-8 rounded-[7px] border border-[#333] bg-black px-3 text-[12px] font-semibold text-white hover:border-[#666]"
-                  >
-                    Clear
-                  </button>
-                </div>
-              )}
-
               <div className="overflow-x-auto">
-                <table className="min-w-[980px] w-full table-fixed text-left">
+                <table className="min-w-[920px] w-full table-fixed text-left">
                   <colgroup>
-                    <col className="w-[52px]" />
                     <col className="w-[128px]" />
-                    <col className="w-[220px]" />
-                    <col className="w-[128px]" />
+                    <col className="w-[150px]" />
+                    <col className="w-[170px]" />
                     <col className="w-[120px]" />
                     <col className="w-[140px]" />
-                    <col className="w-[220px]" />
+                    <col className="w-[260px]" />
                   </colgroup>
                   <thead>
                     <tr className="h-12 border-b border-[#333] text-[11px] font-semibold uppercase tracking-[0.12em] text-[#777]">
-                      <th className="px-4">
-                        <input
-                          type="checkbox"
-                          aria-label="Select all dashboard invoices"
-                          checked={selectedInvoiceIds.length === dashboardInvoices.length && dashboardInvoices.length > 0}
-                          onChange={() =>
-                            setSelectedInvoiceIds((current) =>
-                              current.length === dashboardInvoices.length ? [] : dashboardInvoices.map((invoice) => invoice.id)
-                            )
-                          }
-                          className="h-4 w-4 accent-white"
-                        />
-                      </th>
                       <th className="px-4">Invoice</th>
-                      <th className="px-0">Requested</th>
+                      <th className="px-0">Autosplit</th>
                       <th className="px-0">Status</th>
                       <th className="px-0">Due</th>
                       <th className="px-0">Amount</th>
-                      <th className="px-0">Client</th>
+                      <th className="px-0">Talent / Payee</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {dashboardInvoices.map((invoice, index) => (
+                    {dashboardInvoices.map((invoice) => (
                       <tr
                         key={invoice.id}
-                        onClick={() => setSelectedInvoiceId(invoice.id)}
-                        className={cn(
-                        "h-[72px] cursor-pointer border-b border-[#2c2c2c] transition-colors hover:bg-white/[0.02]",
-                          (invoice.id === selectedInvoiceId || index === 0 && !selectedInvoiceId) && "bg-white/[0.04]"
-                        )}
+                        onClick={() => router.push(`/dashboard/pay-flow/${invoice.id}`)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            router.push(`/dashboard/pay-flow/${invoice.id}`);
+                          }
+                        }}
+                        role="button"
+                        tabIndex={0}
+                        className="h-[72px] cursor-pointer border-b border-[#2c2c2c] transition-colors hover:bg-white/[0.04] focus:bg-white/[0.05] focus:outline-none"
                       >
                         <td className="px-4">
-                          <input
-                            type="checkbox"
-                            checked={selectedInvoiceIds.includes(invoice.id)}
-                            onChange={(event) => {
-                              event.stopPropagation();
-                              toggleInvoiceSelection(invoice.id);
-                            }}
-                            onClick={(event) => event.stopPropagation()}
-                            className="h-4 w-4 accent-white"
+                          <span className="font-mono text-[13px] font-semibold text-white">
+                            {invoice.id}
+                          </span>
+                        </td>
+                        <td className="px-0">
+                          <AutoSplitToggle
+                            active={autosplitInvoiceIds.includes(invoice.id)}
+                            onToggle={() => toggleAutosplitInvoice(invoice.id)}
                           />
                         </td>
-                        <td className="px-4">
-                          <Link
-                            href={`/dashboard/pay-flow/${invoice.id}`}
-                            onClick={(event) => event.stopPropagation()}
-                            className="font-mono text-[13px] font-semibold text-white hover:underline"
-                          >
-                            {invoice.id}
-                          </Link>
-                        </td>
                         <td className="px-0">
-                          <RequestedBadge invoiceId={invoice.id} />
-                        </td>
-                        <td className="px-0">
-                          <StatusPill status={invoice.status} />
+                          <InvoiceStatusPill invoice={invoice} />
                         </td>
                         <td className="px-0 text-[13px] text-[#bdbdbd]">{invoice.due}</td>
                         <td className="px-0 text-[13px] font-semibold text-white">
                           {formatMainboardMoney(invoice.amount + invoice.fee)}
                         </td>
                         <td className="px-0">
-                          <div className="min-w-0">
-                            <p className="truncate text-[13px] font-semibold text-white">{invoice.recipient}</p>
-                            <p className="truncate text-[11px] text-[#7f7f7f]">{invoice.note}</p>
+                          <div className="flex min-w-0 items-center gap-3 pr-3">
+                            <PayeeLogoTile invoice={invoice} size="sm" />
+                            <div className="min-w-0">
+                              <p className="truncate text-[13px] font-semibold text-white">{getInvoicePersonName(invoice)}</p>
+                              <p className="truncate text-[11px] text-[#7f7f7f]">{invoice.recipient} - {invoice.jobType}</p>
+                            </div>
                           </div>
                         </td>
                       </tr>
@@ -472,74 +717,84 @@ export default function DashboardHomePage() {
             </Panel>
 
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-              <Panel className="flex min-h-[190px] items-center gap-4 p-4 sm:p-5">
-                <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[#3a3a3a] bg-[#0b0b0b]">
-                  <img
-                    src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/97/The_Earth_seen_from_Apollo_17.jpg/320px-The_Earth_seen_from_Apollo_17.jpg"
-                    alt="Earth"
-                    className="h-full w-full object-cover"
-                    loading="lazy"
-                    referrerPolicy="no-referrer"
-                  />
+              <Panel className="flex min-h-[190px] flex-col justify-between p-4 sm:p-5">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-[#777]">Card program</p>
+                    <h3 className="mt-2 text-[24px] font-semibold text-white">AgncyPay Card</h3>
+                  </div>
+                  <span className="inline-flex h-7 items-center rounded-full border border-[#14c96b] bg-[#082315] px-3 text-[11px] font-black text-[#70ff9e]">
+                    Active
+                  </span>
                 </div>
-                <div>
-                  <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-[#777]">
-                    AgncyPay
+                <div className="mt-5 grid grid-cols-3 gap-2">
+                  {[
+                    ["Available", "$24,500"],
+                    ["Pending", "$3,200"],
+                    ["Cards", "4"],
+                  ].map(([label, value]) => (
+                    <div key={label} className="rounded-[8px] border border-[#2f2f2f] bg-black px-3 py-3">
+                      <p className="text-[11px] font-semibold text-[#777]">{label}</p>
+                      <p className="mt-2 truncate text-[15px] font-black text-white">{value}</p>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-5 flex items-center justify-between gap-4">
+                  <p className="text-[12px] font-semibold leading-5 text-[#8f8f8f]">
+                    Virtual and physical cards for approved workspace spend.
                   </p>
-                  <h3 className="mt-2 text-[22px] font-semibold text-white">digital card</h3>
-                  <p className="mt-2 text-[13px] leading-5 text-[#8f8f8f]">
-                    A branded card surface for fast access and wallet movement.
-                  </p>
+                  <Link
+                    href="/dashboard/wallet/link"
+                    className="inline-flex h-9 shrink-0 items-center rounded-[7px] border border-[#333] bg-[#111] px-3 text-[12px] font-semibold text-white hover:border-[#666]"
+                  >
+                    Manage
+                  </Link>
                 </div>
               </Panel>
 
-              <Panel className="relative overflow-hidden p-4 sm:p-5">
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.08),transparent_38%)]" />
-                <div className="relative flex min-h-[190px] flex-col justify-between">
+              <Panel className="overflow-hidden p-4 sm:p-5">
+                <div className="flex min-h-[190px] flex-col justify-between">
                   <div className="flex items-start justify-between gap-4">
-                    <div className="max-w-[210px]">
-                      <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-[#777]">
-                        AgncyPay Card
-                      </p>
-                      <h3 className="mt-2 text-[24px] font-semibold leading-[1.02] text-white">
-                        Online, In Stores, Use AgncyPay Card just about anywhere.
-                      </h3>
+                    <div>
+                      <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-[#777]">Primary card</p>
+                      <h3 className="mt-2 text-[22px] font-semibold text-white">Workspace Mastercard</h3>
+                      <p className="mt-2 text-[12px] font-semibold text-[#8f8f8f]">•••• 0001 · Monthly controls enabled</p>
                     </div>
-                    <div className="flex h-[118px] w-[188px] items-center justify-center rounded-[12px] border border-[#3a3a3a] bg-[#080808] p-3">
-                      <div className="h-full w-full rounded-[10px] border border-[#4a4a4a] bg-[linear-gradient(135deg,#111_0%,#1b1b1b_46%,#0d0d0d_100%)] p-3">
+                    <div className="h-[118px] w-[188px] shrink-0 overflow-hidden rounded-[11px] border border-[#333] bg-[#101010] p-3 shadow-[0_18px_42px_rgba(0,0,0,0.42)]">
+                      <div className="h-full w-full rounded-[9px] bg-[linear-gradient(135deg,#171717_0%,#2a2440_52%,#111_100%)] p-3">
                         <div className="flex items-start justify-between">
-                          <AgncyPayLogo imageClassName="h-4" />
+                          <AgncyPayLogo imageClassName="w-[48px]" />
                           <img
-                            src="https://www.google.com/s2/favicons?domain=mastercard.com&sz=64"
+                            src="https://cdn.simpleicons.org/mastercard/FFFFFF"
                             alt="Mastercard"
                             className="h-4 w-4 object-contain"
                             loading="lazy"
                             referrerPolicy="no-referrer"
                           />
                         </div>
-                        <div className="mt-7 space-y-2">
-                          <div className="h-1.5 w-12 rounded-full bg-white/25" />
-                          <div className="h-1.5 w-20 rounded-full bg-white/15" />
-                          <div className="h-1.5 w-16 rounded-full bg-white/10" />
+                        <div className="mt-8 space-y-1.5">
+                          <div className="h-1.5 w-20 rounded-full bg-white/20" />
+                          <div className="h-1.5 w-14 rounded-full bg-white/12" />
                         </div>
-                        <div className="mt-7 flex items-end justify-between">
-                          <div>
-                            <p className="text-[10px] uppercase tracking-[0.12em] text-[#8f8f8f]">Digital card</p>
-                            <p className="mt-1 text-[11px] font-semibold text-white">AgncyPay</p>
-                          </div>
-                          <div className="h-7 w-11 rounded-full border border-[#333] bg-white/5" />
+                        <div className="mt-6 flex items-end justify-between">
+                          <p className="text-[9px] font-black uppercase tracking-[0.14em] text-white/55">Virtual</p>
+                          <p className="text-[10px] font-black text-white/75">0001</p>
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between gap-4">
-                    <button className="inline-flex h-9 items-center rounded-[7px] border border-white bg-white px-3 text-[12px] font-semibold text-black">
-                      Apply Now
-                    </button>
-                    <div className="h-6 w-6 rounded-full border border-[#333] bg-[#111] text-center text-[12px] font-semibold leading-6 text-white">
-                      A
-                    </div>
+                  <div className="mt-5 grid grid-cols-3 gap-2">
+                    {[
+                      ["Limit", "$10k"],
+                      ["Spent", "$1.2k"],
+                      ["Review", "2"],
+                    ].map(([label, value]) => (
+                      <div key={label} className="rounded-[8px] border border-[#2f2f2f] bg-black px-3 py-2">
+                        <p className="text-[10px] font-semibold text-[#777]">{label}</p>
+                        <p className="mt-1 text-[14px] font-black text-white">{value}</p>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </Panel>
@@ -548,14 +803,33 @@ export default function DashboardHomePage() {
 
           <div className="space-y-5">
             <Panel className="p-4 sm:p-5">
-              <div className="grid grid-cols-5 gap-2">
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                 {quickActions.map((action) => {
                   const Icon = action.icon;
+                  const baseClassName =
+                    "flex flex-col items-center gap-2 rounded-[10px] border border-[#3a3a3a] bg-[#090909] px-2 py-3 text-center transition-colors hover:border-[#666]";
+
+                  if (action.label === "Wallet ID contacts") {
+                    return (
+                      <button
+                        key={action.label}
+                        type="button"
+                        onClick={() => setIsWalletContactsOpen(true)}
+                        className={baseClassName}
+                      >
+                        <span className="flex h-10 w-10 items-center justify-center rounded-[9px] border border-[#4a4a4a] bg-black">
+                          <Icon className="h-5 w-5 text-white" />
+                        </span>
+                        <span className="text-[10px] leading-4 text-white">{action.label}</span>
+                      </button>
+                    );
+                  }
+
                   return (
                     <Link
                       key={action.label}
                       href={action.href}
-                      className="flex flex-col items-center gap-2 rounded-[10px] border border-[#3a3a3a] bg-[#090909] px-2 py-3 text-center transition-colors hover:border-[#666]"
+                      className={baseClassName}
                     >
                       <span className="flex h-10 w-10 items-center justify-center rounded-[9px] border border-[#4a4a4a] bg-black">
                         <Icon className="h-5 w-5 text-white" />
@@ -594,20 +868,7 @@ export default function DashboardHomePage() {
                     key={card.name}
                     className="flex items-center gap-3 rounded-[10px] border border-[#3a3a3a] bg-[#090909] p-3"
                   >
-                    <div
-                      className={cn(
-                        "relative flex h-12 w-[72px] shrink-0 items-center justify-center overflow-hidden rounded-[8px] border border-white/10 bg-gradient-to-br text-[10px] font-semibold tracking-[0.12em] text-white",
-                        card.tone
-                      )}
-                    >
-                      <RemoteBrandImage
-                        src={card.src}
-                        alt={card.name}
-                        fallback={card.fallback}
-                        className="h-full w-full"
-                        imageClassName="h-full w-full rounded-[8px] border border-white/10 bg-[#f1e0b9] object-contain p-1"
-                      />
-                    </div>
+                    <BankCardFace card={card} />
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-[14px] font-semibold text-white">{card.name}</p>
                       <p className="mt-1 text-[12px] text-[#8f8f8f]">{card.detail}</p>
@@ -626,17 +887,22 @@ export default function DashboardHomePage() {
             </Panel>
 
             <Panel className="overflow-hidden p-4 sm:p-5">
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-[#777]">PLAID</p>
-                  <h2 className="mt-2 text-[22px] font-semibold text-white">Connect Bank</h2>
+              <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0">
+                  <p className="text-[13px] font-black uppercase tracking-[0.12em] text-[#a9a9a9]">Plaid</p>
+                  <h2 className="mt-1 text-[22px] font-semibold text-white">Connect Bank</h2>
                   <p className="mt-2 max-w-[280px] text-[13px] leading-5 text-[#8f8f8f]">
                     Link your payout method to receive monthly royalty distributions automatically.
                   </p>
                 </div>
-                <div className="flex h-14 w-14 items-center justify-center rounded-full border border-[#3a3a3a] bg-[#0a0a0a]">
-                  <Landmark className="h-6 w-6 text-white" />
-                </div>
+                <span className="inline-flex h-10 shrink-0 items-center rounded-[7px] border border-[#333] bg-white px-3">
+                  <img
+                    src="/plaid-logo.svg"
+                    alt="Plaid"
+                    className="h-6 w-[84px] object-contain"
+                    loading="lazy"
+                  />
+                </span>
               </div>
 
               <div className="mt-5 flex items-center justify-between gap-4">
@@ -652,6 +918,17 @@ export default function DashboardHomePage() {
           </div>
         </div>
       </div>
+      {isWalletContactsOpen && (
+        <WalletContactsOverlay
+          query={walletContactQuery}
+          autosplitContactIds={autosplitContactIds}
+          onQueryChange={setWalletContactQuery}
+          onClose={() => setIsWalletContactsOpen(false)}
+          onToggleContact={toggleAutosplitContact}
+          onEnableAll={enableAllContactAutosplit}
+        />
+      )}
+      {isAutosplitNoticeOpen && <AutoSplitNotice onClose={() => setIsAutosplitNoticeOpen(false)} />}
       <DashboardFooter />
     </main>
   );
