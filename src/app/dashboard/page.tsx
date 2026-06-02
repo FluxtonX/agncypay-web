@@ -716,24 +716,13 @@ export default function DashboardHomePage() {
                 </div>
               </Panel>
 
-              <Panel className="overflow-hidden p-4 sm:p-5">
-                <div className="flex min-h-[190px] flex-col justify-between gap-5">
-                  <div className="grid grid-cols-3 gap-2">
-                    {[
-                      ["Limit", "$10k"],
-                      ["Spent", "$1.2k"],
-                      ["Review", "2"],
-                    ].map(([label, value]) => (
-                      <div key={label} className="rounded-[8px] border border-[#2f2f2f] bg-black px-3 py-2">
-                        <p className="text-[10px] font-semibold text-[#777]">{label}</p>
-                        <p className="mt-1 text-[14px] font-black text-white">{value}</p>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="flex w-full bg-black -mx-4 -mb-5 sm:-mx-5 sm:-mb-5">
-                    <img src="/card-promo.jpg" alt="AgncyPay Card Promo" className="w-full h-auto object-contain" />
-                  </div>
-                </div>
+              <Panel className="overflow-hidden p-0">
+                <img
+                  src="/dashboard-card-promo.png"
+                  alt="AgncyPay Card limit, spend, and apply anywhere"
+                  className="block h-auto w-full"
+                  loading="lazy"
+                />
               </Panel>
             </div>
           </div>
