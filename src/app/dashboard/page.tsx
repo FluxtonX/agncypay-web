@@ -185,76 +185,40 @@ function Panel({
   return <section className={cn("rounded-[13px] border border-[#3a3a3a] bg-[#050505]", className)}>{children}</section>;
 }
 
-function ALogoIcon({ className }: { className?: string }) {
+function FinanceAppPromoCard({ className }: { className?: string }) {
   return (
-    <img
-      src="/AlogoTransparent.png"
-      alt="A"
-      className={cn("inline-block object-contain", className)}
-    />
+    <Panel className={cn("overflow-hidden p-0", className)}>
+      <img
+        src="/dashboard-app-promo.png"
+        alt="For Those Who Create — Get AgncyPay on Google Play and the App Store"
+        className="block h-auto w-full rounded-[12px]"
+        loading="lazy"
+      />
+    </Panel>
   );
 }
 
-function StatusPill({ status }: { status: string }) {
+function getInvoiceStatusLabel(status: string): "Request" | "Paid" | "Pay" {
   const normalized = status.toLowerCase();
-  const colorClass =
-    normalized === "paid"
-      ? "border-[#10b95f] bg-[#082315] text-[#70ff9e]"
-      : normalized === "processing"
-        ? "border-[#ff8a00] bg-[#261603] text-[#ffb866]"
-        : normalized === "needs approval"
-          ? "border-[#ff3b30] bg-[#250706] text-[#ff9088]"
-          : "border-[#3f3f3f] bg-[#0f0f0f] text-[#d7d7d7]";
-
-  return (
-    <span className={cn("inline-flex h-7 items-center gap-1.5 rounded-[7px] border px-2.5 text-[12px] font-semibold", colorClass)}>
-      {normalized === "paid" ? (
-        <>
-          <ALogoIcon className="h-[22px] w-[22px] rounded-[3px]" />
-          <span>Paid</span>
-        </>
-      ) : (
-        status
-      )}
-    </span>
-  );
-}
-
-function RequestPayPill() {
-  return (
-    <span className="inline-flex h-9 min-w-[120px] items-center justify-center gap-1.5 rounded-full border-2 border-[#ff8a00] bg-[#261603] px-3 text-[12px] uppercase text-white shadow-[0_0_0_1px_rgba(255,138,0,0.14)]">
-      <span className="font-bold">Request</span>
-      <ALogoIcon className="h-[26px] w-[26px] rounded-[3px]" />
-      <span className="font-bold">Pay</span>
-    </span>
-  );
+  if (normalized === "paid") return "Paid";
+  if (normalized === "ready" || normalized === "pending") return "Request";
+  return "Pay";
 }
 
 function InvoiceStatusPill({ invoice }: { invoice: (typeof dashboardInvoices)[number] }) {
-  if (invoice.id === "MB-6984" && invoice.status.toLowerCase() === "ready") {
-    return <RequestPayPill />;
-  }
+  const label = getInvoiceStatusLabel(invoice.status);
+  const colorClass =
+    label === "Paid"
+      ? "border-[#10b95f] bg-[#082315] text-[#70ff9e]"
+      : label === "Pay"
+        ? "border-[#ff3b30] bg-[#250706] text-[#ff9088]"
+        : "border-[#ff8a00] bg-[#261603] text-[#ffb866]";
 
-  if (invoice.id === "MB-7044") {
-    const normalized = invoice.status.toLowerCase();
-    const colorClass =
-      normalized === "paid"
-        ? "border-[#10b95f] bg-[#082315] text-[#70ff9e]"
-        : normalized === "processing"
-          ? "border-[#ff8a00] bg-[#261603] text-[#ffb866]"
-          : normalized === "needs approval"
-            ? "border-[#ff3b30] bg-[#250706] text-[#ff9088]"
-            : "border-[#3f3f3f] bg-[#0f0f0f] text-[#d7d7d7]";
-
-    return (
-      <span className={cn("inline-flex h-7 items-center gap-1.5 rounded-[7px] border px-2.5 text-[12px] font-semibold", colorClass)}>
-        <ALogoIcon className="h-[22px] w-[22px] rounded-[3px]" />
-        <span>{normalized === "needs approval" ? "Pay" : invoice.status}</span>
-      </span>
-    );
-  }
-
-  return <StatusPill status={invoice.status} />;
+  return (
+    <span className={cn("inline-flex h-7 items-center rounded-[7px] border px-2.5 text-[12px] font-semibold", colorClass)}>
+      {label}
+    </span>
+  );
 }
 
 function PayeeLogoTile({
@@ -587,13 +551,7 @@ export default function DashboardHomePage() {
 
         <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(360px,0.85fr)]">
           <div className="space-y-5">
-            <Panel className="overflow-hidden p-0">
-              <img
-                src="/dashboard_hero.jpg"
-                alt="For Those Who Create"
-                className="w-full h-auto block rounded-[12px]"
-              />
-            </Panel>
+            <FinanceAppPromoCard />
 
             <Panel className="p-4 sm:p-5">
               <div className="flex items-center justify-between gap-4">
@@ -670,7 +628,7 @@ export default function DashboardHomePage() {
                       <th className="px-0">Status</th>
                       <th className="px-0">Due</th>
                       <th className="px-0">Amount</th>
-                      <th className="px-0">Talent / Payee</th>
+                      <th className="px-0">Client</th>
                     </tr>
                   </thead>
                   <tbody>
