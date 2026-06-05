@@ -212,12 +212,14 @@ function TopBar() {
   return (
     <header className="flex flex-nowrap items-center justify-between gap-4 pb-4">
       <div className="flex min-w-0 flex-nowrap items-center gap-2 overflow-x-auto">
+        {/*
         <Link
           href="/dashboard/booking"
           className="inline-flex h-9 shrink-0 items-center rounded-[4px] border border-white bg-white px-4 text-[12px] font-semibold uppercase text-[#1a1a1a]"
         >
           Booking Dashboard
         </Link>
+        */}
         <Link
           href="/dashboard"
           className="inline-flex h-9 shrink-0 items-center rounded-[4px] border border-white bg-white px-4 text-[12px] font-semibold uppercase text-[#3971b6]"

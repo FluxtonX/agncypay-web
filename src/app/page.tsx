@@ -176,12 +176,14 @@ export default function LandingPage() {
                 Start Now
                 <ArrowRight className="h-[15px] w-[15px]" />
               </Link>
+              {/*
               <Link
                 href="/mainboard/login"
                 className="inline-flex h-[44px] w-[202px] items-center justify-center rounded-[6px] border border-white/[0.32] bg-black/35 text-[13px] font-bold text-white transition-colors hover:bg-white/[0.06]"
               >
                 Open Mainboard Demo
               </Link>
+              */}
               <Link
                 href="/auth/login"
                 className="inline-flex h-[44px] w-[202px] items-center justify-center rounded-[6px] border border-white/[0.32] bg-black/35 text-[13px] font-bold text-white transition-colors hover:bg-white/[0.06]"

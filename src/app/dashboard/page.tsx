@@ -1,21 +1,21 @@
 "use client";
 
 import React, { useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   ArrowUpRight,
+  BarChart3,
   ChevronRight,
   CreditCard,
   EllipsisVertical,
+  Play,
   Search,
   Send,
   Settings,
   Users,
   X,
 } from "lucide-react";
-import { AgncyPayLogo } from "../../components/payment/AgncyPayLogo";
 import { cn } from "../../lib/utils";
 import { mainboardInvoices, formatMainboardMoney } from "../../lib/mainboard";
 
@@ -58,17 +58,62 @@ function RemoteBrandImage({ src, alt, fallback, className, imageClassName }: Rem
 
 const quickActions = [
   { label: "Send / Request", icon: Send, href: "/dashboard/send-request" },
-  { label: "Add card or bank", icon: CreditCard, href: "/dashboard/wallet" },
+  { label: "Analytics", icon: BarChart3, href: "/dashboard/reports" },
   { label: "Wallet ID contacts", icon: Users, href: "/dashboard/profile" },
   { label: "More", icon: EllipsisVertical, href: "/dashboard/settings" },
 ] as const;
 
-const brandShortcuts = [
+/*
+const oldBrandShortcuts = [
   { label: "Nike", src: "https://cdn.simpleicons.org/nike/000000", fallback: "Nike", href: "/mainboard" },
   { label: "Zara", src: "https://cdn.simpleicons.org/zara/000000", fallback: "Zara", href: "/mainboard" },
   { label: "Adidas", src: "https://upload.wikimedia.org/wikipedia/commons/2/20/Adidas_Logo.svg", fallback: "Adidas", href: "/mainboard" },
   { label: "Spotify", src: "https://cdn.simpleicons.org/spotify/1DB954", fallback: "Spotify", href: "/mainboard" },
   { label: "Netflix", src: "https://cdn.simpleicons.org/netflix/E50914", fallback: "Netflix", href: "/mainboard" },
+] as const;
+*/
+
+const brandShortcuts = [
+  {
+    label: "TikTok",
+    src: "/tiktok.png",
+    fallback: "TikTok",
+    href: "/dashboard/income/tiktok",
+    tileClassName: "bg-transparent p-0",
+    imageClassName: "scale-[3.2]",
+  },
+  {
+    label: "iHeartRadio",
+    src: "/iheart.png",
+    fallback: "iHeart",
+    href: "/dashboard/income/iheart-radio",
+    tileClassName: "bg-transparent p-0",
+    imageClassName: "scale-[3.2]",
+  },
+  {
+    label: "Instagram",
+    src: "/instagram.png",
+    fallback: "Instagram",
+    href: "/dashboard/income/instagram",
+    tileClassName: "bg-transparent p-0",
+    imageClassName: "scale-[3.2]",
+  },
+  {
+    label: "Pandora",
+    src: "/pandora.png",
+    fallback: "Pandora",
+    href: "/dashboard/income/pandora",
+    tileClassName: "bg-transparent p-0",
+    imageClassName: "scale-[3.2]",
+  },
+  {
+    label: "Tidal",
+    src: "/tidal.png",
+    fallback: "Tidal",
+    href: "/dashboard/income/tidal",
+    tileClassName: "bg-transparent p-0",
+    imageClassName: "scale-[3.2]",
+  },
 ] as const;
 
 const bankCards = [
@@ -96,6 +141,79 @@ const bankCards = [
     cardImage: MERCURY_IO_CARD_IMAGE,
     fallback: "Mercury",
   },
+] as const;
+
+const musicIncomeItems = [
+  {
+    slug: "soundcloud",
+    name: "SoundCloud",
+    detail: "Q3 Stream revenue",
+    date: "Today, 10:24 AM",
+    amount: "$3,040.00",
+    src: "https://cdn.simpleicons.org/soundcloud/FFFFFF",
+    fallback: "SC",
+    className: "bg-[#ff5500]",
+    imageClassName: "scale-[0.82]",
+  },
+  {
+    slug: "amazon-music",
+    name: "Amazon Music",
+    detail: "Q3 Stream revenue",
+    date: "Today, 9:42 AM",
+    amount: "$9,805.25",
+    src: "/logo-tiles/amazonMusic.png",
+    fallback: "AM",
+    className: "bg-[#2ccfd2]",
+    imageClassName: "scale-[1.18] -translate-x-[14%] -translate-y-[14%]",
+  },
+  {
+    slug: "apple-music",
+    name: "Apple Music",
+    detail: "Q3 Stream revenue",
+    date: "Yesterday",
+    amount: "$3,500.00",
+    src: "/logo-tiles/appleMusic.png",
+    fallback: "Apple",
+    className: "bg-[linear-gradient(135deg,#fa2d48,#fb1ba5)]",
+    imageClassName: "scale-[1.18] -translate-x-[14%] -translate-y-[14%]",
+  },
+  {
+    slug: "spotify",
+    name: "Spotify",
+    detail: "Q3 Stream revenue",
+    date: "May 31",
+    amount: "$2,600.00",
+    src: "https://cdn.simpleicons.org/spotify/1DB954",
+    fallback: "Spotify",
+    className: "bg-black",
+    imageClassName: "scale-[0.78]",
+  },
+  {
+    slug: "youtube",
+    name: "Youtube",
+    detail: "Q3 Stream revenue",
+    date: "May 24",
+    amount: "$1,800.00",
+    src: "https://cdn.simpleicons.org/youtube/FFFFFF",
+    fallback: "YT",
+    className: "bg-[#ff0000]",
+    imageClassName: "scale-[0.72]",
+  },
+] as const;
+
+const yearlyActivity = [
+  { month: "Jan", label: "J", height: 44, revenue: "$214K", streams: "4.2M", growth: "+8.4%" },
+  { month: "Feb", label: "F", height: 60, revenue: "$286K", streams: "5.7M", growth: "+12.1%" },
+  { month: "Mar", label: "M", height: 37, revenue: "$181K", streams: "3.6M", growth: "-3.8%" },
+  { month: "Apr", label: "A", height: 66, revenue: "$314K", streams: "6.3M", growth: "+15.4%" },
+  { month: "May", label: "M", height: 50, revenue: "$242K", streams: "4.9M", growth: "+6.2%" },
+  { month: "Jun", label: "J", height: 56, revenue: "$269K", streams: "5.4M", growth: "+9.1%" },
+  { month: "Jul", label: "J", height: 71, revenue: "$337K", streams: "6.9M", growth: "+18.7%" },
+  { month: "Aug", label: "A", height: 44, revenue: "$218K", streams: "4.4M", growth: "+4.0%" },
+  { month: "Sep", label: "S", height: 62, revenue: "$298K", streams: "6.0M", growth: "+11.8%" },
+  { month: "Oct", label: "O", height: 76, revenue: "$361K", streams: "7.2M", growth: "+21.3%" },
+  { month: "Nov", label: "N", height: 52, revenue: "$251K", streams: "5.1M", growth: "+7.6%" },
+  { month: "Dec", label: "D", height: 86, revenue: "$407K", streams: "8.1M", growth: "+26.9%" },
 ] as const;
 
 const dashboardInvoices = mainboardInvoices.slice(0, 5);
@@ -275,12 +393,16 @@ function BrandTile({
   href,
   src,
   fallback,
+  tileClassName,
+  imageClassName,
   search,
 }: {
   label: string;
   href?: string;
   src?: string;
   fallback: string;
+  tileClassName?: string;
+  imageClassName?: string;
   search?: boolean;
 }) {
   const Component = href ? Link : "button";
@@ -290,19 +412,25 @@ function BrandTile({
       className="flex min-w-0 flex-col items-center gap-2 text-center"
       aria-label={label}
     >
-      <div className="flex h-[68px] w-[68px] items-center justify-center overflow-hidden rounded-[12px] border border-[#5a5a5a] bg-white p-3 shadow-[0_0_0_1px_rgba(255,255,255,0.02)]">
+      <div className="flex h-[72px] w-[72px] items-center justify-center rounded-[12px] border border-[#303030] bg-[#060606] p-[3px] shadow-[0_0_0_1px_rgba(255,255,255,0.02)]">
         {search ? (
-          <Search className="h-6 w-6 text-black" />
+          <div className={cn("flex h-full w-full items-center justify-center overflow-hidden rounded-[9px]", tileClassName)}>
+            <Search className="h-6 w-6 text-black" />
+          </div>
         ) : src ? (
-          <RemoteBrandImage
-            src={src}
-            alt={label}
-            fallback={fallback}
-            className="h-full w-full"
-            imageClassName="object-contain"
-          />
+          <div className={cn("h-full w-full overflow-hidden rounded-[9px]", tileClassName)}>
+            <RemoteBrandImage
+              src={src}
+              alt={label}
+              fallback={fallback}
+              className="h-full w-full"
+              imageClassName={cn("object-contain", imageClassName)}
+            />
+          </div>
         ) : (
-          <span className="text-[12px] font-semibold text-black">{fallback}</span>
+          <div className={cn("flex h-full w-full items-center justify-center overflow-hidden rounded-[9px]", tileClassName)}>
+            <span className="text-[12px] font-semibold text-black">{fallback}</span>
+          </div>
         )}
       </div>
       <span className="max-w-[78px] text-[12px] leading-4 text-[#b8b8b8]">{label}</span>
@@ -320,6 +448,96 @@ function BankCardFace({ card }: { card: (typeof bankCards)[number] }) {
         className="h-full w-full rounded-[inherit] bg-black"
         imageClassName="h-full w-full object-cover"
       />
+    </div>
+  );
+}
+
+function MusicIncomeLogo({ item }: { item: (typeof musicIncomeItems)[number] }) {
+  return (
+    <div
+      className={cn(
+        "flex h-12 w-12 shrink-0 items-center justify-center rounded-[10px] border border-[#303030] bg-[#060606] p-[3px]"
+      )}
+    >
+      <div className={cn("h-full w-full overflow-hidden rounded-[8px]", item.className)}>
+        <RemoteBrandImage
+          src={item.src}
+          alt={item.name}
+          fallback={item.fallback}
+          className="h-full w-full"
+          imageClassName={cn("object-contain", item.imageClassName)}
+        />
+      </div>
+    </div>
+  );
+}
+
+function CatalogValuationPanel() {
+  return (
+    <div className="space-y-3">
+      <Link
+        href="https://catalogcalculator.com/"
+        className="flex h-[50px] items-center justify-center rounded-[11px] bg-[#16cf55] px-4 text-center text-[24px] font-black text-[#08240f] transition-colors hover:bg-[#23df65]"
+      >
+        Catalog Valuation
+        <Play className="ml-2 h-6 w-6 fill-current" />
+      </Link>
+
+      <Panel className="p-4 sm:p-6">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-[1fr_1fr]">
+          <div className="flex min-h-[170px] flex-col items-center justify-center rounded-[14px] border border-[#242424] bg-[#171717] p-5 text-center">
+            <p className="text-[24px] leading-8 text-[#a7a7a7]">
+              Total Income
+              <br />
+              2026:
+            </p>
+            <p className="mt-3 text-[36px] font-black leading-none text-[#13d463]">$3,657,001</p>
+          </div>
+
+          <div className="flex min-h-[170px] flex-col justify-between rounded-[14px] border border-[#242424] bg-[#171717] p-5">
+            <div>
+              <p className="text-[20px] text-[#a7a7a7]">Payment Due</p>
+              <p className="mt-3 text-[31px] font-semibold leading-none text-white">1 Apr</p>
+            </div>
+            <button
+              type="button"
+              className="h-10 rounded-[8px] border border-[#454545] bg-[#222] text-[18px] font-semibold text-white transition-colors hover:border-[#777]"
+            >
+              Pay Early
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-4 rounded-[14px] border border-[#242424] bg-[#171717] px-5 py-6">
+          <p className="text-[20px] text-[#a7a7a7]">Yearly Activity</p>
+          <div className="mt-5 grid h-[128px] grid-cols-12 items-end gap-3 overflow-visible">
+            {yearlyActivity.map((month) => (
+              <button
+                key={month.month}
+                type="button"
+                className="group relative flex h-full min-w-0 flex-col items-center justify-end gap-2 outline-none"
+                aria-label={`${month.month}: ${month.revenue} revenue, ${month.streams} streams, ${month.growth} growth`}
+              >
+                <span className="pointer-events-none absolute bottom-[calc(100%+10px)] left-1/2 z-10 w-[124px] -translate-x-1/2 translate-y-1 rounded-[7px] border border-[#2f2f2f] bg-[#0b0b0b] px-3 py-2 text-left opacity-0 shadow-2xl transition-all duration-200 group-hover:translate-y-0 group-hover:opacity-100 group-focus-visible:translate-y-0 group-focus-visible:opacity-100">
+                  <span className="block text-[11px] font-black text-white">{month.month}</span>
+                  <span className="mt-1 block text-[10px] font-semibold text-[#8f8f8f]">Revenue {month.revenue}</span>
+                  <span className="block text-[10px] font-semibold text-[#8f8f8f]">Streams {month.streams}</span>
+                  <span className={cn("mt-1 block text-[10px] font-black", month.growth.startsWith("-") ? "text-[#ff6b5f]" : "text-[#13d463]")}>
+                    {month.growth}
+                  </span>
+                </span>
+                <div
+                  className="w-full max-w-[30px] rounded-t-[4px] bg-[#13d463] shadow-[0_0_0_rgba(19,212,99,0)] transition-all duration-300 ease-out group-hover:-translate-y-1 group-hover:bg-[#20f076] group-hover:shadow-[0_0_18px_rgba(19,212,99,0.45)] group-focus-visible:-translate-y-1 group-focus-visible:bg-[#20f076] group-focus-visible:shadow-[0_0_18px_rgba(19,212,99,0.45)]"
+                  style={{ height: `${month.height}%` }}
+                />
+                <span className="text-[14px] font-semibold text-[#676767] transition-colors duration-200 group-hover:text-white group-focus-visible:text-white">
+                  {month.label}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </Panel>
     </div>
   );
 }
@@ -526,12 +744,14 @@ export default function DashboardHomePage() {
       <div className="mx-auto max-w-[1520px] px-4 py-4 sm:px-6 lg:px-8">
         <div className="flex flex-nowrap items-center justify-between gap-4 pb-4">
           <div className="flex min-w-0 flex-nowrap items-center gap-2 overflow-x-auto">
+            {/*
             <Link
               href="/dashboard/booking"
               className="inline-flex h-9 shrink-0 items-center rounded-[4px] border border-white bg-white px-4 text-[12px] font-semibold uppercase text-[#1a1a1a]"
             >
               Booking Dashboard
             </Link>
+            */}
             <Link
               href="/dashboard"
               className="inline-flex h-9 shrink-0 items-center rounded-[4px] border border-white bg-white px-4 text-[12px] font-semibold uppercase text-[#3971b6]"
@@ -556,7 +776,7 @@ export default function DashboardHomePage() {
             <Panel className="p-4 sm:p-5">
               <div className="flex items-center justify-between gap-4">
                 <div>
-                  <h2 className="text-[18px] font-semibold text-white">Recent Payouts</h2>
+                  <h2 className="text-[18px] font-semibold text-white">Recent Income</h2>
                   <p className="mt-1 text-[13px] text-[#8f8f8f]">Your latest account activity.</p>
                 </div>
                 <Link
@@ -569,13 +789,14 @@ export default function DashboardHomePage() {
               </div>
 
               <div className="mt-4 space-y-2">
-                {payoutItems.map((item) => (
+                {/* Old finance payout rows used payoutItems from dashboardInvoices. */}
+                {musicIncomeItems.map((item) => (
                   <Link
                     key={`${item.name}-${item.date}`}
-                    href={`/dashboard/pay-flow/${item.invoiceId}`}
+                    href={`/dashboard/income/${item.slug}`}
                     className="flex items-center gap-3 rounded-[8px] border border-[#333] bg-black px-3 py-2 transition-colors hover:border-[#555] hover:bg-white/[0.04]"
                   >
-                    <PayeeLogoTile invoice={item.invoice} />
+                    <MusicIncomeLogo item={item} />
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-[13px] font-semibold text-white">{item.name}</p>
                       <p className="truncate text-[11px] text-[#7f7f7f]">{item.detail}</p>
@@ -592,6 +813,7 @@ export default function DashboardHomePage() {
               </div>
             </Panel>
 
+            {/* Old invoices table preserved for reuse.
             <Panel className="overflow-hidden">
               <div className="flex items-center justify-between border-b border-[#333] p-4 sm:p-5">
                 <div>
@@ -679,6 +901,7 @@ export default function DashboardHomePage() {
                 </table>
               </div>
             </Panel>
+            */}
 
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
               <Panel className="flex min-h-[190px] flex-col justify-between p-4 sm:p-5">
@@ -725,6 +948,36 @@ export default function DashboardHomePage() {
                 />
               </Panel>
             </div>
+
+            <Panel className="overflow-hidden p-4 sm:p-5">
+              <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0">
+                  <p className="text-[13px] font-black uppercase tracking-[0.12em] text-[#a9a9a9]">Plaid</p>
+                  <h2 className="mt-1 text-[22px] font-semibold text-white">Connect Bank</h2>
+                  <p className="mt-2 max-w-[280px] text-[13px] leading-5 text-[#8f8f8f]">
+                    Link your payout method to receive monthly royalty distributions automatically.
+                  </p>
+                </div>
+                <span className="inline-flex h-10 shrink-0 items-center rounded-[7px] border border-[#333] bg-white px-3">
+                  <img
+                    src="/plaid-logo.svg"
+                    alt="Plaid"
+                    className="h-6 w-[84px] object-contain"
+                    loading="lazy"
+                  />
+                </span>
+              </div>
+
+              <div className="mt-5 flex items-center justify-between gap-4">
+                <Link
+                  href="/dashboard/wallet"
+                  className="inline-flex h-9 items-center rounded-[7px] border border-white bg-white px-3 text-[12px] font-semibold text-black"
+                >
+                  Set Up Payouts
+                </Link>
+                <span className="text-[11px] text-[#7f7f7f]">Secure bank linking</span>
+              </div>
+            </Panel>
           </div>
 
           <div className="space-y-5">
@@ -781,6 +1034,8 @@ export default function DashboardHomePage() {
               </div>
             </Panel>
 
+            <CatalogValuationPanel />
+
             <Panel className="p-4 sm:p-5">
               <div className="flex items-center justify-between gap-4">
                 <div>
@@ -812,6 +1067,7 @@ export default function DashboardHomePage() {
               </Link>
             </Panel>
 
+            {/*
             <Panel className="overflow-hidden p-4 sm:p-5">
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
@@ -841,6 +1097,7 @@ export default function DashboardHomePage() {
                 <span className="text-[11px] text-[#7f7f7f]">Secure bank linking</span>
               </div>
             </Panel>
+            */}
           </div>
         </div>
       </div>
