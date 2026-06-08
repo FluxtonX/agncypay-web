@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Check, ShieldCheck } from "lucide-react";
 import { saveRegisteredUser } from "../../../lib/authStorage";
+import { WorkspaceType } from "../../../types/workspace";
 
 const DEMO_EMAIL = "martin.safi@adidas.com";
 const DEMO_PASSWORD = "password123";
@@ -51,6 +52,8 @@ export default function RegisterPage() {
   const [email, setEmail] = useState("");
   const [workspaceName, setWorkspaceName] = useState("");
   const [password, setPassword] = useState("");
+  const [roleType, setRoleType] = useState<"business" | "individual">("business");
+  const accountType: WorkspaceType = roleType === "business" ? "agency" : "talent_independent";
   const [agree, setAgree] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
@@ -103,8 +106,8 @@ export default function RegisterPage() {
         email: normalizedEmail,
         password,
         fullName: normalizedName,
-        accountType: "brand",
-        workspaceType: "brand",
+        accountType: accountType,
+        workspaceType: accountType,
         workspaceName: normalizedWorkspaceName,
       });
 
@@ -218,6 +221,52 @@ export default function RegisterPage() {
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="rounded-[10px] border border-[#262626] bg-black/30 p-4 sm:p-5">
+              <div className="mb-6">
+                <label className="text-[13px] font-medium text-[#E5E5EA] mb-3 block">Account Type</label>
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { id: "business", label: "Business (Agency / Brand)" },
+                    { id: "individual", label: "Individual (Model / Talent)" },
+                  ].map((role) => (
+                    <label
+                      key={role.id}
+                      className={`flex cursor-pointer items-center justify-center rounded-lg border px-3 py-2 text-center text-[12px] font-semibold transition-colors ${
+                        roleType === role.id
+                          ? "border-white bg-white text-black"
+                          : "border-[#262626] bg-[#0B0B0B] text-[#8E8E93] hover:border-white/40"
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="roleType"
+                        value={role.id}
+                        checked={roleType === role.id}
+                        onChange={() => setRoleType(role.id as "business" | "individual")}
+                        className="hidden"
+                      />
+                      {role.label}
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {roleType === "business" && (
+                <div className="mb-6">
+                  <label className="text-[13px] font-medium text-[#E5E5EA] mb-3 block">Connect Accounting (Optional)</label>
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                    {["QuickBooks", "Xero", "NetSuite", "Sage"].map((erp) => (
+                      <button
+                        key={erp}
+                        type="button"
+                        className="flex h-10 items-center justify-center rounded-lg border border-[#262626] bg-[#0B0B0B] text-[11px] font-semibold text-[#8E8E93] transition-colors hover:border-white/40 hover:text-white"
+                      >
+                        {erp}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <FormField
                   id="fullName"

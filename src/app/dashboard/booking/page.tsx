@@ -31,37 +31,7 @@ const castings = [
   { project: "Resort Lookbook", client: "Atlas Talent Group", due: "June 05", unread: 2 },
 ];
 
-function TopNav() {
-  return (
-    <header className="sticky top-0 z-30 border-b border-[#dddddd] bg-[#f4f4f4]/95 px-3 py-3 backdrop-blur">
-      <div className="flex flex-nowrap items-center justify-between gap-4">
-        <div className="flex min-w-0 flex-nowrap items-center gap-2 overflow-x-auto">
-          {/*
-          <Link
-            href="/dashboard/booking"
-            className="inline-flex h-9 shrink-0 items-center rounded-[4px] border border-white bg-white px-4 text-[12px] font-semibold uppercase text-[#3971b6] shadow-sm"
-          >
-            Booking Dashboard
-          </Link>
-          */}
-          <Link
-            href="/dashboard"
-            className="inline-flex h-9 shrink-0 items-center rounded-[4px] border border-white bg-white px-4 text-[12px] font-semibold uppercase text-[#1a1a1a] shadow-sm"
-          >
-            Finance Dashboard
-          </Link>
-          <Link
-            href="/dashboard/settings"
-            className="inline-flex h-9 w-11 shrink-0 items-center justify-center rounded-[4px] border border-white bg-white text-[#3971b6] shadow-sm"
-            aria-label="Settings"
-          >
-            <Settings className="h-5 w-5" />
-          </Link>
-        </div>
-      </div>
-    </header>
-  );
-}
+
 
 function Panel({ title, children, className }: { title: string; children: React.ReactNode; className?: string }) {
   return (
@@ -200,7 +170,6 @@ function CastingsPanel() {
 export default function BookingDashboardPage() {
   return (
     <main className="min-h-screen bg-[#f3f3f3] text-[#5c5c5c]">
-      <TopNav />
       <div className="mx-auto max-w-[1380px] px-3 py-5 sm:px-5">
         <div className="grid grid-cols-1 gap-7 lg:grid-cols-2">
           <BirthdaysPanel />
