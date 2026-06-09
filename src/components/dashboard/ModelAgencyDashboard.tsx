@@ -269,71 +269,69 @@ export function CsvDropzonePanel() {
     setIsDragActive(false);
   };
 
-  const uploadFile = async (file: File) => {
+  const uploadFiles = async (files: File[]) => {
     setIsDragActive(false);
     setUploadState("parsing");
     setErrorMessage("");
 
     try {
-      const formData = new FormData();
-      formData.append("file", file);
+      let accumulatedIncomes: any[] = [];
+      let hasError = false;
 
-      const response = await fetch("https://agencypay-website-backend.onrender.com/api/excel/uploads", {
-        method: "POST",
-        body: formData,
-      });
+      for (const file of files) {
+        const formData = new FormData();
+        formData.append("file", file);
 
-      let data;
-      try {
-        data = await response.json();
-      } catch (err) {
-        data = null;
+        const response = await fetch("/api/extract-income", {
+          method: "POST",
+          body: formData,
+        });
+
+        let data;
+        try {
+          data = await response.json();
+        } catch (err) {
+          data = null;
+        }
+
+        if (response.ok && data?.success) {
+          const aiIncomes = data.data || [];
+          
+          const newIncomes = aiIncomes.map((v: any, index: number) => ({
+            slug: `ai-vendor-${Date.now()}-${index}`,
+            name: v.name,
+            detail: v.detail || "AI Extracted Data",
+            date: v.date || new Date().toLocaleDateString(),
+            amount: v.amount,
+            src: `https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://${v.name.toLowerCase().replace(/[^a-z0-9]/g, '')}.com&size=128`,
+            fallback: v.name.substring(0, 2).toUpperCase(),
+            className: "bg-[#111]",
+            imageClassName: "scale-[1]",
+          }));
+
+          accumulatedIncomes = [...accumulatedIncomes, ...newIncomes];
+        } else {
+          hasError = true;
+          setErrorMessage(data?.error || `Failed to parse ${file.name}`);
+        }
       }
 
-      if (response.ok && data?.success) {
-        const uploadId = data.data.uploadId;
+      if (accumulatedIncomes.length > 0) {
+        const existingIncomes = JSON.parse(localStorage.getItem("uploadedIncomes") || "[]");
+        const updatedIncomes = [...accumulatedIncomes, ...existingIncomes];
+        localStorage.setItem("uploadedIncomes", JSON.stringify(updatedIncomes));
         
-        try {
-          const summaryRes = await fetch(`https://agencypay-website-backend.onrender.com/api/excel/uploads/${uploadId}/summary`);
-          const summaryData = await summaryRes.json().catch(() => null);
+        // Dispatch event to update the UI
+        window.dispatchEvent(new Event("incomesUpdated"));
 
-          if (summaryRes.ok && summaryData?.success) {
-            const vendors = summaryData.data.vendors || [];
-            
-            const newIncomes = vendors.map((v: any, index: number) => ({
-              slug: `vendor-${Date.now()}-${index}`,
-              name: v.vendor,
-              detail: "Digital Sales CSV Upload",
-              date: new Date().toLocaleDateString(),
-              amount: `$${v.totalNetIncome.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`,
-              src: `https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://${v.vendor.toLowerCase().replace(/[^a-z0-9]/g, '')}.com&size=128`,
-              fallback: v.vendor.substring(0, 2).toUpperCase(),
-              className: "bg-[#111]",
-              imageClassName: "scale-[1]",
-            }));
-
-            const existingIncomes = JSON.parse(localStorage.getItem("uploadedIncomes") || "[]");
-            const updatedIncomes = [...newIncomes, ...existingIncomes];
-            localStorage.setItem("uploadedIncomes", JSON.stringify(updatedIncomes));
-            
-            // Dispatch event to update the UI
-            window.dispatchEvent(new Event("incomesUpdated"));
-
-            setUploadState("success");
-            setTimeout(() => setUploadState("idle"), 4000);
-          } else {
-            setUploadState("error");
-            setErrorMessage(summaryData?.error?.message || summaryData?.message || "Failed to fetch summary data");
-            setTimeout(() => setUploadState("idle"), 5000);
-          }
-        } catch (err: any) {
-          setUploadState("error");
-          setErrorMessage(err.message || "Network error fetching summary");
-          setTimeout(() => setUploadState("idle"), 5000);
-        }
+        setUploadState("success");
+        setTimeout(() => setUploadState("idle"), 4000);
+      } else if (hasError) {
+        setUploadState("error");
+        setTimeout(() => setUploadState("idle"), 5000);
       } else {
         setUploadState("error");
-        setErrorMessage(data?.message || "Failed to upload file");
+        setErrorMessage("No income data found in the provided files.");
         setTimeout(() => setUploadState("idle"), 5000);
       }
     } catch (error: any) {
@@ -347,13 +345,13 @@ export function CsvDropzonePanel() {
     e.preventDefault();
     setIsDragActive(false);
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      uploadFile(e.dataTransfer.files[0]);
+      uploadFiles(Array.from(e.dataTransfer.files));
     }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      uploadFile(e.target.files[0]);
+      uploadFiles(Array.from(e.target.files));
     }
   };
 
@@ -374,7 +372,8 @@ export function CsvDropzonePanel() {
         className="hidden" 
         ref={fileInputRef} 
         onChange={handleFileChange}
-        accept=".csv,.pdf,.xlsx,.xls" 
+        accept=".csv,.pdf,.xlsx,.xls,image/*" 
+        multiple
       />
 
       {uploadState === "idle" && (

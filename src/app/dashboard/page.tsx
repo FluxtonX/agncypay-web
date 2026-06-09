@@ -60,7 +60,7 @@ function RemoteBrandImage({ src, alt, fallback, className, imageClassName }: Rem
 
 const quickActions = [
   { label: "Send / Request", icon: Send, href: "/dashboard/send-request" },
-  { label: "Analytics", icon: BarChart3, href: "/dashboard/reports" },
+  { label: "Analytics", icon: BarChart3, href: "/dashboard/analytics" },
   { label: "Wallet ID contacts", icon: Users, href: "/dashboard/profile" },
   { label: "More", icon: EllipsisVertical, href: "/dashboard/settings" },
 ] as const;
