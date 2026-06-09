@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -18,6 +18,8 @@ import {
 } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { mainboardInvoices, formatMainboardMoney } from "../../lib/mainboard";
+import { useApp } from "../../context/AppContext";
+import { ModelIncomeList, ModelPayoutsList, CsvDropzonePanel } from "../../components/dashboard/ModelAgencyDashboard";
 
 const BOFA_BUSINESS_DEBIT_VISA_IMAGE =
   "https://business.bankofamerica.com/content/dam/consumer/business/deposits/checking-accounts/debit-cards/bofa_busdbtcm_v.png";
@@ -58,7 +60,7 @@ function RemoteBrandImage({ src, alt, fallback, className, imageClassName }: Rem
 
 const quickActions = [
   { label: "Send / Request", icon: Send, href: "/dashboard/send-request" },
-  { label: "Analytics", icon: BarChart3, href: "/dashboard/reports" },
+  { label: "Analytics", icon: BarChart3, href: "/dashboard/analytics" },
   { label: "Wallet ID contacts", icon: Users, href: "/dashboard/profile" },
   { label: "More", icon: EllipsisVertical, href: "/dashboard/settings" },
 ] as const;
@@ -712,11 +714,34 @@ function DashboardFooter() {
 
 export default function DashboardHomePage() {
   const router = useRouter();
+  const { state } = useApp();
+  const activeWorkspace = state.workspaces.find((w) => w.id === state.activeWorkspaceId);
+  const workspaceType = activeWorkspace?.type || state.user?.accountType || "brand";
+
   const [autosplitInvoiceIds, setAutosplitInvoiceIds] = useState<string[]>([dashboardInvoices[0]?.id || ""]);
   const [autosplitContactIds, setAutosplitContactIds] = useState<string[]>([]);
   const [isAutosplitNoticeOpen, setIsAutosplitNoticeOpen] = useState(false);
   const [isWalletContactsOpen, setIsWalletContactsOpen] = useState(false);
   const [walletContactQuery, setWalletContactQuery] = useState("");
+  const [dynamicIncomes, setDynamicIncomes] = useState<any[]>([]);
+
+  useEffect(() => {
+    const loadIncomes = () => {
+      try {
+        const stored = localStorage.getItem("uploadedIncomes");
+        if (stored) {
+          setDynamicIncomes(JSON.parse(stored));
+        }
+      } catch (e) {
+        // ignore
+      }
+    };
+    loadIncomes();
+    window.addEventListener("incomesUpdated", loadIncomes);
+    return () => window.removeEventListener("incomesUpdated", loadIncomes);
+  }, []);
+
+  const allIncomes = dynamicIncomes.length > 0 ? dynamicIncomes : musicIncomeItems;
 
   const toggleAutosplitInvoice = (invoiceId: string) => {
     const isActive = autosplitInvoiceIds.includes(invoiceId);
@@ -742,31 +767,8 @@ export default function DashboardHomePage() {
   return (
     <main className="min-h-screen bg-black text-white">
       <div className="mx-auto max-w-[1520px] px-4 py-4 sm:px-6 lg:px-8">
-        <div className="flex flex-nowrap items-center justify-between gap-4 pb-4">
-          <div className="flex min-w-0 flex-nowrap items-center gap-2 overflow-x-auto">
-            {/*
-            <Link
-              href="/dashboard/booking"
-              className="inline-flex h-9 shrink-0 items-center rounded-[4px] border border-white bg-white px-4 text-[12px] font-semibold uppercase text-[#1a1a1a]"
-            >
-              Booking Dashboard
-            </Link>
-            */}
-            <Link
-              href="/dashboard"
-              className="inline-flex h-9 shrink-0 items-center rounded-[4px] border border-white bg-white px-4 text-[12px] font-semibold uppercase text-[#3971b6]"
-            >
-              Finance Dashboard
-            </Link>
-            <Link
-              href="/dashboard/settings"
-              className="inline-flex h-9 w-11 shrink-0 items-center justify-center rounded-[4px] border border-white bg-white text-[#3971b6]"
-              aria-label="Settings"
-            >
-              <Settings className="h-5 w-5" />
-            </Link>
-          </div>
-          <img src="/agncypaybrand.png" alt="AgncyPay" className="h-[52px] w-auto shrink-0 object-contain scale-[1.5] origin-right" />
+        <div className="flex flex-nowrap items-center justify-start gap-4 pb-4">
+          <img src="/agncypaybrand.png" alt="AgncyPay" className="h-[52px] w-auto shrink-0 object-contain scale-[1.5] origin-left" />
         </div>
 
         <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(360px,0.85fr)]">
@@ -780,7 +782,7 @@ export default function DashboardHomePage() {
                   <p className="mt-1 text-[13px] text-[#8f8f8f]">Your latest account activity.</p>
                 </div>
                 <Link
-                  href="/dashboard/payments"
+                  href="/dashboard/incomes"
                   className="inline-flex items-center gap-2 rounded-[7px] border border-[#333] bg-[#0b0b0b] px-3 py-2 text-[12px] font-semibold text-white"
                 >
                   View All
@@ -789,8 +791,7 @@ export default function DashboardHomePage() {
               </div>
 
               <div className="mt-4 space-y-2">
-                {/* Old finance payout rows used payoutItems from dashboardInvoices. */}
-                {musicIncomeItems.map((item) => (
+                {allIncomes.slice(0, 5).map((item) => (
                   <Link
                     key={`${item.name}-${item.date}`}
                     href={`/dashboard/income/${item.slug}`}
@@ -812,6 +813,10 @@ export default function DashboardHomePage() {
                 ))}
               </div>
             </Panel>
+
+            {workspaceType === "agency" && (
+              <ModelPayoutsList />
+            )}
 
             {/* Old invoices table preserved for reuse.
             <Panel className="overflow-hidden">
@@ -939,13 +944,35 @@ export default function DashboardHomePage() {
                 </div>
               </Panel>
 
-              <Panel className="overflow-hidden p-0">
-                <img
-                  src="/dashboard-card-promo.png"
-                  alt="AgncyPay Card limit, spend, and apply anywhere"
-                  className="block h-auto w-full"
-                  loading="lazy"
-                />
+              <Panel className="flex flex-col overflow-hidden p-4 sm:p-5 gap-4">
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    ["Limit", "$10k"],
+                    ["Spent", "$1.2k"],
+                    ["Review", "3"],
+                  ].map(([label, value]) => (
+                    <div key={label} className="rounded-[8px] border border-[#2f2f2f] bg-black px-3 py-3">
+                      <p className="text-[11px] font-semibold text-[#777]">{label}</p>
+                      <p className="mt-2 truncate text-[15px] font-black text-white">{value}</p>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex flex-row gap-5 mt-1 items-center">
+                  <div className="relative w-[140px] h-[200px] shrink-0 rounded-[8px] overflow-hidden border border-[#2f2f2f]">
+                    <img
+                      src="/mobilelook.jpeg"
+                      alt="AgncyPay Mobile View"
+                      className="absolute inset-0 h-full w-full object-cover object-top"
+                      loading="lazy"
+                    />
+                  </div>
+                  <div className="flex flex-1 flex-col justify-center">
+                    <h4 className="text-[20px] sm:text-[22px] font-bold text-white leading-[1.35]">
+                      Online in Stores,<br />
+                      Use AgncyPay Cards
+                    </h4>
+                  </div>
+                </div>
               </Panel>
             </div>
 
@@ -1019,6 +1046,10 @@ export default function DashboardHomePage() {
                 })}
               </div>
             </Panel>
+
+            {workspaceType !== "brand" && (
+              <CsvDropzonePanel />
+            )}
 
             <Panel className="p-4 sm:p-5">
               <div className="flex items-center justify-between gap-4">

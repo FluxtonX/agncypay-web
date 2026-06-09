@@ -20,12 +20,14 @@ import {
   Users,
   Wand2,
   X,
+  Paperclip,
 } from "lucide-react";
 import { FinanceInvoicesSection } from "../../../components/dashboard/FinanceInvoicesSection";
 import { AgncyPayLogo } from "../../../components/payment/AgncyPayLogo";
 import { getInvoicesForRecipient } from "../../../lib/finance-dashboard-invoices";
 import { type MainboardInvoice } from "../../../lib/mainboard";
 import { cn } from "../../../lib/utils";
+import { CsvDropzonePanel } from "../../../components/dashboard/ModelAgencyDashboard";
 
 type TransferMode = "send" | "request";
 type TransferStage = "search" | "invoices" | "amount" | "success";
@@ -210,31 +212,8 @@ function RecipientAvatar({ recipient, size = "md" }: { recipient: Recipient; siz
 
 function TopBar() {
   return (
-    <header className="flex flex-nowrap items-center justify-between gap-4 pb-4">
-      <div className="flex min-w-0 flex-nowrap items-center gap-2 overflow-x-auto">
-        {/*
-        <Link
-          href="/dashboard/booking"
-          className="inline-flex h-9 shrink-0 items-center rounded-[4px] border border-white bg-white px-4 text-[12px] font-semibold uppercase text-[#1a1a1a]"
-        >
-          Booking Dashboard
-        </Link>
-        */}
-        <Link
-          href="/dashboard"
-          className="inline-flex h-9 shrink-0 items-center rounded-[4px] border border-white bg-white px-4 text-[12px] font-semibold uppercase text-[#3971b6]"
-        >
-          Finance Dashboard
-        </Link>
-        <Link
-          href="/dashboard/settings"
-          className="inline-flex h-9 w-11 shrink-0 items-center justify-center rounded-[4px] border border-white bg-white text-[#3971b6]"
-          aria-label="Settings"
-        >
-          <Settings className="h-5 w-5" />
-        </Link>
-      </div>
-      <img src="/agncypaybrand.png" alt="AgncyPay" className="h-[52px] w-auto shrink-0 object-contain scale-[1.5] origin-right" />
+    <header className="flex flex-nowrap items-center justify-start gap-4 pb-4">
+      <img src="/agncypaybrand.png" alt="AgncyPay" className="h-[52px] w-auto shrink-0 object-contain scale-[1.5] origin-left" />
     </header>
   );
 }
@@ -594,27 +573,33 @@ export default function SendRequestPage() {
 
                 <div className="px-4 pt-5">
                   <p className="mb-3 text-[11px] font-black text-white">
-                    {query.trim() ? "Search results" : "Recent searches"}
+                    {query.trim() ? "Search results" : ""}
                   </p>
                   <div className="space-y-3">
-                    {filteredRecipients.map((recipient) => (
-                      <button
-                        key={recipient.id}
-                        type="button"
-                        onClick={() => selectRecipient(recipient)}
-                        className="flex w-full items-center gap-4 rounded-[7px] px-2 py-1.5 text-left transition-colors hover:bg-white/[0.06]"
-                      >
-                        <RecipientAvatar recipient={recipient} size="sm" />
-                        <span className="min-w-0">
-                          <span className="block truncate text-[14px] font-black text-white">{recipient.name}</span>
-                          <span className="block truncate text-[10px] font-bold text-[#c4c4c4]">{recipient.handle}</span>
-                        </span>
-                      </button>
-                    ))}
-                    {filteredRecipients.length === 0 && (
-                      <div className="rounded-[7px] border border-[#454545] bg-black/25 px-4 py-5 text-[13px] font-bold text-[#bdbdbd]">
-                        No recipient found. Try a name, agency ID, email, or mobile number.
-                      </div>
+                    {query.trim() ? (
+                      <>
+                        {filteredRecipients.map((recipient) => (
+                          <button
+                            key={recipient.id}
+                            type="button"
+                            onClick={() => selectRecipient(recipient)}
+                            className="flex w-full items-center gap-4 rounded-[7px] px-2 py-1.5 text-left transition-colors hover:bg-white/[0.06]"
+                          >
+                            <RecipientAvatar recipient={recipient} size="sm" />
+                            <span className="min-w-0">
+                              <span className="block truncate text-[14px] font-black text-white">{recipient.name}</span>
+                              <span className="block truncate text-[10px] font-bold text-[#c4c4c4]">{recipient.handle}</span>
+                            </span>
+                          </button>
+                        ))}
+                        {filteredRecipients.length === 0 && (
+                          <div className="rounded-[7px] border border-[#454545] bg-black/25 px-4 py-5 text-[13px] font-bold text-[#bdbdbd]">
+                            No recipient found. Try a name, agency ID, email, or mobile number.
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <CsvDropzonePanel />
                     )}
                   </div>
                   <div className="mt-4 flex justify-center">
@@ -833,6 +818,14 @@ export default function SendRequestPage() {
                 >
                   <Landmark className="mr-2 inline h-4 w-4" />
                   Multi Payout
+                </button>
+                <button
+                  type="button"
+                  onClick={() => showMessage("File attachment simulated.")}
+                  className="h-8 rounded-[5px] bg-[#2d2d2d] text-[11px] font-black text-[#d9d9d9] hover:bg-[#3d3d3d] hover:text-white"
+                >
+                  <Paperclip className="mr-2 inline h-4 w-4" />
+                  Attach Paystub / CSV
                 </button>
               </div>
 

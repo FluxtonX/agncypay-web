@@ -1,4 +1,5 @@
 "use client";
+export const dynamic = "force-dynamic";
 
 import React, { useState } from "react";
 import {
@@ -12,6 +13,7 @@ import {
   User,
   X,
 } from "lucide-react";
+import { IntegrationsMarketplace } from "@/components/dashboard/integrations/IntegrationsMarketplace";
 
 type UserRole = "Admin" | "Approver" | "Viewer";
 type QuickAction = "payment" | "notifications" | "api" | null;
@@ -23,20 +25,9 @@ type TeamUser = {
   role: UserRole;
 };
 
-type Integration = {
-  name: string;
-  status: "Connected" | "Not Connected";
-};
-
 const initialUsers: TeamUser[] = [
   { id: "john", name: "John Doe", email: "john@acme.com", role: "Admin" },
   { id: "sarah", name: "Sarah Smith", email: "sarah@acme.com", role: "Approver" },
-];
-
-const initialIntegrations: Integration[] = [
-  { name: "Salesforce CRM", status: "Connected" },
-  { name: "QuickBooks", status: "Not Connected" },
-  { name: "Slack", status: "Connected" },
 ];
 
 function Section({
@@ -112,7 +103,6 @@ export default function SettingsPage() {
     address: "123 Main St, San Francisco, CA 94105",
   });
   const [users, setUsers] = useState<TeamUser[]>(initialUsers);
-  const [integrations, setIntegrations] = useState(initialIntegrations);
   const [mfaEnabled, setMfaEnabled] = useState(true);
   const [sessionTimeout, setSessionTimeout] = useState("30 min");
   const [saveMessage, setSaveMessage] = useState("");
@@ -152,19 +142,6 @@ export default function SettingsPage() {
     setInviteOpen(false);
   };
 
-  const toggleIntegration = (name: string) => {
-    setIntegrations((currentIntegrations) =>
-      currentIntegrations.map((integration) =>
-        integration.name === name
-          ? {
-              ...integration,
-              status:
-                integration.status === "Connected" ? "Not Connected" : "Connected",
-            }
-          : integration
-      )
-    );
-  };
 
   return (
     <main className="mx-auto w-full max-w-[1180px] px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
@@ -345,34 +322,10 @@ export default function SettingsPage() {
                 Integrations
               </h2>
             </div>
-            <p className="mt-[15px] text-[17px] leading-6 text-[#9b9b9b]">
-              Connect external systems and services
+            <p className="mt-[15px] mb-[29px] text-[17px] leading-6 text-[#9b9b9b]">
+              Connect external systems and services to sync your data automatically.
             </p>
-
-            <div className="mt-[29px] space-y-[18px]">
-              {integrations.map((integration) => (
-                <div
-                  key={integration.name}
-                  className="flex items-center justify-between gap-4 rounded-[7px] border border-[#303030] px-[18px] py-[18px]"
-                >
-                  <div>
-                    <p className="text-[17px] font-semibold leading-5 text-white">
-                      {integration.name}
-                    </p>
-                    <p className="mt-[7px] text-[15px] leading-4 text-[#8d8d8d]">
-                      {integration.status}
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => toggleIntegration(integration.name)}
-                    className="h-[38px] rounded-[7px] border border-[#303030] bg-[#0c0c0c] px-[18px] text-[16px] font-semibold text-white transition-colors hover:border-[#777]"
-                  >
-                    {integration.status === "Connected" ? "Configure" : "Connect"}
-                  </button>
-                </div>
-              ))}
-            </div>
+            <IntegrationsMarketplace />
           </Section>
         </div>
 
