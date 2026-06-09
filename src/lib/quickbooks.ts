@@ -1,35 +1,54 @@
 import OAuthClient from "intuit-oauth";
-import fs from "fs";
-import path from "path";
+import { cookies } from "next/headers";
 
-// Define the path for our local token storage
-const TOKEN_STORAGE_PATH = path.join(process.cwd(), "qbo-tokens.json");
+const COOKIE_NAME = "qbo_token_data";
 
-// Helper to save tokens to a local file (simulating a database)
-export function saveToken(token: any) {
+// Helper to save tokens to a secure HttpOnly cookie
+export async function saveToken(token: any) {
   try {
-    fs.writeFileSync(TOKEN_STORAGE_PATH, JSON.stringify(token, null, 2));
-    console.log("QuickBooks token saved locally.");
+    const cookieStore = await cookies();
+    
+    // Only store essential fields to ensure we don't exceed the 4KB cookie limit
+    const essentialToken = {
+      access_token: token.access_token,
+      refresh_token: token.refresh_token,
+      realmId: token.realmId,
+      expires_in: token.expires_in,
+      x_refresh_token_expires_in: token.x_refresh_token_expires_in,
+      createdAt: token.createdAt || Date.now(),
+      token_type: token.token_type || "bearer",
+    };
+
+    cookieStore.set(COOKIE_NAME, JSON.stringify(essentialToken), {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      // Max age: 100 days (QuickBooks refresh token is valid for 100 days)
+      maxAge: 100 * 24 * 60 * 60,
+    });
+    console.log("QuickBooks token saved to cookie.");
   } catch (error) {
-    console.error("Error saving QuickBooks token:", error);
+    console.error("Error saving QuickBooks token to cookie:", error);
   }
 }
 
-// Helper to retrieve the token from the local file
-export function getToken() {
+// Helper to retrieve the token from the secure cookie
+export async function getToken() {
   try {
-    if (fs.existsSync(TOKEN_STORAGE_PATH)) {
-      const tokenStr = fs.readFileSync(TOKEN_STORAGE_PATH, "utf8");
-      return JSON.parse(tokenStr);
+    const cookieStore = await cookies();
+    const cookie = cookieStore.get(COOKIE_NAME);
+    if (cookie?.value) {
+      return JSON.parse(cookie.value);
     }
   } catch (error) {
-    console.error("Error reading QuickBooks token:", error);
+    console.error("Error reading QuickBooks token from cookie:", error);
   }
   return null;
 }
 
-// Helper to initialize the OAuthClient
-export function getQuickBooksClient() {
+// Helper to initialize the OAuthClient with an optional token
+export function getQuickBooksClient(token?: any) {
   const clientId = process.env.QUICKBOOKS_CLIENT_ID;
   const clientSecret = process.env.QUICKBOOKS_CLIENT_SECRET;
   const environment = process.env.QUICKBOOKS_ENVIRONMENT || "sandbox";
@@ -46,10 +65,8 @@ export function getQuickBooksClient() {
     redirectUri: redirectUri || "",
   });
 
-  // If we have an existing token, load it into the client
-  const existingToken = getToken();
-  if (existingToken) {
-    oauthClient.setToken(existingToken);
+  if (token) {
+    oauthClient.setToken(token);
   }
 
   return oauthClient;
@@ -57,12 +74,13 @@ export function getQuickBooksClient() {
 
 // Helper to get a ready-to-use client (refreshing the token if needed)
 export async function getAuthenticatedClient() {
-  const oauthClient = getQuickBooksClient();
-  const token = getToken();
+  const token = await getToken();
 
   if (!token) {
     throw new Error("No QuickBooks token found. Please connect to QuickBooks first.");
   }
+
+  const oauthClient = getQuickBooksClient(token);
 
   if (oauthClient.isAccessTokenValid()) {
     return oauthClient;
@@ -72,7 +90,14 @@ export async function getAuthenticatedClient() {
   console.log("QuickBooks Access Token expired. Refreshing...");
   try {
     const authResponse = await oauthClient.refresh();
-    saveToken(authResponse.getJson());
+    const newToken = authResponse.getJson();
+    
+    // Preserve the realmId since it is not returned in the refresh token response payload
+    if (token.realmId) {
+      newToken.realmId = token.realmId;
+    }
+    
+    await saveToken(newToken);
     return oauthClient;
   } catch (error) {
     console.error("Failed to refresh token:", error);
