@@ -1,13 +1,13 @@
-import { getAuthenticatedClient } from "@/lib/quickbooks";
+import { getAuthenticatedClient, getToken } from "@/lib/quickbooks";
 import { NextResponse } from "next/server";
 
 export async function GET() {
   try {
     const oauthClient = await getAuthenticatedClient();
     
-    // To make API calls, we need the realmId (Company ID) which is returned in the token payload
-    const token = oauthClient.getToken();
-    const realmId = token.realmId;
+    // To make API calls, we need the realmId (Company ID)
+    const token = await getToken();
+    const realmId = token?.realmId;
 
     if (!realmId) {
       throw new Error("No realmId found in token. Please reconnect QuickBooks.");

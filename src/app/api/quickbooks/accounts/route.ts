@@ -5,8 +5,8 @@ export async function GET() {
   try {
     const oauthClient = await getAuthenticatedClient();
     
-    // Read the raw token from our local file to reliably get the realmId
-    const rawToken = getToken();
+    // Read the raw token from our cookie to reliably get the realmId
+    const rawToken = await getToken();
     const realmId = rawToken?.realmId;
 
     if (!realmId) {

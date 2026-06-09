@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Plug, CheckCircle2, ArrowRight, Loader2, AlertCircle } from "lucide-react";
@@ -104,6 +104,27 @@ function OAuthModal({
 export function IntegrationsMarketplace() {
   const [providers, setProviders] = useState(erpProviders);
   const [activeOAuth, setActiveOAuth] = useState<ERPProvider | null>(null);
+
+  useEffect(() => {
+    async function checkQuickBooksStatus() {
+      try {
+        const res = await fetch("/api/quickbooks/status");
+        if (res.ok) {
+          const data = await res.json();
+          setProviders(current =>
+            current.map(p => 
+              p.id === "quickbooks" 
+                ? { ...p, status: data.connected ? "Connected" : "Not Connected" } 
+                : p
+            )
+          );
+        }
+      } catch (err) {
+        console.error("Failed to fetch QuickBooks status:", err);
+      }
+    }
+    checkQuickBooksStatus();
+  }, []);
 
   const handleConnectSuccess = (providerId: string) => {
     setProviders(current =>

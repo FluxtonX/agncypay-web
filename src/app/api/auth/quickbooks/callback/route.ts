@@ -20,7 +20,7 @@ export async function GET(request: Request) {
       tokenData.realmId = realmId;
     }
     
-    saveToken(tokenData);
+    await saveToken(tokenData);
 
     console.log("QuickBooks connection successful!");
 
