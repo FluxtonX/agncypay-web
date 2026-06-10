@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useCallback } from "react";
+import Link from "next/link";
 import { AlertTriangle, CheckCircle2, Loader2, RefreshCw } from "lucide-react";
 
 type SyncLog = {
@@ -12,7 +13,7 @@ type SyncLog = {
   amount?: number;
   currency?: string;
   itemType: string;
-  status: "Success" | "Failed";
+  status: "Success" | "Failed" | "Paid" | "Pending" | "Overdue";
   error?: string;
 };
 
@@ -41,6 +42,13 @@ export function RealSyncLogs({ refreshKey }: { refreshKey: number }) {
   useEffect(() => {
     fetchLogs();
   }, [fetchLogs, refreshKey]);
+
+  const getRowHref = (log: SyncLog) => {
+    if (log.status === "Paid" || log.status === "Success") {
+      return `/receipt/${log.id}?tx=TX-AP-QBO-${log.id}&mode=logged_in&returnTo=dashboard`;
+    }
+    return `/dashboard/pay-flow/${log.id}`;
+  };
 
   return (
     <section className="rounded-[13px] border border-[#303030] bg-black p-[28px]">
@@ -91,39 +99,53 @@ export function RealSyncLogs({ refreshKey }: { refreshKey: number }) {
             ) : (
               logs.map((log) => (
                 <tr key={log.id} className="bg-black transition-colors hover:bg-[#0c0c0c]">
-                  <td className="px-[16px] py-[14px] text-[#b8b8b8]">
-                    {new Date(log.date).toLocaleDateString()}
-                  </td>
-                  <td className="px-[16px] py-[14px] font-medium text-white">
-                    {log.docNumber || "-"}
-                  </td>
-                  <td className="px-[16px] py-[14px] text-[#b8b8b8]">
-                    {log.customerName || "-"}
-                  </td>
-                  <td className="px-[16px] py-[14px] font-medium text-white">
-                    {new Intl.NumberFormat("en-US", {
-                      style: "currency",
-                      currency: log.currency || "USD",
-                    }).format(log.amount || 0)}
-                  </td>
-                  <td className="px-[16px] py-[14px]">
-                    {log.status === "Success" && (
-                      <div className="flex items-center gap-1.5 text-green-500">
-                        <CheckCircle2 className="h-4 w-4" />
-                        <span className="font-medium">Success</span>
-                      </div>
-                    )}
-                    {log.status === "Failed" && (
-                      <div className="group relative flex cursor-help items-center gap-1.5 text-red-500">
-                        <AlertTriangle className="h-4 w-4" />
-                        <span className="border-b border-dashed border-red-500/50 font-medium">Failed</span>
-                        <div className="pointer-events-none absolute bottom-full left-0 mb-2 w-[240px] opacity-0 transition-opacity group-hover:opacity-100">
-                          <div className="rounded-[6px] bg-[#222] p-[10px] text-[13px] leading-tight text-white shadow-xl">
-                            {log.error}
-                          </div>
-                        </div>
-                      </div>
-                    )}
+                  <td colSpan={5} className="p-0">
+                    <Link
+                      href={getRowHref(log)}
+                      className="flex items-center w-full"
+                    >
+                      <span className="px-[16px] py-[14px] text-[#b8b8b8] flex-1 min-w-[100px]">
+                        {new Date(log.date).toLocaleDateString()}
+                      </span>
+                      <span className="px-[16px] py-[14px] font-medium text-white flex-1 min-w-[60px]">
+                        {log.docNumber || "-"}
+                      </span>
+                      <span className="px-[16px] py-[14px] text-[#b8b8b8] flex-[2] min-w-[120px]">
+                        {log.customerName || "-"}
+                      </span>
+                      <span className="px-[16px] py-[14px] font-medium text-white flex-1 min-w-[100px]">
+                        {new Intl.NumberFormat("en-US", {
+                          style: "currency",
+                          currency: log.currency || "USD",
+                        }).format(log.amount || 0)}
+                      </span>
+                      <span className="px-[16px] py-[14px] flex-1 min-w-[100px]">
+                        {(log.status === "Success" || log.status === "Paid") && (
+                          <span className="flex items-center gap-1.5 text-green-500">
+                            <CheckCircle2 className="h-4 w-4" />
+                            <span className="font-medium">{log.status === "Success" ? "Success" : "Paid"}</span>
+                          </span>
+                        )}
+                        {log.status === "Failed" && (
+                          <span className="flex items-center gap-1.5 text-red-500">
+                            <AlertTriangle className="h-4 w-4" />
+                            <span className="font-medium">Failed</span>
+                          </span>
+                        )}
+                        {log.status === "Overdue" && (
+                          <span className="flex items-center gap-1.5 text-red-500">
+                            <AlertTriangle className="h-4 w-4" />
+                            <span className="font-medium">Overdue</span>
+                          </span>
+                        )}
+                        {log.status === "Pending" && (
+                          <span className="flex items-center gap-1.5 text-amber-500">
+                            <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
+                            <span className="font-medium">Pending</span>
+                          </span>
+                        )}
+                      </span>
+                    </Link>
                   </td>
                 </tr>
               ))

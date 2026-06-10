@@ -35,8 +35,23 @@ export async function GET() {
     // Map Invoices
     if (invoicesData.QueryResponse?.Invoice) {
       invoicesData.QueryResponse.Invoice.forEach((i: any) => {
+        const balance = i.Balance !== undefined ? i.Balance : i.TotalAmt;
+        const isPaid = balance === 0;
+        const dueDate = i.DueDate;
+
+        let status = "Pending";
+        if (isPaid) {
+          status = "Paid";
+        } else if (dueDate) {
+          const dueTime = new Date(dueDate).getTime();
+          const nowTime = new Date().getTime();
+          if (dueTime < nowTime) {
+            status = "Overdue";
+          }
+        }
+
         logs.push({
-          id: `inv-${i.Id}`,
+          id: i.Id,
           date: i.MetaData?.LastUpdatedTime || new Date().toISOString(),
           itemName: `Invoice #${i.DocNumber || i.Id}`, // keeping for backwards compatibility if needed
           docNumber: i.DocNumber || i.Id,
@@ -44,7 +59,7 @@ export async function GET() {
           amount: i.TotalAmt || 0,
           currency: i.CurrencyRef?.value || "USD",
           itemType: "Invoice",
-          status: "Success",
+          status: status,
         });
       });
     }
