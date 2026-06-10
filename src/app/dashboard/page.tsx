@@ -9,6 +9,7 @@ import {
   ChevronRight,
   CreditCard,
   EllipsisVertical,
+  Loader2,
   Play,
   Search,
   Send,
@@ -712,6 +713,187 @@ function DashboardFooter() {
   );
 }
 
+function IntegrationsShortcutsPanel() {
+  const integrationsList = [
+    { label: "QuickBooks", src: "/quickbook.png", href: "/dashboard/settings/integrations/quickbooks" },
+    { label: "Mercury", src: "/mercuryLogo.png", href: "/dashboard/settings/integrations/mercury", bg: "bg-white" },
+    { label: "Xero", src: "/xero.png", href: "/dashboard/settings/integrations/xero" },
+    { label: "Sage", src: "/sage.png", href: "/dashboard/settings/integrations/sage" },
+    { label: "NetSuite", src: "/netsuite.png", href: "/dashboard/settings/integrations/netsuite" },
+  ];
+
+  return (
+    <Panel className="p-4 sm:p-5">
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <h2 className="text-[18px] font-semibold text-white">Integrations</h2>
+          <p className="mt-1 text-[13px] text-[#8f8f8f]">
+            Connect external systems and services to sync data automatically.
+          </p>
+        </div>
+      </div>
+      <div className="mt-4 grid grid-cols-5 gap-3">
+        {integrationsList.map((item) => (
+          <Link
+            key={item.label}
+            href={item.href}
+            className="flex min-w-0 flex-col items-center gap-2 text-center"
+            aria-label={item.label}
+          >
+            <div className="flex h-[72px] w-[72px] items-center justify-center rounded-[12px] border border-[#303030] bg-[#060606] p-[3px] shadow-[0_0_0_1px_rgba(255,255,255,0.02)]">
+              <div className={cn("h-full w-full overflow-hidden rounded-[9px] flex items-center justify-center", item.bg || "bg-transparent")}>
+                <img
+                  src={item.src}
+                  alt={item.label}
+                  className="h-full w-full object-contain"
+                />
+              </div>
+            </div>
+            <span className="max-w-[78px] text-[12px] leading-4 text-[#b8b8b8]">{item.label}</span>
+          </Link>
+        ))}
+      </div>
+    </Panel>
+  );
+}
+
+function QuickBooksOnlinePanel() {
+  const [invoices, setInvoices] = useState<any[]>([]);
+  const [connected, setConnected] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchQboInvoices() {
+      try {
+        const res = await fetch("/api/quickbooks/invoices");
+        if (res.ok) {
+          const data = await res.json();
+          setConnected(data.connected);
+          setInvoices(data.invoices);
+        }
+      } catch (err) {
+        console.error("Failed to fetch QuickBooks invoices:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchQboInvoices();
+  }, []);
+
+  return (
+    <Panel className="p-4 sm:p-5">
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-2">
+          {/* Green QuickBooks Logo */}
+          <div className="flex h-6 w-6 items-center justify-center rounded-[4px] bg-transparent">
+            <img src="/quickbook.png" alt="QuickBooks" className="h-full w-full object-contain" />
+          </div>
+          <h2 className="text-[18px] font-semibold text-white">QuickBooks Online</h2>
+        </div>
+
+        <div className="flex items-center gap-3">
+          {connected ? (
+            <span className="inline-flex h-[26px] items-center gap-1.5 rounded-full border border-green-500/30 bg-green-500/10 px-3 text-[11px] font-semibold text-green-500">
+              <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
+              Connected
+            </span>
+          ) : (
+            <Link
+              href="/api/auth/quickbooks/connect"
+              className="inline-flex h-[26px] items-center rounded-full border border-[#444] bg-[#1a1a1a] px-3 text-[11px] font-semibold text-[#bdbdbd] hover:border-[#666] hover:text-white"
+            >
+              Connect
+            </Link>
+          )}
+          <Link
+            href="/dashboard/settings/integrations/quickbooks"
+            className="text-[12px] font-semibold text-[#8f8f8f] hover:text-white"
+          >
+            View All
+          </Link>
+        </div>
+      </div>
+
+      <p className="mt-1 text-[13px] text-[#8f8f8f]">
+        Sync invoices, payments, and vendors automatically to your QBO account.
+      </p>
+
+      <div className="mt-4 space-y-2">
+        {loading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-5 w-5 animate-spin text-[#8f8f8f]" />
+          </div>
+        ) : (
+          invoices.slice(0, 5).map((inv) => {
+            const isOverdue = inv.daysText === "Overdue";
+            const isPaid = inv.status === "Paid";
+            const targetHref = isPaid
+              ? `/receipt/${inv.id}?tx=TX-AP-QBO-${inv.id}&mode=logged_in&returnTo=dashboard`
+              : `/dashboard/pay-flow/${inv.id}`;
+
+            return (
+              <Link
+                key={inv.id}
+                href={targetHref}
+                className="flex items-center gap-3 rounded-[8px] border border-[#333] bg-black px-3 py-2 transition-colors hover:border-[#555] hover:bg-white/[0.04] cursor-pointer"
+              >
+                {/* Green qb logo */}
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] bg-transparent">
+                  <img src="/quickbook.png" alt="QuickBooks" className="h-full w-full object-contain" />
+                </div>
+
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[13px] font-semibold text-white">{inv.name}</p>
+                  <p className="truncate text-[11px] text-[#7f7f7f]">{inv.detail}</p>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  {/* Status Pill */}
+                  <span
+                    className={cn(
+                      "inline-flex h-[22px] items-center rounded-full border px-2.5 text-[10px] font-bold",
+                      isPaid
+                        ? "border-[#10b95f]/30 bg-[#082315] text-[#70ff9e]"
+                        : isOverdue
+                          ? "border-[#ff3b30]/30 bg-[#250706] text-[#ff9088]"
+                          : "border-[#f59e0b]/30 bg-[#261a03] text-[#fbbf24]"
+                    )}
+                  >
+                    {inv.status}
+                  </span>
+
+                  {/* Days remaining/Overdue text */}
+                  <span
+                    className={cn(
+                      "hidden text-[11px] sm:inline-block w-28 text-left",
+                      isOverdue ? "text-[#ff9088]" : isPaid ? "text-[#70ff9e]" : "text-[#7f7f7f]"
+                    )}
+                  >
+                    {inv.daysText}
+                  </span>
+
+                  {/* Date */}
+                  <div className="hidden text-right text-[11px] text-[#7f7f7f] md:block">{inv.date}</div>
+
+                  {/* Amount */}
+                  <div className="min-w-[72px] text-right text-[13px] font-semibold text-white">
+                    {new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(inv.amount)}
+                  </div>
+
+                  {/* Ellipsis */}
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full text-[#7f7f7f] hover:text-white">
+                    <EllipsisVertical className="h-4 w-4" />
+                  </div>
+                </div>
+              </Link>
+            );
+          })
+        )}
+      </div>
+    </Panel>
+  );
+}
+
 export default function DashboardHomePage() {
   const router = useRouter();
   const { state } = useApp();
@@ -994,7 +1176,6 @@ export default function DashboardHomePage() {
                   />
                 </span>
               </div>
-
               <div className="mt-5 flex items-center justify-between gap-4">
                 <Link
                   href="/dashboard/wallet"
@@ -1005,9 +1186,12 @@ export default function DashboardHomePage() {
                 <span className="text-[11px] text-[#7f7f7f]">Secure bank linking</span>
               </div>
             </Panel>
+
+            <CatalogValuationPanel />
           </div>
 
           <div className="space-y-5">
+            {/* 1. Send / Request Analytics */}
             <Panel className="p-4 sm:p-5">
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                 {quickActions.map((action) => {
@@ -1047,10 +1231,7 @@ export default function DashboardHomePage() {
               </div>
             </Panel>
 
-            {workspaceType !== "brand" && (
-              <CsvDropzonePanel />
-            )}
-
+            {/* 2. Shortcuts */}
             <Panel className="p-4 sm:p-5">
               <div className="flex items-center justify-between gap-4">
                 <div>
@@ -1065,8 +1246,16 @@ export default function DashboardHomePage() {
               </div>
             </Panel>
 
-            <CatalogValuationPanel />
+            {/* 3. Integrations */}
+            <IntegrationsShortcutsPanel />
 
+            {/* 4. QuickBooks Online Invoices */}
+            <QuickBooksOnlinePanel />
+
+            {/* 5. Upload File Section */}
+            <CsvDropzonePanel />
+
+            {/* 6. Banks and Cards */}
             <Panel className="p-4 sm:p-5">
               <div className="flex items-center justify-between gap-4">
                 <div>

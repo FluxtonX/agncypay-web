@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import {
@@ -18,6 +18,7 @@ import {
   findMainboardInvoice,
   formatMainboardMoney,
   type MainboardInvoice,
+  type MainboardInvoiceStatus,
 } from "../../../lib/mainboard";
 
 function StatusBadge({ status }: { status: MainboardInvoice["status"] }) {
@@ -36,16 +37,91 @@ function StatusBadge({ status }: { status: MainboardInvoice["status"] }) {
   );
 }
 
-export default function ReceiptPage() {
+function ReceiptPageContent() {
   const params = useParams<{ invoiceId: string }>();
   const searchParams = useSearchParams();
   const rawInvoiceId = Array.isArray(params.invoiceId) ? params.invoiceId[0] : params.invoiceId;
-  const invoice = findMainboardInvoice(rawInvoiceId || "");
   const transactionId = searchParams.get("tx") || "TX-AP-000000";
   const mode = searchParams.get("mode") === "logged_in" ? "Logged-in checkout" : "Guest checkout";
   const returnTo = searchParams.get("returnTo") === "dashboard" ? "dashboard" : "mainboard";
   const returnHref = returnTo === "dashboard" ? "/dashboard" : "/mainboard";
   const returnLabel = returnTo === "dashboard" ? "Dashboard" : "Mainboard";
+
+  const [invoice, setInvoice] = useState<MainboardInvoice | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const cleanInvoiceId = (rawInvoiceId || "").replace(/^inv-/, "");
+    const localInv = findMainboardInvoice(cleanInvoiceId);
+    if (localInv) {
+      setInvoice({ ...localInv, status: "Paid" });
+      setLoading(false);
+      return;
+    }
+
+    async function fetchQboInvoice() {
+      try {
+        const res = await fetch("/api/quickbooks/invoices");
+        if (res.ok) {
+          const data = await res.json();
+          const qboInv = data.invoices.find((inv: any) => inv.id === cleanInvoiceId || inv.id === rawInvoiceId);
+          if (qboInv) {
+            const mapped: MainboardInvoice = {
+              id: qboInv.id,
+              invoiceNumber: qboInv.docNumber,
+              recipient: qboInv.name,
+              email: "qbo-recipient@agncypay.com",
+              walletId: "AGNCY-QBO-" + qboInv.id,
+              mobile: "+1 (555) 019-2834",
+              brand: "QuickBooks Online",
+              payer: "Client Workspace",
+              payerEmail: "billing@clientworkspace.com",
+              payerAddress: ["123 Business Way", "Suite 100", "New York, NY 10001"],
+              payeeAddress: ["QuickBooks Online Sync"],
+              amount: qboInv.amount,
+              fee: 0,
+              due: qboInv.daysText,
+              invoiceDate: qboInv.date,
+              settlementEta: "Immediate sync",
+              status: "Paid" as const,
+              source: "QuickBooks Online",
+              note: qboInv.detail,
+              jobType: "QuickBooks Invoice",
+              jobNumber: "QBO-" + qboInv.docNumber,
+              poNumber: "QBO-PO-" + qboInv.docNumber,
+              talentName: qboInv.name,
+              talentRealName: qboInv.name,
+              items: [
+                {
+                  title: qboInv.detail,
+                  qty: 1,
+                  rate: qboInv.amount,
+                  feeType: "Fee" as const,
+                }
+              ]
+            };
+            setInvoice(mapped);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch QBO invoice:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchQboInvoice();
+  }, [rawInvoiceId]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#333] border-t-white mx-auto mb-4"></div>
+          <p className="text-[14px] text-[#bdbdbd]">Loading receipt details...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!invoice) {
     return (
@@ -290,5 +366,20 @@ export default function ReceiptPage() {
         </section>
       </main>
     </div>
+  );
+}
+
+export default function ReceiptPage() {
+  return (
+    <React.Suspense fallback={
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#333] border-t-white mx-auto mb-4"></div>
+          <p className="text-[14px] text-[#bdbdbd]">Loading receipt...</p>
+        </div>
+      </div>
+    }>
+      <ReceiptPageContent />
+    </React.Suspense>
   );
 }
