@@ -4,36 +4,35 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import {
   ArrowLeft,
-  BriefcaseBusiness,
+  ArrowRight,
+  Banknote,
   CheckCircle2,
-  ChevronDown,
+  Copy,
   CreditCard,
   FileText,
-  GripVertical,
   Landmark,
-  MoreVertical,
+  Lock,
+  Mail,
+  Paperclip,
+  Plus,
+  ReceiptText,
+  RefreshCw,
   Search,
   Send,
-  Settings,
+  ShieldCheck,
+  Sparkles,
   Split,
-  Trash2,
   Users,
-  Wand2,
   X,
-  Paperclip,
 } from "lucide-react";
-import { FinanceInvoicesSection } from "../../../components/dashboard/FinanceInvoicesSection";
 import { AgncyPayLogo } from "../../../components/payment/AgncyPayLogo";
-import { getInvoicesForRecipient } from "../../../lib/finance-dashboard-invoices";
-import { type MainboardInvoice } from "../../../lib/mainboard";
 import { cn } from "../../../lib/utils";
-import { CsvDropzonePanel } from "../../../components/dashboard/ModelAgencyDashboard";
 
 type TransferMode = "send" | "request";
-type TransferStage = "search" | "invoices" | "amount" | "success";
-
-const BOFA_BUSINESS_DEBIT_VISA_IMAGE =
-  "https://business.bankofamerica.com/content/dam/consumer/business/deposits/checking-accounts/debit-cards/bofa_busdbtcm_v.png";
+type FlowStage = "start" | "recipient" | "amount" | "review" | "processing" | "success";
+type FundingMethod = "balance" | "bank" | "card";
+type DeliverySpeed = "instant" | "standard";
+type Purpose = "friends" | "services" | "invoice" | "payout";
 
 type Recipient = {
   id: string;
@@ -41,10 +40,27 @@ type Recipient = {
   handle: string;
   email: string;
   mobile: string;
-  type: "user" | "brand";
+  type: "talent" | "agency" | "brand" | "vendor";
+  initials: string;
   color: string;
+  suggestedAmount: number;
+  note: string;
+};
+
+type FundingOption = {
+  id: FundingMethod;
+  title: string;
+  detail: string;
+  feeText: string;
+  icon: typeof Landmark;
+};
+
+type BatchInvoice = {
+  id: string;
+  recipient: string;
+  source: string;
   amount: number;
-  rate: string;
+  due: string;
 };
 
 const recipients: Recipient[] = [
@@ -54,10 +70,11 @@ const recipients: Recipient[] = [
     handle: "@agncy11174",
     email: "john@westernmodels.com",
     mobile: "+1 (555) 810-1174",
-    type: "user",
-    color: "from-[#5a382c] to-[#1a1513]",
-    amount: 7840.25,
-    rate: "$250/hr",
+    type: "talent",
+    initials: "JA",
+    color: "from-[#575757] to-[#111111]",
+    suggestedAmount: 7840.25,
+    note: "Runway booking payout",
   },
   {
     id: "amy-holland",
@@ -65,43 +82,23 @@ const recipients: Recipient[] = [
     handle: "@agncy65122",
     email: "amy@studioholland.com",
     mobile: "+1 (555) 324-6512",
-    type: "user",
-    color: "from-[#7d5c44] to-[#1d1410]",
-    amount: 4200,
-    rate: "$175/hr",
+    type: "talent",
+    initials: "AH",
+    color: "from-[#6f6f6f] to-[#151515]",
+    suggestedAmount: 4200,
+    note: "Creator campaign settlement",
   },
   {
-    id: "lucy-che",
-    name: "Lucy Che",
-    handle: "@agncy88179",
-    email: "lucy@chetalent.com",
-    mobile: "+1 (555) 881-7900",
-    type: "user",
-    color: "from-[#7b3d4e] to-[#1e1116]",
-    amount: 3250.5,
-    rate: "$200/hr",
-  },
-  {
-    id: "jessica-bailey",
-    name: "Jessica Bailey",
-    handle: "@agncy67171",
-    email: "jessica@baileycreative.com",
-    mobile: "+1 (555) 671-7100",
-    type: "user",
-    color: "from-[#9d6556] to-[#25110e]",
-    amount: 1800,
-    rate: "$150/hr",
-  },
-  {
-    id: "lola-durant",
-    name: "Lola Durant",
-    handle: "@agncy72176",
-    email: "lola@duranttalent.com",
-    mobile: "+1 (555) 721-7600",
-    type: "user",
-    color: "from-[#8f6c3e] to-[#1c1710]",
-    amount: 9600,
-    rate: "$300/hr",
+    id: "m-models",
+    name: "M Models",
+    handle: "@mmodels",
+    email: "ap@mmodels.com",
+    mobile: "+1 (555) 310-4400",
+    type: "agency",
+    initials: "MM",
+    color: "from-[#2f2f2f] to-[#050505]",
+    suggestedAmount: 12800,
+    note: "Agency batch payout",
   },
   {
     id: "nike",
@@ -110,380 +107,292 @@ const recipients: Recipient[] = [
     email: "treasury@nike.com",
     mobile: "+1 (503) 671-6453",
     type: "brand",
-    color: "from-[#2b2b2b] to-[#050505]",
-    amount: 12500,
-    rate: "Campaign",
+    initials: "NI",
+    color: "from-[#3f3f46] to-[#090909]",
+    suggestedAmount: 12500,
+    note: "Brand invoice request",
   },
   {
-    id: "bank-of-america",
-    name: "Bank of America",
-    handle: "@bankofamerica",
-    email: "business@bofa.com",
-    mobile: "+1 (800) 432-1000",
-    type: "brand",
-    color: "from-[#1f4c98] to-[#11213f]",
-    amount: 2840.25,
-    rate: "Bank transfer",
+    id: "soundcloud",
+    name: "SoundCloud",
+    handle: "@soundcloud",
+    email: "payments@soundcloud.com",
+    mobile: "+1 (555) 407-8100",
+    type: "vendor",
+    initials: "SC",
+    color: "from-[#525252] to-[#111111]",
+    suggestedAmount: 3040,
+    note: "Streaming revenue transfer",
   },
 ];
 
-const moreOptions = [
-  { label: "Split Payout", icon: Users, href: "/dashboard/splits" },
-  { label: "Multi Payout", icon: Wand2, href: "/dashboard/payouts" },
-  { label: "Send an invoice", icon: FileText, href: "/dashboard/invoices" },
-  { label: "Apply for AgncyPay card", icon: CreditCard, href: "/dashboard/wallet/link" },
-] as const;
-
 const currencies = [
-  { code: "GBP", name: "British Pound", countryCode: "gb", rate: 0.78 },
-  { code: "AED", name: "United Arab Emirates Dirham", countryCode: "ae", rate: 3.67 },
-  { code: "EUR", name: "Euro", countryCode: "eu", rate: 0.92 },
-  { code: "USD", name: "United States Dollar", countryCode: "us", rate: 1 },
-  { code: "AUD", name: "Australian Dollar", countryCode: "au", rate: 1.52 },
-  { code: "BAM", name: "Bosnia-Herzegovina Convertible Mark", countryCode: "ba", rate: 1.8 },
-  { code: "BGN", name: "Bulgarian Lev", countryCode: "bg", rate: 1.8 },
-  { code: "BHD", name: "Bahraini Dinar", countryCode: "bh", rate: 0.38 },
-  { code: "BIF", name: "Burundian Franc", countryCode: "bi", rate: 2870 },
-  { code: "BOB", name: "Bolivian Boliviano", countryCode: "bo", rate: 6.91 },
-  { code: "BRL", name: "Brazilian Real", countryCode: "br", rate: 5.3 },
-  { code: "ARS", name: "Argentine Peso", countryCode: "ar", rate: 894 },
+  { code: "USD", name: "United States Dollar", symbol: "$" },
+  { code: "EUR", name: "Euro", symbol: "€" },
+  { code: "GBP", name: "British Pound", symbol: "£" },
+  { code: "AED", name: "UAE Dirham", symbol: "د.إ" },
 ] as const;
 
-type Currency = (typeof currencies)[number];
-type CurrencyCode = Currency["code"];
+type CurrencyCode = (typeof currencies)[number]["code"];
 
-const batchInvoices = [
-  { id: "QB-inv#29475 - 2918...", requested: "paid", status: "Done", due: 27, amount: 1500, currency: "USD" as CurrencyCode, client: "Nike, Inc." },
-  { id: "QB-inv#38485 - 2299...", requested: "request", status: "In Process", due: 2, amount: 5400, currency: "USD" as CurrencyCode, client: "The Gap, Inc." },
-  { id: "QB-inv#88573 - 8857...", requested: "request", status: "In Process", due: 20, amount: 12000, currency: "USD" as CurrencyCode, client: "Levi Strauss & Co." },
-  { id: "QB-inv#88442 - 1184...", requested: "request", status: "In Process", due: 19, amount: 2800, currency: "EUR" as CurrencyCode, client: "Adidas AG" },
-  { id: "QB-inv#99781 - 7463...", requested: "paid", status: "Done", due: 25, amount: 1200, currency: "GBP" as CurrencyCode, client: "Burberry Group plc" },
-  { id: "QB-inv#77362 - 9911...", requested: "paid", status: "Done", due: 7, amount: 800.65, currency: "GBP" as CurrencyCode, client: "Timberland LLC" },
-  { id: "QB-inv#65622 - 7712...", requested: "paid", status: "Done", due: 30, amount: 1100.11, currency: "USD" as CurrencyCode, client: "Levi Strauss & Co." },
+const fundingOptions: FundingOption[] = [
+  {
+    id: "balance",
+    title: "AgncyPay Balance",
+    detail: "$28,450.72 available",
+    feeText: "No fee",
+    icon: Banknote,
+  },
+  {
+    id: "bank",
+    title: "Chase Business Checking",
+    detail: "Bank ****1234",
+    feeText: "No fee · 1 business day",
+    icon: Landmark,
+  },
+  {
+    id: "card",
+    title: "Corporate Visa",
+    detail: "Card ****8930",
+    feeText: "2.9% demo card fee",
+    icon: CreditCard,
+  },
 ];
 
-function formatAmount(value: number, currency: CurrencyCode) {
-  const selectedCurrency = currencies.find((item) => item.code === currency) || currencies[0];
+const purposeOptions: { id: Purpose; title: string; detail: string }[] = [
+  { id: "friends", title: "Personal", detail: "Quick transfer without invoice controls." },
+  { id: "services", title: "Services", detail: "Best for creator, vendor, or contractor payments." },
+  { id: "invoice", title: "Invoice", detail: "Attach invoice memo and reconciliation details." },
+  { id: "payout", title: "Payout", detail: "Use for agency, talent, or platform payout runs." },
+];
 
+const batchInvoices: BatchInvoice[] = [
+  { id: "QB-29475", recipient: "Nike, Inc.", source: "QuickBooks", amount: 1500, due: "27 days" },
+  { id: "QB-38485", recipient: "The Gap, Inc.", source: "QuickBooks", amount: 5400, due: "2 days" },
+  { id: "MB-6984", recipient: "M Models", source: "Mainboard", amount: 3040, due: "Today" },
+  { id: "SC-2044", recipient: "SoundCloud", source: "Music income", amount: 3040, due: "Ready" },
+  { id: "QB-88442", recipient: "Adidas AG", source: "QuickBooks", amount: 2800, due: "19 days" },
+];
+
+function formatCurrency(value: number, currency: CurrencyCode) {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency,
     maximumFractionDigits: 2,
-  }).format(value * selectedCurrency.rate);
+  }).format(value);
 }
 
-function FlagIcon({ countryCode, className }: { countryCode: string; className?: string }) {
-  return (
-    <img
-      src={`https://flagcdn.com/w40/${countryCode}.png`}
-      srcSet={`https://flagcdn.com/w80/${countryCode}.png 2x`}
-      alt={`${countryCode.toUpperCase()} flag`}
-      className={cn("h-6 w-8 rounded-[3px] object-cover", className)}
-      loading="lazy"
-    />
-  );
+function avatarLabel(type: Recipient["type"]) {
+  if (type === "brand") return "Brand";
+  if (type === "agency") return "Agency";
+  if (type === "vendor") return "Vendor";
+  return "Talent";
 }
 
 function RecipientAvatar({ recipient, size = "md" }: { recipient: Recipient; size?: "sm" | "md" | "lg" }) {
-  const initials = recipient.name
-    .split(" ")
-    .map((part) => part[0])
-    .join("")
-    .slice(0, 2);
-
   return (
     <div
       className={cn(
-        "flex shrink-0 items-center justify-center overflow-hidden rounded-[6px] border border-white/10 bg-gradient-to-br text-center font-black text-white",
+        "flex shrink-0 items-center justify-center rounded-full border border-white/10 bg-gradient-to-br text-center font-black text-white",
         recipient.color,
-        size === "sm" && "h-10 w-10 text-[11px]",
-        size === "md" && "h-14 w-14 text-[14px]",
-        size === "lg" && "h-[74px] w-[74px] text-[18px]"
+        size === "sm" && "h-10 w-10 text-[12px]",
+        size === "md" && "h-14 w-14 text-[15px]",
+        size === "lg" && "h-20 w-20 text-[22px]"
       )}
     >
-      {recipient.type === "brand" ? (
-        <BriefcaseBusiness className="h-6 w-6" />
-      ) : (
-        <span>{initials}</span>
-      )}
+      {recipient.initials}
     </div>
   );
 }
 
-function TopBar() {
+function StepPill({ active, done, label }: { active: boolean; done: boolean; label: string }) {
   return (
-    <header className="flex flex-nowrap items-center justify-start gap-4 pb-4">
-      <img src="/agncypaybrand.png" alt="AgncyPay" className="h-[52px] w-auto shrink-0 object-contain scale-[1.5] origin-left" />
+    <div className="flex items-center gap-2">
+      <span
+        className={cn(
+          "flex h-6 w-6 items-center justify-center rounded-full border text-[11px] font-black",
+          done && "border-white bg-white text-black",
+          active && !done && "border-white text-white",
+          !active && !done && "border-[#333] text-[#777]"
+        )}
+      >
+        {done ? <CheckCircle2 className="h-3.5 w-3.5" /> : null}
+      </span>
+      <span className={cn("text-[12px] font-semibold", active || done ? "text-white" : "text-[#777]")}>{label}</span>
+    </div>
+  );
+}
+
+function ProgressHeader({ stage }: { stage: FlowStage }) {
+  const order: FlowStage[] = ["recipient", "amount", "review", "success"];
+  const currentIndex = stage === "start" ? 0 : order.indexOf(stage) === -1 ? 2 : order.indexOf(stage);
+
+  return (
+    <div className="hidden items-center gap-5 rounded-full border border-[#282828] bg-[#080808] px-4 py-2 md:flex">
+      {[
+        { id: "recipient", label: "Recipient" },
+        { id: "amount", label: "Amount" },
+        { id: "review", label: "Review" },
+        { id: "success", label: "Done" },
+      ].map((item, index) => (
+        <StepPill
+          key={item.id}
+          active={index === currentIndex}
+          done={stage === "success" || index < currentIndex}
+          label={item.label}
+        />
+      ))}
+    </div>
+  );
+}
+
+function TopBar({ stage }: { stage: FlowStage }) {
+  return (
+    <header className="flex flex-col gap-4 border-b border-[#171717] pb-5 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex items-center gap-4">
+        <Link
+          href="/dashboard"
+          className="inline-flex h-10 items-center gap-2 rounded-[7px] border border-[#303030] bg-[#060606] px-3 text-[13px] font-semibold text-[#d7d7d7] hover:border-[#666] hover:text-white"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Dashboard
+        </Link>
+        <AgncyPayLogo className="h-[24px] w-[70px]" imageClassName="h-full w-full" />
+      </div>
+      <ProgressHeader stage={stage} />
     </header>
   );
 }
 
-function FooterBar() {
-  return (
-    <footer className="mt-16 border-y border-[#343434]">
-      <div className="mx-auto flex max-w-[1040px] flex-wrap items-center justify-center gap-8 px-4 py-8 text-[12px] font-bold text-white">
-        <AgncyPayLogo className="h-[20px] w-[50px]" imageClassName="h-full w-full" />
-        <Link href="/dashboard/support">Help</Link>
-        <Link href="/dashboard/support">Contact Us</Link>
-        <Link href="/dashboard/verification">Security</Link>
-        <Link href="/dashboard/settings">Fees</Link>
-      </div>
-    </footer>
-  );
-}
-
-function CurrencyPickerModal({
-  selectedCurrency,
-  search,
-  onSearchChange,
-  onSelect,
-  onClose,
-}: {
-  selectedCurrency: Currency;
-  search: string;
-  onSearchChange: (value: string) => void;
-  onSelect: (currency: Currency) => void;
-  onClose: () => void;
-}) {
-  const filteredCurrencies = currencies.filter((currency) =>
-    [currency.code, currency.name].join(" ").toLowerCase().includes(search.trim().toLowerCase())
-  );
-
-  return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/62 px-4 py-10 backdrop-blur-[1px]">
-      <div className="mx-auto w-full max-w-[840px]">
-        <div className="relative">
-          <Search className="pointer-events-none absolute left-6 top-1/2 h-5 w-5 -translate-y-1/2 text-[#858585]" />
-          <input
-            autoFocus
-            value={search}
-            onChange={(event) => onSearchChange(event.target.value)}
-            placeholder="Search currency by name or code"
-            className="h-[58px] w-full rounded-full border border-[#323232] bg-[#1f1f1f] pl-16 pr-14 text-[22px] font-black text-white outline-none placeholder:text-[#777] focus:border-[#6a6a6a]"
-          />
-          <button
-            type="button"
-            onClick={onClose}
-            className="absolute right-5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full text-[#cfcfcf] hover:bg-white/[0.08]"
-            aria-label="Close currency selector"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-
-        <div className="mt-3 min-h-[680px] rounded-[3px] bg-[#252322] px-8 py-7 sm:px-28">
-          <p className="mb-8 text-[10px] font-black text-white">Recent searches</p>
-          <div className="space-y-3">
-            {filteredCurrencies.map((currency) => {
-              const isSelected = currency.code === selectedCurrency.code;
-
-              return (
-                <button
-                  key={currency.code}
-                  type="button"
-                  onClick={() => onSelect(currency)}
-                  className={cn(
-                    "flex min-h-[60px] w-full items-center justify-between gap-4 rounded-[7px] px-4 text-left",
-                    isSelected ? "bg-black" : "hover:bg-black/35"
-                  )}
-                >
-                  <span className="flex min-w-0 items-center gap-4">
-                    <FlagIcon countryCode={currency.countryCode} className="h-8 w-11" />
-                    <span className="min-w-0">
-                      <span className="block truncate text-[14px] font-black text-white">{currency.name}</span>
-                      <span className="block text-[13px] font-black text-white">{currency.code}</span>
-                    </span>
-                  </span>
-                  {isSelected && (
-                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#00ef27] text-black">
-                      <CheckCircle2 className="h-4 w-4" />
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-            {filteredCurrencies.length === 0 && (
-              <div className="rounded-[7px] border border-[#454545] bg-black/25 px-4 py-5 text-[13px] font-bold text-[#bdbdbd]">
-                No currency found.
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function BatchPaymentModal({
+function BatchModal({
   selectedIds,
   onToggle,
-  onToggleAll,
   onClose,
-  onCreate,
+  onUseBatch,
 }: {
   selectedIds: string[];
   onToggle: (id: string) => void;
-  onToggleAll: () => void;
   onClose: () => void;
-  onCreate: () => void;
+  onUseBatch: () => void;
 }) {
-  const allSelected = selectedIds.length === batchInvoices.length;
   const selectedTotal = batchInvoices
     .filter((invoice) => selectedIds.includes(invoice.id))
     .reduce((total, invoice) => total + invoice.amount, 0);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/62 px-4 py-8 backdrop-blur-[1px]">
-      <div className="w-full max-w-[1180px] overflow-hidden rounded-[9px] border border-[#343434] bg-[#080808] shadow-2xl">
-        <div className="grid h-14 grid-cols-[42px_44px_minmax(220px,1.35fr)_160px_150px_90px_150px_minmax(150px,1fr)_34px] items-center border-b border-[#272727] bg-[#222] text-[15px] font-black text-white">
-          <div className="flex h-full items-center justify-center bg-[#22a92d] text-white">
-            <span className="rounded-full bg-[#1a8f25] px-1.5 py-1 text-[16px] leading-none">qb</span>
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/70 px-4 py-8 backdrop-blur-sm">
+      <section className="w-full max-w-[920px] overflow-hidden rounded-[12px] border border-[#333] bg-[#080808] shadow-2xl">
+        <div className="flex items-center justify-between border-b border-[#222] px-5 py-4">
+          <div>
+            <h2 className="text-[22px] font-semibold text-white">Create batch payment</h2>
+            <p className="mt-1 text-[13px] text-[#8d8d8d]">Select synced invoices and turn them into one payment run.</p>
           </div>
-          <label className="flex justify-center">
-            <input
-              type="checkbox"
-              checked={allSelected}
-              onChange={onToggleAll}
-              aria-label="Select all batch invoices"
-              className="h-5 w-5 rounded border-[#444] bg-black accent-white"
-            />
-          </label>
-          <span>Invoice(s)</span>
-          <span>Requested</span>
-          <span>Status</span>
-          <span>Due</span>
-          <span>Amount</span>
-          <span>Client</span>
-          <button type="button" onClick={onClose} aria-label="Close batch payment">
-            <X className="h-5 w-5 text-[#cfcfcf]" />
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-9 w-9 items-center justify-center rounded-[7px] border border-[#333] text-[#d7d7d7] hover:border-[#666] hover:text-white"
+            aria-label="Close batch payment"
+          >
+            <X className="h-5 w-5" />
           </button>
         </div>
 
-        <div className="max-h-[520px] overflow-y-auto">
-          {batchInvoices.map((invoice) => {
-            const checked = selectedIds.includes(invoice.id);
+        <div className="max-h-[460px] overflow-y-auto p-4">
+          <div className="grid gap-3">
+            {batchInvoices.map((invoice) => {
+              const checked = selectedIds.includes(invoice.id);
 
-            return (
-              <div
-                key={invoice.id}
-                className={cn(
-                  "grid min-h-[66px] grid-cols-[42px_44px_minmax(220px,1.35fr)_160px_150px_90px_150px_minmax(150px,1fr)_34px] items-center border-b border-[#202020] text-[15px] font-black",
-                  checked ? "bg-white/[0.04]" : "bg-[#090909]"
-                )}
-              >
-                <div className="flex justify-center text-[#8b8b8b]">
-                  <GripVertical className="h-4 w-4" />
-                </div>
-                <label className="flex justify-center">
-                  <input
-                    type="checkbox"
-                    checked={checked}
-                    onChange={() => onToggle(invoice.id)}
-                    aria-label={`Select ${invoice.id}`}
-                    className="h-5 w-5 rounded border-[#444] bg-black accent-white"
-                  />
-                </label>
-                <span className="truncate pr-4">{invoice.id}</span>
-                <span>
-                  {invoice.requested === "paid" ? (
-                    <span className="inline-flex h-9 min-w-[76px] items-center justify-center rounded-full border border-[#10b95f] bg-[#082315] px-3 text-[#70ff9e]">
-                      <img src="/AlogoTransparent.png" alt="A" className="h-[26px] w-[26px] rounded-[3px] object-contain" />
-                      <span className="ml-1 text-[13px] font-black uppercase tracking-wide">Paid</span>
-                    </span>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => onToggle(invoice.id)}
-                      className="inline-flex h-7 w-full max-w-[152px] items-center justify-center gap-1 rounded-full border border-[#ff8a00] bg-[#261603] px-2 text-[10px] uppercase text-white hover:bg-[#3a200a]"
-                    >
-                      <span className="font-bold leading-none">Request Pay</span>
-                      <img src="/AlogoTransparent.png" alt="A" className="h-[18px] w-[18px] shrink-0 rounded-[3px] object-contain" />
-                      <span className="font-bold leading-none">Pay</span>
-                    </button>
+              return (
+                <button
+                  key={invoice.id}
+                  type="button"
+                  onClick={() => onToggle(invoice.id)}
+                  className={cn(
+                    "grid grid-cols-[24px_1fr_auto] items-center gap-4 rounded-[9px] border px-4 py-4 text-left transition-colors",
+                    checked ? "border-white bg-white text-black" : "border-[#303030] bg-black text-white hover:border-[#666]"
                   )}
-                </span>
-                <span>
-                  <span className="inline-flex h-8 items-center gap-2 rounded-full border border-[#242424] bg-black px-3 text-[#9d9d9d]">
-                    {invoice.status === "Done" ? (
-                      <CheckCircle2 className="h-4 w-4 text-[#08d66c]" />
-                    ) : (
-                      <span className="h-4 w-4 rounded-full border border-[#777]" />
+                >
+                  <span
+                    className={cn(
+                      "flex h-5 w-5 items-center justify-center rounded border",
+                      checked ? "border-black bg-black text-white" : "border-[#555]"
                     )}
-                    {invoice.status}
+                  >
+                    {checked ? <CheckCircle2 className="h-3.5 w-3.5" /> : null}
                   </span>
-                </span>
-                <span>{invoice.due}</span>
-                <span>{formatAmount(invoice.amount, invoice.currency)}</span>
-                <span className="truncate pr-3">{invoice.client}</span>
-                <button type="button" aria-label={`More actions for ${invoice.id}`}>
-                  <MoreVertical className="h-5 w-5 text-[#8f8f8f]" />
+                  <span className="min-w-0">
+                    <span className="block truncate text-[15px] font-semibold">{invoice.recipient}</span>
+                    <span className={cn("mt-1 block text-[12px]", checked ? "text-[#333]" : "text-[#888]")}>
+                      {invoice.id} · {invoice.source} · due {invoice.due}
+                    </span>
+                  </span>
+                  <span className="text-[15px] font-semibold">{formatCurrency(invoice.amount, "USD")}</span>
                 </button>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
 
-        <div className="flex flex-col gap-3 border-t border-[#252525] bg-[#0b0b0b] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="text-[13px] font-bold text-[#cfcfcf]">
-            {selectedIds.length} invoice{selectedIds.length === 1 ? "" : "s"} selected - Approx. total {formatAmount(selectedTotal, "USD")}
-          </div>
+        <div className="flex flex-col gap-3 border-t border-[#222] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-[13px] font-semibold text-[#d7d7d7]">
+            {selectedIds.length} selected · {formatCurrency(selectedTotal, "USD")}
+          </p>
           <div className="flex gap-3">
             <button
               type="button"
               onClick={onClose}
-              className="h-9 rounded-[6px] border border-[#ff4e2f] bg-[#ff4e2f] px-4 text-[12px] font-black text-white hover:bg-[#ff684d]"
+              className="h-10 rounded-[7px] border border-[#444] px-5 text-[13px] font-semibold text-white hover:border-[#666]"
             >
               Cancel
             </button>
             <button
               type="button"
-              onClick={onCreate}
+              onClick={onUseBatch}
               disabled={selectedIds.length === 0}
-              className="h-9 rounded-[6px] border border-white bg-white px-4 text-[12px] font-black text-black hover:bg-[#e5e5e5] disabled:cursor-not-allowed disabled:opacity-50"
+              className="h-10 rounded-[7px] border border-white bg-white px-5 text-[13px] font-semibold text-black hover:bg-[#e8e8e8] disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Create Batch Payment
+              Use selected batch
             </button>
           </div>
         </div>
-      </div>
+      </section>
     </div>
   );
 }
 
 export default function SendRequestPage() {
   const [mode, setMode] = useState<TransferMode>("send");
-  const [stage, setStage] = useState<TransferStage>("search");
+  const [stage, setStage] = useState<FlowStage>("start");
   const [query, setQuery] = useState("");
-  const [selectedId, setSelectedId] = useState(recipients[0].id);
+  const [selectedRecipientId, setSelectedRecipientId] = useState(recipients[0].id);
+  const [amount, setAmount] = useState(recipients[0].suggestedAmount.toFixed(2));
   const [currency, setCurrency] = useState<CurrencyCode>("USD");
-  const [amount, setAmount] = useState(recipients[0].amount.toFixed(2));
-  const [message, setMessage] = useState("");
-  const [splitEnabled, setSplitEnabled] = useState(false);
-  const [batchCreated, setBatchCreated] = useState(false);
-  const [multiPayout, setMultiPayout] = useState(false);
-  const [isCurrencyOpen, setIsCurrencyOpen] = useState(false);
-  const [currencySearch, setCurrencySearch] = useState("");
+  const [note, setNote] = useState(recipients[0].note);
+  const [purpose, setPurpose] = useState<Purpose>("services");
+  const [fundingMethod, setFundingMethod] = useState<FundingMethod>("balance");
+  const [deliverySpeed, setDeliverySpeed] = useState<DeliverySpeed>("instant");
   const [isBatchOpen, setIsBatchOpen] = useState(false);
-  const [batchSelectedIds, setBatchSelectedIds] = useState<string[]>(() =>
-    batchInvoices.filter((invoice) => invoice.requested === "request").map((invoice) => invoice.id)
-  );
-  const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
-  const [autosplitInvoiceIds, setAutosplitInvoiceIds] = useState<string[]>([]);
+  const [batchIds, setBatchIds] = useState<string[]>(["QB-38485", "MB-6984"]);
+  const [copyState, setCopyState] = useState<"idle" | "copied">("idle");
+  const [receiptId, setReceiptId] = useState("AP-DEMO-482901");
 
-  const selectedRecipient = recipients.find((recipient) => recipient.id === selectedId) || recipients[0];
-  const recipientInvoices = getInvoicesForRecipient(selectedRecipient.id, selectedRecipient.name);
+  const selectedRecipient = recipients.find((recipient) => recipient.id === selectedRecipientId) || recipients[0];
   const selectedCurrency = currencies.find((item) => item.code === currency) || currencies[0];
-  const amountValue = Number(amount) || 0;
-  const splitPercent = 80;
-  const talentAmount = amountValue * (splitPercent / 100);
-  const fee = Math.max(3.25, amountValue * 0.00042);
-  const total = amountValue;
-  const recipientGets = mode === "send" ? Math.max(0, talentAmount - fee) : talentAmount;
+  const numericAmount = Number(amount) || 0;
+  const selectedFunding = fundingOptions.find((option) => option.id === fundingMethod) || fundingOptions[0];
+  const batchTotal = batchInvoices
+    .filter((invoice) => batchIds.includes(invoice.id))
+    .reduce((total, invoice) => total + invoice.amount, 0);
+  const cardFee = fundingMethod === "card" && mode === "send" ? numericAmount * 0.029 : 0;
+  const instantFee = deliverySpeed === "instant" && fundingMethod !== "balance" && mode === "send" ? Math.max(1.5, numericAmount * 0.0025) : 0;
+  const platformFee = purpose === "invoice" && mode === "request" ? Math.max(2, numericAmount * 0.004) : 0;
+  const total = mode === "send" ? numericAmount + cardFee + instantFee : numericAmount;
+  const recipientGets = mode === "send" ? numericAmount : numericAmount - platformFee;
 
   const filteredRecipients = useMemo(() => {
     const normalized = query.trim().toLowerCase();
 
-    if (!normalized) return recipients.slice(0, 5);
+    if (!normalized) return recipients;
 
     return recipients.filter((recipient) =>
       [recipient.name, recipient.handle, recipient.email, recipient.mobile, recipient.type]
@@ -494,63 +403,140 @@ export default function SendRequestPage() {
   }, [query]);
 
   const selectRecipient = (recipient: Recipient) => {
-    setSelectedId(recipient.id);
-    setAmount(recipient.amount.toFixed(2));
-    setSelectedInvoiceId(null);
-    setAutosplitInvoiceIds([]);
-    setStage("invoices");
-    setMessage("");
-  };
-
-  const selectInvoice = (invoice: MainboardInvoice) => {
-    setSelectedInvoiceId(invoice.id);
-    setAmount((invoice.amount + invoice.fee).toFixed(2));
+    setSelectedRecipientId(recipient.id);
+    setAmount(recipient.suggestedAmount.toFixed(2));
+    setNote(recipient.note);
     setStage("amount");
-    setMessage("");
   };
 
-  const toggleAutosplitInvoice = (invoiceId: string) => {
-    setAutosplitInvoiceIds((current) =>
-      current.includes(invoiceId) ? current.filter((id) => id !== invoiceId) : [...current, invoiceId]
-    );
+  const submitTransfer = () => {
+    setReceiptId(`AP-${Math.floor(100000 + Math.random() * 900000)}`);
+    setStage("processing");
+    window.setTimeout(() => setStage("success"), 1300);
   };
 
-  const showMessage = (value: string) => {
-    setMessage(value);
-    window.setTimeout(() => setMessage(""), 2600);
+  const copyReceipt = () => {
+    setCopyState("copied");
+    window.setTimeout(() => setCopyState("idle"), 1600);
   };
 
-  const toggleBatchInvoice = (invoiceId: string) => {
-    setBatchSelectedIds((current) =>
-      current.includes(invoiceId) ? current.filter((id) => id !== invoiceId) : [...current, invoiceId]
-    );
+  const resetFlow = () => {
+    setQuery("");
+    setNote(selectedRecipient.note);
+    setStage("start");
+    setCopyState("idle");
   };
 
-  const toggleAllBatchInvoices = () => {
-    setBatchSelectedIds((current) =>
-      current.length === batchInvoices.length ? [] : batchInvoices.map((invoice) => invoice.id)
-    );
+  const startMode = (nextMode: TransferMode) => {
+    setMode(nextMode);
+    setStage("recipient");
   };
 
   return (
-    <main className="min-h-screen bg-[#080808] text-white">
-      <div className="mx-auto flex min-h-screen w-full max-w-[1480px] flex-col px-5 py-4 sm:px-7 lg:px-10">
-        <TopBar />
+    <main className="min-h-screen bg-[#050505] text-white">
+      <div className="mx-auto flex min-h-screen w-full max-w-[1280px] flex-col px-5 py-5 sm:px-7 lg:px-10">
+        <TopBar stage={stage} />
 
-        {stage === "search" && (
-          <section className="mx-auto grid w-full max-w-[720px] flex-1 grid-cols-1 content-start gap-12 pb-8 pt-20 lg:max-w-[760px] xl:max-w-[920px] xl:grid-cols-[1fr_280px] xl:pt-24">
-            <div>
-              <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-                <h1 className="text-[20px] font-black tracking-[-0.01em]">Send and request money</h1>
-                <div className="inline-flex rounded-full border border-[#343434] bg-[#111] p-1">
-                  {(["send", "request"] as const).map((item) => (
+        {stage === "start" && (
+          <section className="grid flex-1 place-items-center py-10">
+            <div className="w-full max-w-[980px]">
+              <div className="mx-auto max-w-[680px] text-center">
+                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full border border-[#303030] bg-[#080808]">
+                  <Sparkles className="h-6 w-6 text-white" />
+                </div>
+                <h1 className="mt-6 text-[42px] font-semibold leading-none tracking-[-0.04em] text-white sm:text-[58px]">
+                  Send or request money
+                </h1>
+                <p className="mt-5 text-[16px] leading-7 text-[#9b9b9b]">
+                  Move money to talent, agencies, brands, music platforms, and vendors with a guided AgncyPay checkout.
+                </p>
+              </div>
+
+              <div className="mt-10 grid grid-cols-1 gap-4 md:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={() => startMode("send")}
+                  className="rounded-[12px] border border-[#303030] bg-[#080808] p-6 text-left transition-colors hover:border-white"
+                >
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white text-black">
+                    <Send className="h-5 w-5" />
+                  </div>
+                  <h2 className="mt-7 text-[26px] font-semibold text-white">Send payment</h2>
+                  <p className="mt-3 text-[14px] leading-6 text-[#8d8d8d]">
+                    Pay a person, agency, brand, vendor, or synced invoice recipient.
+                  </p>
+                  <span className="mt-7 inline-flex items-center gap-2 text-[13px] font-bold text-white">
+                    Start sending <ArrowRight className="h-4 w-4" />
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => startMode("request")}
+                  className="rounded-[12px] border border-[#303030] bg-[#080808] p-6 text-left transition-colors hover:border-white"
+                >
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white text-black">
+                    <ReceiptText className="h-5 w-5" />
+                  </div>
+                  <h2 className="mt-7 text-[26px] font-semibold text-white">Request money</h2>
+                  <p className="mt-3 text-[14px] leading-6 text-[#8d8d8d]">
+                    Create a payment request with memo, invoice context, and shareable receipt trail.
+                  </p>
+                  <span className="mt-7 inline-flex items-center gap-2 text-[13px] font-bold text-white">
+                    Start requesting <ArrowRight className="h-4 w-4" />
+                  </span>
+                </button>
+              </div>
+
+              <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-3">
+                {[
+                  { icon: Split, title: "Batch-ready", detail: "Pull synced QuickBooks or Mainboard invoices into one run." },
+                  { icon: Lock, title: "Review first", detail: "Every transfer goes through a final confirmation screen." },
+                  { icon: ShieldCheck, title: "Demo receipts", detail: "Generate a realistic status and receipt after submit." },
+                ].map((item) => {
+                  const Icon = item.icon;
+
+                  return (
+                    <div key={item.title} className="rounded-[10px] border border-[#242424] bg-black p-4">
+                      <Icon className="h-5 w-5 text-white" />
+                      <p className="mt-3 text-[14px] font-semibold text-white">{item.title}</p>
+                      <p className="mt-1 text-[12px] leading-5 text-[#777]">{item.detail}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {stage === "recipient" && (
+          <section className="mx-auto w-full max-w-[840px] flex-1 py-10">
+            <button
+              type="button"
+              onClick={() => setStage("start")}
+              className="mb-6 inline-flex items-center gap-2 text-[13px] font-semibold text-[#bdbdbd] hover:text-white"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back
+            </button>
+
+            <div className="rounded-[13px] border border-[#303030] bg-[#080808] p-5 sm:p-7">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h1 className="text-[30px] font-semibold text-white">
+                    Who do you want to {mode === "send" ? "pay" : "request from"}?
+                  </h1>
+                  <p className="mt-2 text-[14px] text-[#8d8d8d]">Search by name, email, phone, wallet ID, or organization.</p>
+                </div>
+                <div className="inline-flex rounded-full border border-[#303030] bg-black p-1">
+                  {(["send", "request"] as TransferMode[]).map((item) => (
                     <button
                       key={item}
                       type="button"
                       onClick={() => setMode(item)}
                       className={cn(
-                        "h-8 rounded-full px-4 text-[12px] font-black capitalize",
-                        mode === item ? "bg-white text-black" : "text-[#bdbdbd]"
+                        "h-9 rounded-full px-5 text-[13px] font-bold capitalize",
+                        mode === item ? "bg-white text-black" : "text-[#8d8d8d] hover:text-white"
                       )}
                     >
                       {item}
@@ -559,402 +545,483 @@ export default function SendRequestPage() {
                 </div>
               </div>
 
-              <div className="rounded-[7px] bg-[#2b2929] pb-5">
-                <label className="relative block">
-                  <Search className="pointer-events-none absolute left-5 top-1/2 h-5 w-5 -translate-y-1/2 text-[#898989]" />
-                  <input
-                    autoFocus
-                    value={query}
-                    onChange={(event) => setQuery(event.target.value)}
-                    placeholder="Name, Agency ID, email, mobile"
-                    className="h-[56px] w-full rounded-full border border-[#5b5959] bg-[#302e2e] pl-14 pr-5 text-[13px] font-bold text-white outline-none placeholder:text-[#8d8b8b] focus:border-[#9a9a9a]"
-                  />
-                </label>
+              <label className="relative mt-6 block">
+                <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#777]" />
+                <input
+                  autoFocus
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder="Name, email, phone, @wallet"
+                  className="h-14 w-full rounded-full border border-[#333] bg-black pl-12 pr-5 text-[15px] font-semibold text-white outline-none placeholder:text-[#666] focus:border-[#777]"
+                />
+              </label>
 
-                <div className="px-4 pt-5">
-                  <p className="mb-3 text-[11px] font-black text-white">
-                    {query.trim() ? "Search results" : ""}
-                  </p>
-                  <div className="space-y-3">
-                    {query.trim() ? (
-                      <>
-                        {filteredRecipients.map((recipient) => (
-                          <button
-                            key={recipient.id}
-                            type="button"
-                            onClick={() => selectRecipient(recipient)}
-                            className="flex w-full items-center gap-4 rounded-[7px] px-2 py-1.5 text-left transition-colors hover:bg-white/[0.06]"
-                          >
-                            <RecipientAvatar recipient={recipient} size="sm" />
-                            <span className="min-w-0">
-                              <span className="block truncate text-[14px] font-black text-white">{recipient.name}</span>
-                              <span className="block truncate text-[10px] font-bold text-[#c4c4c4]">{recipient.handle}</span>
-                            </span>
-                          </button>
-                        ))}
-                        {filteredRecipients.length === 0 && (
-                          <div className="rounded-[7px] border border-[#454545] bg-black/25 px-4 py-5 text-[13px] font-bold text-[#bdbdbd]">
-                            No recipient found. Try a name, agency ID, email, or mobile number.
-                          </div>
-                        )}
-                      </>
-                    ) : (
-                      <CsvDropzonePanel />
-                    )}
-                  </div>
-                  <div className="mt-4 flex justify-center">
-                    <button
-                      type="button"
-                      onClick={() => setQuery("")}
-                      className="text-[12px] font-black text-[#22e03b] underline"
-                    >
-                      Clear all
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <aside className="pt-1">
-              <h2 className="mb-7 text-[20px] font-black">More options</h2>
-              <div className="space-y-6">
-                {moreOptions.map((option) => {
-                  const Icon = option.icon;
-                  return (
-                    <Link
-                      key={option.label}
-                      href={option.href}
-                      className="flex items-center gap-5 text-[14px] font-black text-white hover:text-[#d7d7d7]"
-                    >
-                      <span className="flex h-9 w-9 items-center justify-center">
-                        <Icon className="h-8 w-8" />
+              <div className="mt-6 space-y-3">
+                {filteredRecipients.map((recipient) => (
+                  <button
+                    key={recipient.id}
+                    type="button"
+                    onClick={() => selectRecipient(recipient)}
+                    className="flex w-full items-center justify-between gap-4 rounded-[10px] border border-[#242424] bg-black px-4 py-4 text-left transition-colors hover:border-[#666]"
+                  >
+                    <span className="flex min-w-0 items-center gap-4">
+                      <RecipientAvatar recipient={recipient} size="sm" />
+                      <span className="min-w-0">
+                        <span className="block truncate text-[15px] font-semibold text-white">{recipient.name}</span>
+                        <span className="mt-1 block truncate text-[12px] text-[#888]">
+                          {recipient.handle} · {recipient.email}
+                        </span>
                       </span>
-                      {option.label}
-                    </Link>
-                  );
-                })}
+                    </span>
+                    <span className="hidden rounded-full border border-[#333] px-3 py-1 text-[11px] font-bold text-[#bdbdbd] sm:inline-flex">
+                      {avatarLabel(recipient.type)}
+                    </span>
+                  </button>
+                ))}
+                {filteredRecipients.length === 0 && (
+                  <div className="rounded-[10px] border border-[#303030] bg-black px-4 py-8 text-center">
+                    <p className="text-[15px] font-semibold text-white">No matching contact</p>
+                    <p className="mt-2 text-[13px] text-[#8d8d8d]">Try another name, email, phone, or wallet handle.</p>
+                  </div>
+                )}
               </div>
-            </aside>
-          </section>
-        )}
 
-        {stage === "invoices" && (
-          <section className="mx-auto w-full max-w-[1180px] flex-1 pb-8 pt-8 sm:pt-12">
-            <button
-              type="button"
-              onClick={() => setStage("search")}
-              className="mb-6 inline-flex items-center gap-2 text-[13px] font-black text-[#bdbdbd] transition-colors hover:text-white"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Back to search
-            </button>
-
-            <div className="mb-6 flex items-center gap-4">
-              <RecipientAvatar recipient={selectedRecipient} size="md" />
-              <div className="min-w-0">
-                <h1 className="truncate text-[24px] font-black text-white sm:text-[28px]">{selectedRecipient.name}</h1>
-                <p className="mt-1 text-[13px] font-bold text-[#8f8f8f]">{selectedRecipient.handle}</p>
-                <p className="mt-1 text-[12px] font-semibold text-[#6f6f6f]">
-                  {recipientInvoices.length} invoice{recipientInvoices.length === 1 ? "" : "s"} — select one to{" "}
-                  {mode === "send" ? "send" : "request"} payment
-                </p>
+              <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <button
+                  type="button"
+                  onClick={() => setIsBatchOpen(true)}
+                  className="inline-flex h-11 items-center justify-center gap-2 rounded-[8px] border border-[#333] bg-black text-[13px] font-semibold text-white hover:border-[#666]"
+                >
+                  <Split className="h-4 w-4" />
+                  Batch payment
+                </button>
+                <Link
+                  href="/dashboard/invoices"
+                  className="inline-flex h-11 items-center justify-center gap-2 rounded-[8px] border border-[#333] bg-black text-[13px] font-semibold text-white hover:border-[#666]"
+                >
+                  <FileText className="h-4 w-4" />
+                  Open invoices
+                </Link>
+                <Link
+                  href="/dashboard/profile"
+                  className="inline-flex h-11 items-center justify-center gap-2 rounded-[8px] border border-[#333] bg-black text-[13px] font-semibold text-white hover:border-[#666]"
+                >
+                  <Users className="h-4 w-4" />
+                  Contacts
+                </Link>
               </div>
             </div>
-
-            <FinanceInvoicesSection
-              invoices={recipientInvoices}
-              autosplitInvoiceIds={autosplitInvoiceIds}
-              onToggleAutosplit={toggleAutosplitInvoice}
-              onInvoiceSelect={selectInvoice}
-              subtitle={`Invoices for ${selectedRecipient.name}. Select an invoice to continue.`}
-              showOpenInvoicesLink={false}
-            />
           </section>
         )}
 
         {stage === "amount" && (
-          <section className="mx-auto flex w-full max-w-[540px] flex-1 flex-col justify-start pb-8 pt-12 sm:pt-16">
-            {message && (
-              <div className="mb-4 rounded-[7px] border border-[#3c3c3c] bg-[#151515] px-4 py-2 text-[12px] font-bold">
-                {message}
-              </div>
-            )}
+          <section className="mx-auto grid w-full max-w-[1120px] flex-1 grid-cols-1 gap-6 py-10 lg:grid-cols-[minmax(0,1fr)_360px]">
+            <div className="rounded-[13px] border border-[#303030] bg-[#080808] p-5 sm:p-7">
+              <button
+                type="button"
+                onClick={() => setStage("recipient")}
+                className="mb-6 inline-flex items-center gap-2 text-[13px] font-semibold text-[#bdbdbd] hover:text-white"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Change recipient
+              </button>
 
-            <button
-              type="button"
-              onClick={() => setStage("invoices")}
-              className="mb-4 inline-flex items-center gap-2 text-[13px] font-black text-[#bdbdbd] transition-colors hover:text-white"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Back to invoices
-            </button>
-
-            <div className="rounded-[9px] border border-[#444] bg-[#1a1a1a] px-9 py-10">
-              <div className="flex items-center justify-center gap-4">
-                <RecipientAvatar recipient={selectedRecipient} size="lg" />
+              <div className="flex items-center gap-4">
+                <RecipientAvatar recipient={selectedRecipient} size="md" />
                 <div className="min-w-0">
-                  <h1 className="truncate text-[28px] font-black leading-none">{selectedRecipient.name}</h1>
-                  <p className="mt-2 text-[14px] font-black text-white">{selectedRecipient.handle}</p>
-                  {selectedInvoiceId && (
-                    <p className="mt-1 font-mono text-[12px] font-bold text-[#8f8f8f]">{selectedInvoiceId}</p>
-                  )}
+                  <h1 className="truncate text-[28px] font-semibold text-white">{selectedRecipient.name}</h1>
+                  <p className="mt-1 text-[13px] text-[#8d8d8d]">{selectedRecipient.handle} · {selectedRecipient.mobile}</p>
                 </div>
               </div>
 
-              <div className="mt-8 flex items-end justify-between gap-4">
-                <input
-                  value={amount}
-                  onChange={(event) => setAmount(event.target.value.replace(/[^\d.]/g, ""))}
-                  inputMode="decimal"
-                  aria-label="Transfer amount"
-                  className="min-w-0 flex-1 bg-transparent text-[40px] font-black leading-none text-[#c9c9c9] outline-none"
-                />
+              <div className="mt-8 rounded-[12px] border border-[#242424] bg-black p-5">
+                <p className="text-[13px] font-semibold uppercase tracking-[0.12em] text-[#777]">
+                  {mode === "send" ? "You send" : "You request"}
+                </p>
+                <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-end">
+                  <div className="flex min-w-0 flex-1 items-baseline gap-3">
+                    <span className="text-[38px] font-semibold text-[#777]">{selectedCurrency.symbol}</span>
+                    <input
+                      value={amount}
+                      onChange={(event) => setAmount(event.target.value.replace(/[^\d.]/g, ""))}
+                      inputMode="decimal"
+                      aria-label="Amount"
+                      className="min-w-0 flex-1 bg-transparent text-[52px] font-semibold leading-none text-white outline-none"
+                    />
+                  </div>
+                  <label className="block">
+                    <span className="sr-only">Currency</span>
+                    <select
+                      value={currency}
+                      onChange={(event) => setCurrency(event.target.value as CurrencyCode)}
+                      className="h-11 rounded-[8px] border border-[#333] bg-[#111] px-3 text-[14px] font-semibold text-white outline-none"
+                    >
+                      {currencies.map((item) => (
+                        <option key={item.code} value={item.code}>
+                          {item.code} · {item.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+              </div>
+
+              <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
+                <label className="block">
+                  <span className="text-[13px] font-semibold text-[#d7d7d7]">What is this for?</span>
+                  <textarea
+                    value={note}
+                    onChange={(event) => setNote(event.target.value)}
+                    rows={4}
+                    placeholder="Add a note"
+                    className="mt-2 w-full resize-none rounded-[9px] border border-[#303030] bg-black px-4 py-3 text-[14px] text-white outline-none placeholder:text-[#666] focus:border-[#777]"
+                  />
+                </label>
+
+                <div>
+                  <p className="text-[13px] font-semibold text-[#d7d7d7]">Payment type</p>
+                  <div className="mt-2 grid grid-cols-1 gap-2">
+                    {purposeOptions.map((item) => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => setPurpose(item.id)}
+                        className={cn(
+                          "rounded-[9px] border px-4 py-3 text-left transition-colors",
+                          purpose === item.id ? "border-white bg-white text-black" : "border-[#303030] bg-black text-white hover:border-[#666]"
+                        )}
+                      >
+                        <span className="block text-[13px] font-semibold">{item.title}</span>
+                        <span className={cn("mt-1 block text-[12px]", purpose === item.id ? "text-[#333]" : "text-[#777]")}>
+                          {item.detail}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-5 flex flex-wrap gap-3">
                 <button
                   type="button"
-                  onClick={() => {
-                    setCurrencySearch("");
-                    setIsCurrencyOpen(true);
-                  }}
-                  className="inline-flex h-10 shrink-0 items-center gap-2 rounded-[7px] border border-[#484848] bg-[#181818] px-4 text-[14px] font-black text-white hover:border-[#777]"
-                  aria-label="Select currency"
+                  onClick={() => setIsBatchOpen(true)}
+                  className="inline-flex h-10 items-center gap-2 rounded-[8px] border border-[#333] bg-black px-4 text-[13px] font-semibold text-white hover:border-[#666]"
                 >
-                  <FlagIcon countryCode={selectedCurrency.countryCode} className="h-5 w-7" />
-                  {selectedCurrency.code}
-                  <ChevronDown className="h-4 w-4 text-white" />
+                  <Plus className="h-4 w-4" />
+                  Add batch invoices
+                </button>
+                <button
+                  type="button"
+                  className="inline-flex h-10 items-center gap-2 rounded-[8px] border border-[#333] bg-black px-4 text-[13px] font-semibold text-white hover:border-[#666]"
+                >
+                  <Paperclip className="h-4 w-4" />
+                  Attach file
+                </button>
+                <button
+                  type="button"
+                  className="inline-flex h-10 items-center gap-2 rounded-[8px] border border-[#333] bg-black px-4 text-[13px] font-semibold text-white hover:border-[#666]"
+                >
+                  <Mail className="h-4 w-4" />
+                  Email copy
                 </button>
               </div>
             </div>
 
-            <div className="mt-5 rounded-[8px] border border-[#3c3c3c] bg-black px-8 py-7">
-              <div className="grid grid-cols-[1fr_48px_54px_78px_28px] items-center gap-2 text-[12px] font-black">
-                <span className="text-center">Name/Total</span>
-                <span>Qty</span>
-                <span>Rate</span>
-                <span>%</span>
-                <span />
+            <aside className="rounded-[13px] border border-[#303030] bg-[#080808] p-5">
+              <h2 className="text-[18px] font-semibold text-white">How should this move?</h2>
+              <div className="mt-5 space-y-3">
+                {fundingOptions.map((option) => {
+                  const Icon = option.icon;
+
+                  return (
+                    <button
+                      key={option.id}
+                      type="button"
+                      onClick={() => setFundingMethod(option.id)}
+                      className={cn(
+                        "flex w-full items-start gap-3 rounded-[9px] border px-4 py-4 text-left transition-colors",
+                        fundingMethod === option.id ? "border-white bg-white text-black" : "border-[#303030] bg-black text-white hover:border-[#666]"
+                      )}
+                    >
+                      <Icon className="mt-0.5 h-5 w-5 shrink-0" />
+                      <span className="min-w-0">
+                        <span className="block text-[14px] font-semibold">{option.title}</span>
+                        <span className={cn("mt-1 block text-[12px]", fundingMethod === option.id ? "text-[#333]" : "text-[#777]")}>
+                          {option.detail}
+                        </span>
+                        <span className={cn("mt-2 block text-[12px] font-semibold", fundingMethod === option.id ? "text-[#111]" : "text-[#bdbdbd]")}>
+                          {option.feeText}
+                        </span>
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
 
-              <div className="mt-2 grid min-h-[48px] grid-cols-[1fr_48px_54px_78px_28px] items-center gap-2 rounded-[5px] bg-[#242424] px-3">
-                <div className="flex min-w-0 items-center gap-3">
-                  <RecipientAvatar recipient={selectedRecipient} size="sm" />
-                  <div className="min-w-0">
-                    <p className="truncate text-[11px] font-black">{selectedRecipient.name}</p>
-                    <p className="text-[9px] font-bold text-[#c7c7c7]">{formatAmount(amountValue, currency)}</p>
+              <div className="mt-5">
+                <p className="text-[13px] font-semibold text-[#d7d7d7]">Delivery</p>
+                <div className="mt-2 grid grid-cols-2 gap-2">
+                  {(["instant", "standard"] as DeliverySpeed[]).map((speed) => (
+                    <button
+                      key={speed}
+                      type="button"
+                      onClick={() => setDeliverySpeed(speed)}
+                      className={cn(
+                        "rounded-[8px] border px-3 py-3 text-left",
+                        deliverySpeed === speed ? "border-white bg-white text-black" : "border-[#303030] bg-black text-white"
+                      )}
+                    >
+                      <span className="block text-[13px] font-semibold capitalize">{speed}</span>
+                      <span className={cn("mt-1 block text-[11px]", deliverySpeed === speed ? "text-[#333]" : "text-[#777]")}>
+                        {speed === "instant" ? "Seconds" : "1 business day"}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mt-5 rounded-[9px] border border-[#303030] bg-black p-4">
+                <div className="flex justify-between text-[13px] text-[#bdbdbd]">
+                  <span>Amount</span>
+                  <span>{formatCurrency(numericAmount, currency)}</span>
+                </div>
+                {cardFee > 0 && (
+                  <div className="mt-2 flex justify-between text-[13px] text-[#bdbdbd]">
+                    <span>Card fee</span>
+                    <span>{formatCurrency(cardFee, currency)}</span>
+                  </div>
+                )}
+                {instantFee > 0 && (
+                  <div className="mt-2 flex justify-between text-[13px] text-[#bdbdbd]">
+                    <span>Instant fee</span>
+                    <span>{formatCurrency(instantFee, currency)}</span>
+                  </div>
+                )}
+                {platformFee > 0 && (
+                  <div className="mt-2 flex justify-between text-[13px] text-[#bdbdbd]">
+                    <span>Request fee preview</span>
+                    <span>{formatCurrency(platformFee, currency)}</span>
+                  </div>
+                )}
+                {batchIds.length > 0 && (
+                  <div className="mt-2 flex justify-between text-[13px] text-[#bdbdbd]">
+                    <span>Batch attached</span>
+                    <span>{batchIds.length} · {formatCurrency(batchTotal, currency)}</span>
+                  </div>
+                )}
+                <div className="mt-3 border-t border-[#222] pt-3">
+                  <div className="flex justify-between text-[15px] font-semibold text-white">
+                    <span>{mode === "send" ? "You pay" : "Request total"}</span>
+                    <span>{formatCurrency(total, currency)}</span>
+                  </div>
+                  <div className="mt-2 flex justify-between text-[12px] text-[#8d8d8d]">
+                    <span>{selectedRecipient.name} {mode === "send" ? "gets" : "will pay"}</span>
+                    <span>{formatCurrency(recipientGets, currency)}</span>
                   </div>
                 </div>
-                <span className="flex h-7 items-center justify-center rounded-[2px] border border-[#444] text-[11px]">1</span>
-                <span className="rounded-[2px] border border-[#444] px-1 py-2 text-[8px] font-black">{selectedRecipient.rate}</span>
-                <span className="flex h-7 items-center justify-center rounded-[2px] border border-[#444] text-[11px]">{splitPercent}%</span>
-                <button
-                  type="button"
-                  onClick={() => showMessage("This synced recipient cannot be removed from the draft.")}
-                  aria-label="Remove recipient"
-                >
-                  <Trash2 className="h-4 w-4 text-[#d7d7d7]" />
-                </button>
               </div>
 
               <button
                 type="button"
-                onClick={() => showMessage("Funding account selected.")}
-                className="mt-4 flex h-12 w-full items-center justify-between rounded-[5px] bg-[#2d2d2d] px-4 text-left"
+                onClick={() => setStage("review")}
+                disabled={numericAmount <= 0}
+                className="mt-5 inline-flex h-12 w-full items-center justify-center gap-2 rounded-[8px] border border-white bg-white text-[14px] font-semibold text-black hover:bg-[#e8e8e8] disabled:cursor-not-allowed disabled:opacity-50"
               >
-                <span className="flex min-w-0 items-center gap-3">
-                  <span className="flex h-8 w-12 shrink-0 items-center justify-center overflow-hidden rounded-[4px] bg-white">
-                    <img
-                      src={BOFA_BUSINESS_DEBIT_VISA_IMAGE}
-                      alt="Bank of America Business Debit Visa"
-                      className="h-full w-full object-cover"
-                      loading="lazy"
-                      referrerPolicy="no-referrer"
-                    />
-                  </span>
-                  <span className="min-w-0">
-                    <span className="block truncate text-[15px] font-black">Bank of America Business Debit Visa</span>
-                    <span className="block text-[10px] font-black">Debit ****88</span>
-                  </span>
-                </span>
-                <ChevronDown className="h-5 w-5 shrink-0" />
+                Continue
+                <ArrowRight className="h-4 w-4" />
               </button>
+            </aside>
+          </section>
+        )}
 
-              <div className="mt-4 grid gap-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSplitEnabled((value) => !value);
-                    showMessage(splitEnabled ? "Split payout disabled." : "Split payout enabled.");
-                  }}
-                  className={cn(
-                    "h-8 rounded-[5px] text-[11px] font-black",
-                    splitEnabled ? "bg-white text-black" : "bg-[#2d2d2d] text-[#d9d9d9]"
-                  )}
-                >
-                  <Users className="mr-2 inline h-4 w-4" />
-                  Split Payout (%)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsBatchOpen(true);
-                  }}
-                  className={cn(
-                    "h-8 rounded-[5px] text-[11px] font-black",
-                    batchCreated ? "bg-white text-black" : "bg-[#2d2d2d] text-[#d9d9d9]"
-                  )}
-                >
-                  <Split className="mr-2 inline h-4 w-4" />
-                  {batchCreated ? "Batch Payment Created" : "+ Create Batch Payment"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMultiPayout((value) => !value);
-                    showMessage(multiPayout ? "Multi payout disabled." : "Multi payout enabled.");
-                  }}
-                  className={cn(
-                    "h-8 rounded-[5px] text-[11px] font-black",
-                    multiPayout ? "bg-white text-black" : "bg-[#2d2d2d] text-[#d9d9d9]"
-                  )}
-                >
-                  <Landmark className="mr-2 inline h-4 w-4" />
-                  Multi Payout
-                </button>
-                <button
-                  type="button"
-                  onClick={() => showMessage("File attachment simulated.")}
-                  className="h-8 rounded-[5px] bg-[#2d2d2d] text-[11px] font-black text-[#d9d9d9] hover:bg-[#3d3d3d] hover:text-white"
-                >
-                  <Paperclip className="mr-2 inline h-4 w-4" />
-                  Attach Paystub / CSV
-                </button>
-              </div>
+        {stage === "review" && (
+          <section className="mx-auto grid w-full max-w-[1040px] flex-1 grid-cols-1 gap-6 py-10 lg:grid-cols-[minmax(0,1fr)_360px]">
+            <div className="rounded-[13px] border border-[#303030] bg-[#080808] p-5 sm:p-7">
+              <button
+                type="button"
+                onClick={() => setStage("amount")}
+                className="mb-6 inline-flex items-center gap-2 text-[13px] font-semibold text-[#bdbdbd] hover:text-white"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Edit details
+              </button>
+              <h1 className="text-[34px] font-semibold tracking-[-0.03em] text-white">
+                Review {mode === "send" ? "payment" : "request"}
+              </h1>
+              <p className="mt-2 text-[14px] text-[#8d8d8d]">Confirm everything before AgncyPay creates the demo transaction.</p>
 
-              <div className="mt-4 space-y-3 text-[12px] font-bold">
-                <div className="flex justify-between">
-                  <span>You&apos;ll {mode === "send" ? "send" : "request"}:</span>
-                  <span>{formatAmount(amountValue, currency)}</span>
+              <div className="mt-7 space-y-4">
+                <div className="flex items-center justify-between gap-4 rounded-[10px] border border-[#303030] bg-black p-4">
+                  <div className="flex min-w-0 items-center gap-4">
+                    <RecipientAvatar recipient={selectedRecipient} size="sm" />
+                    <div className="min-w-0">
+                      <p className="truncate text-[15px] font-semibold text-white">{selectedRecipient.name}</p>
+                      <p className="mt-1 truncate text-[12px] text-[#8d8d8d]">{selectedRecipient.email}</p>
+                    </div>
+                  </div>
+                  <span className="rounded-full border border-[#333] px-3 py-1 text-[11px] font-bold text-[#d7d7d7]">
+                    {avatarLabel(selectedRecipient.type)}
+                  </span>
                 </div>
-                <div className="flex justify-between">
-                  <span>AgncyPay fee:</span>
-                  <span>{formatAmount(fee, currency)}</span>
+
+                <div className="rounded-[10px] border border-[#303030] bg-black p-4">
+                  <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-[#777]">Memo</p>
+                  <p className="mt-2 text-[14px] leading-6 text-white">{note || "No note added."}</p>
                 </div>
-                <div className="flex justify-between text-[13px]">
-                  <span>Total:</span>
-                  <span>{formatAmount(total, currency)}</span>
+
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div className="rounded-[10px] border border-[#303030] bg-black p-4">
+                    <p className="text-[12px] font-semibold text-[#777]">Funding</p>
+                    <p className="mt-2 text-[15px] font-semibold text-white">{selectedFunding.title}</p>
+                    <p className="mt-1 text-[12px] text-[#8d8d8d]">{selectedFunding.detail}</p>
+                  </div>
+                  <div className="rounded-[10px] border border-[#303030] bg-black p-4">
+                    <p className="text-[12px] font-semibold text-[#777]">Delivery</p>
+                    <p className="mt-2 text-[15px] font-semibold text-white capitalize">{deliverySpeed}</p>
+                    <p className="mt-1 text-[12px] text-[#8d8d8d]">{deliverySpeed === "instant" ? "Usually available in seconds." : "Estimated 1 business day."}</p>
+                  </div>
                 </div>
-                <div className="flex justify-between">
-                  <span>Talent split:</span>
-                  <span>{splitPercent}% - {formatAmount(talentAmount, currency)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Estimated delivery:</span>
-                  <span>In seconds</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>{selectedRecipient.name} will get:</span>
-                  <span>{formatAmount(recipientGets, currency)}</span>
+
+                <div className="flex items-start gap-3 rounded-[10px] border border-[#303030] bg-black p-4">
+                  <Lock className="mt-0.5 h-4 w-4 shrink-0 text-white" />
+                  <p className="text-[13px] leading-5 text-[#8d8d8d]">
+                    This demo will not move real money. It simulates the final review, processing, and receipt states for your AgncyPay payment flow.
+                  </p>
                 </div>
               </div>
+            </div>
 
-              {currency !== "USD" && (
-                <p className="mt-4 text-[12px] font-bold leading-5 text-white">
-                  1 USD = {selectedCurrency.rate.toFixed(2)} {currency}
-                  <br />
-                  This rate includes a currency conversion spread.
-                </p>
-              )}
-
-              <div className="mt-6 flex justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={() => setStage("invoices")}
-                  className="h-9 w-[94px] rounded-[6px] bg-[#ff4e2f] text-[13px] font-black text-white hover:bg-[#ff684d]"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setStage("success")}
-                  aria-label={mode === "send" ? "Pay Now" : "Request Now"}
-                  className={cn(
-                    "inline-flex h-9 w-[94px] items-center justify-center gap-1 overflow-hidden rounded-[6px] border text-[13px] font-black",
-                    mode === "send"
-                      ? "border-[#333] bg-black text-white hover:border-[#666] hover:bg-[#111]"
-                      : "border-[#ff3b30] bg-[#ff3b30] text-white hover:bg-[#ff5a4f]"
-                  )}
-                >
-                  <AgncyPayLogo imageClassName="h-3.5 w-auto" />
-                  Now
-                </button>
+            <aside className="rounded-[13px] border border-[#303030] bg-[#080808] p-5">
+              <h2 className="text-[18px] font-semibold text-white">Summary</h2>
+              <div className="mt-5 rounded-[10px] border border-[#303030] bg-black p-4">
+                <div className="flex justify-between text-[13px] text-[#bdbdbd]">
+                  <span>{mode === "send" ? "Sending" : "Requesting"}</span>
+                  <span>{formatCurrency(numericAmount, currency)}</span>
+                </div>
+                {cardFee > 0 && (
+                  <div className="mt-3 flex justify-between text-[13px] text-[#bdbdbd]">
+                    <span>Card fee</span>
+                    <span>{formatCurrency(cardFee, currency)}</span>
+                  </div>
+                )}
+                {instantFee > 0 && (
+                  <div className="mt-3 flex justify-between text-[13px] text-[#bdbdbd]">
+                    <span>Instant fee</span>
+                    <span>{formatCurrency(instantFee, currency)}</span>
+                  </div>
+                )}
+                <div className="mt-4 border-t border-[#222] pt-4">
+                  <div className="flex justify-between text-[18px] font-semibold text-white">
+                    <span>Total</span>
+                    <span>{formatCurrency(total, currency)}</span>
+                  </div>
+                </div>
               </div>
+
+              <button
+                type="button"
+                onClick={submitTransfer}
+                className="mt-5 inline-flex h-12 w-full items-center justify-center gap-2 rounded-[8px] border border-white bg-white text-[14px] font-semibold text-black hover:bg-[#e8e8e8]"
+              >
+                {mode === "send" ? "Send payment" : "Send request"}
+                <ArrowRight className="h-4 w-4" />
+              </button>
+            </aside>
+          </section>
+        )}
+
+        {stage === "processing" && (
+          <section className="grid flex-1 place-items-center py-10">
+            <div className="w-full max-w-[380px] rounded-[13px] border border-[#303030] bg-[#080808] p-8 text-center">
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-[#333] bg-black">
+                <RefreshCw className="h-7 w-7 animate-spin text-white" />
+              </div>
+              <h1 className="mt-6 text-[28px] font-semibold text-white">Processing</h1>
+              <p className="mt-3 text-[14px] leading-6 text-[#8d8d8d]">
+                Securing transfer, checking funding source, and creating receipt trail.
+              </p>
             </div>
           </section>
         )}
 
         {stage === "success" && (
-          <section className="mx-auto flex w-full max-w-[520px] flex-1 items-center pb-12 pt-12">
-            <div className="w-full rounded-[8px] border border-[#3c3c3c] bg-[#151515] px-8 py-9 text-center">
-              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#1ea94b]">
-                <Send className="h-7 w-7 text-white" />
+          <section className="grid flex-1 place-items-center py-10">
+            <div className="w-full max-w-[560px] rounded-[13px] border border-[#303030] bg-[#080808] p-6 text-center sm:p-8">
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-white text-black">
+                <CheckCircle2 className="h-8 w-8" />
               </div>
-              <h1 className="mt-5 text-[28px] font-black">{mode === "send" ? "Payment sent" : "Request sent"}</h1>
-              <p className="mt-3 text-[14px] font-bold leading-6 text-[#bdbdbd]">
-                {formatAmount(amountValue, currency)} {mode === "send" ? "was sent to" : "was requested from"}{" "}
-                {selectedRecipient.name}.
+              <h1 className="mt-6 text-[32px] font-semibold text-white">
+                {mode === "send" ? "Payment sent" : "Request sent"}
+              </h1>
+              <p className="mt-3 text-[15px] leading-6 text-[#bdbdbd]">
+                {formatCurrency(numericAmount, currency)} {mode === "send" ? "was sent to" : "was requested from"} {selectedRecipient.name}.
               </p>
-              <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-                <Link
-                  href="/dashboard"
-                  className="inline-flex h-11 flex-1 items-center justify-center rounded-[6px] border border-white bg-white text-[13px] font-black text-black"
-                >
-                  Go to Dashboard
-                </Link>
+
+              <div className="mt-7 rounded-[10px] border border-[#303030] bg-black p-4 text-left">
+                <div className="flex justify-between gap-4 border-b border-[#222] pb-3">
+                  <span className="text-[13px] text-[#777]">Receipt ID</span>
+                  <span className="font-mono text-[13px] font-semibold text-white">{receiptId}</span>
+                </div>
+                <div className="flex justify-between gap-4 border-b border-[#222] py-3">
+                  <span className="text-[13px] text-[#777]">Status</span>
+                  <span className="inline-flex items-center gap-1 text-[13px] font-semibold text-white">
+                    <CheckCircle2 className="h-4 w-4" />
+                    Completed
+                  </span>
+                </div>
+                <div className="flex justify-between gap-4 pt-3">
+                  <span className="text-[13px] text-[#777]">Delivery</span>
+                  <span className="text-[13px] font-semibold text-white capitalize">{deliverySpeed}</span>
+                </div>
+              </div>
+
+              <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
                 <button
                   type="button"
-                  onClick={() => {
-                    setQuery("");
-                    setStage("search");
-                  }}
-                  className="h-11 rounded-[6px] border border-[#444] px-5 text-[13px] font-black text-white"
+                  onClick={copyReceipt}
+                  className="inline-flex h-11 items-center justify-center gap-2 rounded-[7px] border border-[#333] bg-black text-[13px] font-semibold text-white hover:border-[#666]"
                 >
-                  Send another
+                  <Copy className="h-4 w-4" />
+                  {copyState === "copied" ? "Copied" : "Copy"}
                 </button>
+                <button
+                  type="button"
+                  onClick={resetFlow}
+                  className="inline-flex h-11 items-center justify-center rounded-[7px] border border-[#333] bg-black text-[13px] font-semibold text-white hover:border-[#666]"
+                >
+                  New transfer
+                </button>
+                <Link
+                  href="/dashboard"
+                  className="inline-flex h-11 items-center justify-center rounded-[7px] border border-white bg-white text-[13px] font-semibold text-black hover:bg-[#e8e8e8]"
+                >
+                  Dashboard
+                </Link>
               </div>
             </div>
           </section>
         )}
-
-        {isCurrencyOpen && (
-          <CurrencyPickerModal
-            selectedCurrency={selectedCurrency}
-            search={currencySearch}
-            onSearchChange={setCurrencySearch}
-            onSelect={(nextCurrency) => {
-              setCurrency(nextCurrency.code);
-              setCurrencySearch("");
-              setIsCurrencyOpen(false);
-              showMessage(`Currency changed to ${nextCurrency.code}.`);
-            }}
-            onClose={() => setIsCurrencyOpen(false)}
-          />
-        )}
-
-        {isBatchOpen && (
-          <BatchPaymentModal
-            selectedIds={batchSelectedIds}
-            onToggle={toggleBatchInvoice}
-            onToggleAll={toggleAllBatchInvoices}
-            onClose={() => setIsBatchOpen(false)}
-            onCreate={() => {
-              setBatchCreated(true);
-              setIsBatchOpen(false);
-              showMessage(`${batchSelectedIds.length} invoice batch payment created.`);
-            }}
-          />
-        )}
-
-        <FooterBar />
       </div>
+
+      {isBatchOpen && (
+        <BatchModal
+          selectedIds={batchIds}
+          onToggle={(id) =>
+            setBatchIds((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]))
+          }
+          onClose={() => setIsBatchOpen(false)}
+          onUseBatch={() => {
+            const nextTotal = batchInvoices
+              .filter((invoice) => batchIds.includes(invoice.id))
+              .reduce((sum, invoice) => sum + invoice.amount, 0);
+            setAmount(nextTotal.toFixed(2));
+            setPurpose("invoice");
+            setMode("send");
+            setIsBatchOpen(false);
+            setStage("amount");
+          }}
+        />
+      )}
     </main>
   );
 }

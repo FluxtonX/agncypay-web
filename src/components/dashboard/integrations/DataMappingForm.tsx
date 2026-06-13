@@ -3,11 +3,16 @@
 import React, { useState } from "react";
 import { CheckCircle2, Loader2 } from "lucide-react";
 
+type ChartAccount = {
+  id: string;
+  name: string;
+};
+
 export function DataMappingForm({ 
   chartOfAccounts,
   onSaved 
 }: { 
-  chartOfAccounts: any[];
+  chartOfAccounts: ChartAccount[];
   onSaved?: () => void;
 }) {
   const [isSaving, setIsSaving] = useState(false);

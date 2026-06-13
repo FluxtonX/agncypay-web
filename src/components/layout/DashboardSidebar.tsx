@@ -132,11 +132,18 @@ export function DashboardSidebar() {
     return () => document.removeEventListener("mousedown", closeAccountMenu);
   }, []);
 
-  const handleLogout = () => {
-    resetState();
-    localStorage.removeItem("agncypay_state");
-    setIsAccountOpen(false);
-    router.push("/auth/login");
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/quickbooks/disconnect", { method: "POST" });
+    } catch (error) {
+      console.warn("QuickBooks disconnect failed during logout; clearing local session anyway.", error);
+    } finally {
+      resetState();
+      localStorage.removeItem("agncypay_state");
+      localStorage.removeItem("agncypay_mock_connected_integrations");
+      setIsAccountOpen(false);
+      router.push("/auth/login");
+    }
   };
 
   const handleWorkspaceSwitch = (workspaceId: string) => {
@@ -347,11 +354,18 @@ export function MobileDashboardNav() {
     router.push("/dashboard");
   };
 
-  const handleMobileLogout = () => {
-    resetState();
-    localStorage.removeItem("agncypay_state");
-    setIsWorkspaceOpen(false);
-    router.push("/auth/login");
+  const handleMobileLogout = async () => {
+    try {
+      await fetch("/api/quickbooks/disconnect", { method: "POST" });
+    } catch (error) {
+      console.warn("QuickBooks disconnect failed during logout; clearing local session anyway.", error);
+    } finally {
+      resetState();
+      localStorage.removeItem("agncypay_state");
+      localStorage.removeItem("agncypay_mock_connected_integrations");
+      setIsWorkspaceOpen(false);
+      router.push("/auth/login");
+    }
   };
 
   return (

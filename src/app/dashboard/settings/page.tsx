@@ -2,11 +2,16 @@
 export const dynamic = "force-dynamic";
 
 import React, { useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
+  ArrowLeft,
   Bell,
   Building2,
   CreditCard,
   KeyRound,
+  Loader2,
+  LogOut,
   Plug,
   Save,
   Shield,
@@ -14,6 +19,7 @@ import {
   X,
 } from "lucide-react";
 import { IntegrationsMarketplace } from "@/components/dashboard/integrations/IntegrationsMarketplace";
+import { useApp } from "@/context/AppContext";
 
 type UserRole = "Admin" | "Approver" | "Viewer";
 type QuickAction = "payment" | "notifications" | "api" | null;
@@ -97,6 +103,8 @@ function Modal({
 }
 
 export default function SettingsPage() {
+  const router = useRouter();
+  const { resetState } = useApp();
   const [organization, setOrganization] = useState({
     companyName: "Acme Corporation Inc.",
     ein: "XX-XXXXXXX",
@@ -109,6 +117,7 @@ export default function SettingsPage() {
   const [quickAction, setQuickAction] = useState<QuickAction>(null);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const updateRole = (userId: string, role: UserRole) => {
     setUsers((currentUsers) =>
@@ -142,10 +151,31 @@ export default function SettingsPage() {
     setInviteOpen(false);
   };
 
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+
+    try {
+      await fetch("/api/quickbooks/disconnect", { method: "POST" });
+    } catch (error) {
+      console.warn("QuickBooks disconnect failed during logout; clearing local session anyway.", error);
+    } finally {
+      resetState();
+      localStorage.removeItem("agncypay_state");
+      localStorage.removeItem("agncypay_mock_connected_integrations");
+      router.push("/auth/login");
+    }
+  };
 
   return (
     <main className="mx-auto w-full max-w-[1180px] px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
       <div>
+        <Link
+          href="/dashboard"
+          className="mb-[20px] inline-flex h-[38px] items-center justify-center gap-[10px] rounded-[7px] border border-[#303030] bg-[#0c0c0c] px-[15px] text-[15px] font-semibold text-white transition-colors hover:border-[#777]"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Dashboard
+        </Link>
         <h1 className="text-[34px] font-semibold leading-none text-white">
           Settings
         </h1>
@@ -330,6 +360,28 @@ export default function SettingsPage() {
         </div>
 
         <aside className="space-y-[29px]">
+          <Section className="px-[28px] py-[34px]">
+            <h2 className="text-[20px] font-semibold leading-6 text-white">
+              Account
+            </h2>
+            <p className="mt-[14px] text-[14px] leading-5 text-[#9b9b9b]">
+              Logging out disconnects QuickBooks so your next session starts fresh.
+            </p>
+            <button
+              type="button"
+              onClick={handleLogout}
+              disabled={isLoggingOut}
+              className="mt-[18px] flex h-[38px] w-full items-center justify-center gap-[10px] rounded-[7px] border border-red-500/30 bg-red-500/10 text-[15px] font-semibold text-red-400 transition-colors hover:bg-red-500/20 disabled:opacity-60"
+            >
+              {isLoggingOut ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <LogOut className="h-4 w-4" />
+              )}
+              {isLoggingOut ? "Logging out..." : "Logout"}
+            </button>
+          </Section>
+
           <Section className="px-[28px] py-[34px]">
             <h2 className="text-[20px] font-semibold leading-6 text-white">
               Quick Actions

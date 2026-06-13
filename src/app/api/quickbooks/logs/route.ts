@@ -3,6 +3,43 @@ import { NextResponse } from "next/server";
 
 export async function GET() {
   try {
+    const clientId = process.env.QUICKBOOKS_CLIENT_ID;
+    const clientSecret = process.env.QUICKBOOKS_CLIENT_SECRET;
+    if (!clientId || !clientSecret) {
+      return NextResponse.json([
+        {
+          id: "mock-log-1",
+          date: new Date().toISOString(),
+          itemName: "Invoice #1",
+          customerName: "Amazon Music Unlimited",
+          amount: 10.29,
+          currency: "USD",
+          itemType: "Invoice",
+          status: "Pending",
+        },
+        {
+          id: "mock-log-2",
+          date: new Date(Date.now() - 3600 * 1000).toISOString(),
+          itemName: "Invoice #2",
+          customerName: "Amazon Prime",
+          amount: 0.82,
+          currency: "USD",
+          itemType: "Invoice",
+          status: "Pending",
+        },
+        {
+          id: "mock-log-3",
+          date: new Date(Date.now() - 2 * 3600 * 1000).toISOString(),
+          itemName: "Invoice #3",
+          customerName: "Anghami",
+          amount: 0.01,
+          currency: "USD",
+          itemType: "Invoice",
+          status: "Pending",
+        }
+      ]);
+    }
+
     const oauthClient = await getAuthenticatedClient();
     
     // Read the raw token from our cookie to reliably get the realmId

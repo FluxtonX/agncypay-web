@@ -1,10 +1,33 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import Image from "next/image";
+import React, { useCallback, useState, useEffect } from "react";
 import Link from "next/link";
-import { Plug, CheckCircle2, ArrowRight, Loader2, AlertCircle } from "lucide-react";
+import { CheckCircle2, ArrowRight, Loader2, Unplug } from "lucide-react";
 import { erpProviders, ERPProvider } from "@/data/mock-integrations";
+
+const mockConnectionStorageKey = "agncypay_mock_connected_integrations";
+
+function readMockConnectedProviderIds() {
+  if (typeof window === "undefined") return new Set<string>();
+
+  try {
+    return new Set(JSON.parse(window.localStorage.getItem(mockConnectionStorageKey) || "[]") as string[]);
+  } catch {
+    return new Set<string>();
+  }
+}
+
+function writeMockConnectedProviderId(providerId: string, connected: boolean) {
+  const connectedIds = readMockConnectedProviderIds();
+
+  if (connected) {
+    connectedIds.add(providerId);
+  } else {
+    connectedIds.delete(providerId);
+  }
+
+  window.localStorage.setItem(mockConnectionStorageKey, JSON.stringify([...connectedIds]));
+}
 
 function OAuthModal({
   provider,
@@ -18,11 +41,6 @@ function OAuthModal({
   const [step, setStep] = useState<"auth" | "connecting" | "success">("auth");
 
   const handleConnect = () => {
-    if (provider.id === "quickbooks") {
-      window.location.href = "/api/auth/quickbooks/connect";
-      return;
-    }
-
     setStep("connecting");
     // Simulate API delay
     setTimeout(() => {
@@ -104,33 +122,80 @@ function OAuthModal({
 export function IntegrationsMarketplace() {
   const [providers, setProviders] = useState(erpProviders);
   const [activeOAuth, setActiveOAuth] = useState<ERPProvider | null>(null);
+  const [checkingQuickBooks, setCheckingQuickBooks] = useState(true);
+  const [disconnectingId, setDisconnectingId] = useState<string | null>(null);
 
-  useEffect(() => {
-    async function checkQuickBooksStatus() {
-      try {
-        const res = await fetch("/api/quickbooks/status");
-        if (res.ok) {
-          const data = await res.json();
-          setProviders(current =>
-            current.map(p => 
-              p.id === "quickbooks" 
-                ? { ...p, status: data.connected ? "Connected" : "Not Connected" } 
-                : p
-            )
-          );
-        }
-      } catch (err) {
-        console.error("Failed to fetch QuickBooks status:", err);
+  const connectQuickBooks = () => {
+    window.location.assign("/api/auth/quickbooks/connect");
+  };
+
+  const refreshQuickBooksStatus = useCallback(async () => {
+    setCheckingQuickBooks(true);
+    const mockConnectedIds = readMockConnectedProviderIds();
+
+    try {
+      const res = await fetch("/api/quickbooks/status", { cache: "no-store" });
+      if (res.ok) {
+        const data = await res.json();
+        setProviders(current =>
+          current.map(p => 
+            p.id === "quickbooks" 
+              ? { ...p, status: data.connected ? "Connected" : "Not Connected" } 
+              : { ...p, status: mockConnectedIds.has(p.id) ? "Connected" : "Not Connected" }
+          )
+        );
       }
+    } catch (err) {
+      console.error("Failed to fetch QuickBooks status:", err);
+      setProviders(current =>
+        current.map(p =>
+          p.id === "quickbooks"
+            ? p
+            : { ...p, status: mockConnectedIds.has(p.id) ? "Connected" : "Not Connected" }
+        )
+      );
+    } finally {
+      setCheckingQuickBooks(false);
     }
-    checkQuickBooksStatus();
   }, []);
 
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      refreshQuickBooksStatus();
+    }, 0);
+
+    return () => window.clearTimeout(timeout);
+  }, [refreshQuickBooksStatus]);
+
   const handleConnectSuccess = (providerId: string) => {
+    if (providerId !== "quickbooks") {
+      writeMockConnectedProviderId(providerId, true);
+    }
+
     setProviders(current =>
       current.map(p => p.id === providerId ? { ...p, status: "Connected" } : p)
     );
     setActiveOAuth(null);
+  };
+
+  const handleDisconnect = async (provider: ERPProvider) => {
+    setDisconnectingId(provider.id);
+    try {
+      if (provider.id === "quickbooks") {
+        const res = await fetch("/api/quickbooks/disconnect", { method: "POST" });
+        if (!res.ok) throw new Error("Failed to disconnect QuickBooks.");
+        await refreshQuickBooksStatus();
+      } else {
+        writeMockConnectedProviderId(provider.id, false);
+        setProviders(current =>
+          current.map(p => p.id === provider.id ? { ...p, status: "Not Connected" } : p)
+        );
+      }
+    } catch (error) {
+      console.error("Failed to disconnect integration:", error);
+    } finally {
+      setDisconnectingId(null);
+    }
   };
 
   return (
@@ -151,6 +216,11 @@ export function IntegrationsMarketplace() {
                     <CheckCircle2 className="h-[14px] w-[14px] text-green-500" />
                     <span className="text-[12px] font-medium text-green-500">Connected</span>
                   </div>
+                ) : checkingQuickBooks && provider.id === "quickbooks" ? (
+                  <div className="flex items-center gap-[6px] rounded-full border border-[#444] bg-[#222] px-[10px] py-[4px]">
+                    <Loader2 className="h-[14px] w-[14px] animate-spin text-[#9b9b9b]" />
+                    <span className="text-[12px] font-medium text-[#9b9b9b]">Checking</span>
+                  </div>
                 ) : (
                   <div className="flex items-center gap-[6px] rounded-full border border-[#444] bg-[#222] px-[10px] py-[4px]">
                     <span className="text-[12px] font-medium text-[#9b9b9b]">Not Connected</span>
@@ -168,13 +238,39 @@ export function IntegrationsMarketplace() {
 
             <div className="mt-[28px] flex items-center gap-3">
               {provider.status === "Connected" ? (
-                <Link
-                  href={`/dashboard/settings/integrations/${provider.id}`}
-                  className="flex h-[38px] flex-1 items-center justify-center gap-[8px] rounded-[7px] border border-[#444] bg-[#1a1a1a] text-[15px] font-semibold text-white transition-colors hover:bg-[#2a2a2a]"
+                <>
+                  <Link
+                    href={`/dashboard/settings/integrations/${provider.id}`}
+                    className="flex h-[38px] flex-1 items-center justify-center gap-[8px] rounded-[7px] border border-[#444] bg-[#1a1a1a] text-[15px] font-semibold text-white transition-colors hover:bg-[#2a2a2a]"
+                  >
+                    Configure Sync
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => handleDisconnect(provider)}
+                    disabled={disconnectingId === provider.id}
+                    className="flex h-[38px] items-center justify-center gap-[8px] rounded-[7px] border border-red-500/30 bg-red-500/10 px-3 text-[14px] font-semibold text-red-400 transition-colors hover:bg-red-500/20 disabled:opacity-60"
+                    aria-label={`Disconnect ${provider.name}`}
+                  >
+                    {disconnectingId === provider.id ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Unplug className="h-4 w-4" />
+                    )}
+                  </button>
+                </>
+              ) : provider.id === "quickbooks" ? (
+                <button
+                  type="button"
+                  onClick={connectQuickBooks}
+                  className="flex h-[38px] flex-1 items-center justify-center gap-[8px] rounded-[7px] bg-white text-[15px] font-semibold text-black transition-colors hover:bg-[#e8e8e8]"
                 >
-                  Configure Sync
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
+                  {checkingQuickBooks ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : null}
+                  Connect
+                </button>
               ) : (
                 <button
                   onClick={() => setActiveOAuth(provider)}

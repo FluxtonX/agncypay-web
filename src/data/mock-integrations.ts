@@ -36,6 +36,14 @@ export const erpProviders: ERPProvider[] = [
     primaryColor: "#13B5EA", // Xero Blue
   },
   {
+    id: "mercury",
+    name: "Mercury",
+    description: "Sync banking activity, card spend, transfers, and treasury movements from Mercury.",
+    logoUrl: "/mercuryLogo.png",
+    status: "Not Connected",
+    primaryColor: "#5A5F66",
+  },
+  {
     id: "netsuite",
     name: "Oracle NetSuite",
     description: "Enterprise grade syncing for complex chart of accounts and multi-entity setups.",
@@ -48,7 +56,7 @@ export const erpProviders: ERPProvider[] = [
     name: "Sage Intacct",
     description: "Automate financial reporting and sync payables effortlessly to Sage.",
     logoUrl: "https://www.google.com/s2/favicons?domain=sage.com&sz=128",
-    status: "Connected",
+    status: "Not Connected",
     primaryColor: "#000000",
   }
 ];

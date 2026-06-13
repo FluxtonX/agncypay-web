@@ -11,9 +11,11 @@ import {
   EllipsisVertical,
   Loader2,
   Play,
+  Plug,
   Search,
   Send,
   Settings,
+  Unplug,
   Users,
   X,
 } from "lucide-react";
@@ -761,30 +763,54 @@ function QuickBooksOnlinePanel() {
   const [invoices, setInvoices] = useState<any[]>([]);
   const [connected, setConnected] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [disconnecting, setDisconnecting] = useState(false);
+
+  const fetchStatus = async () => {
+    try {
+      const res = await fetch("/api/quickbooks/status", { cache: "no-store" });
+      if (res.ok) {
+        const data = await res.json();
+        setConnected(data.connected);
+        if (data.connected) {
+          const invRes = await fetch("/api/quickbooks/invoices", { cache: "no-store" });
+          if (invRes.ok) {
+            const invData = await invRes.json();
+            setInvoices(invData.invoices || []);
+          }
+        } else {
+          setInvoices([]);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to fetch QuickBooks status:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    async function fetchQboInvoices() {
-      try {
-        const res = await fetch("/api/quickbooks/invoices");
-        if (res.ok) {
-          const data = await res.json();
-          setConnected(data.connected);
-          setInvoices(data.invoices);
-        }
-      } catch (err) {
-        console.error("Failed to fetch QuickBooks invoices:", err);
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchQboInvoices();
+    fetchStatus();
   }, []);
+
+  const handleDisconnect = async () => {
+    setDisconnecting(true);
+    try {
+      const res = await fetch("/api/quickbooks/disconnect", { method: "POST" });
+      if (res.ok) {
+        setConnected(false);
+        setInvoices([]);
+      }
+    } catch (err) {
+      console.error("Failed to disconnect QuickBooks:", err);
+    } finally {
+      setDisconnecting(false);
+    }
+  };
 
   return (
     <Panel className="p-4 sm:p-5">
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-2">
-          {/* Green QuickBooks Logo */}
           <div className="flex h-6 w-6 items-center justify-center rounded-[4px] bg-transparent">
             <img src="/quickbook.png" alt="QuickBooks" className="h-full w-full object-contain" />
           </div>
@@ -792,24 +818,27 @@ function QuickBooksOnlinePanel() {
         </div>
 
         <div className="flex items-center gap-3">
-          {connected ? (
+          {loading ? (
+            <span className="inline-flex h-[26px] items-center gap-1.5 rounded-full border border-[#333] bg-[#111] px-3 text-[11px] font-semibold text-[#8f8f8f]">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              Checking
+            </span>
+          ) : connected ? (
             <span className="inline-flex h-[26px] items-center gap-1.5 rounded-full border border-green-500/30 bg-green-500/10 px-3 text-[11px] font-semibold text-green-500">
               <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
               Connected
             </span>
           ) : (
-            <Link
-              href="/api/auth/quickbooks/connect"
-              className="inline-flex h-[26px] items-center rounded-full border border-[#444] bg-[#1a1a1a] px-3 text-[11px] font-semibold text-[#bdbdbd] hover:border-[#666] hover:text-white"
-            >
-              Connect
-            </Link>
+            <span className="inline-flex h-[26px] items-center gap-1.5 rounded-full border border-[#444] bg-[#1a1a1a] px-3 text-[11px] font-semibold text-[#777]">
+              <span className="h-1.5 w-1.5 rounded-full bg-[#555]" />
+              Not Connected
+            </span>
           )}
           <Link
             href="/dashboard/settings/integrations/quickbooks"
             className="text-[12px] font-semibold text-[#8f8f8f] hover:text-white"
           >
-            View All
+            Settings
           </Link>
         </div>
       </div>
@@ -818,76 +847,124 @@ function QuickBooksOnlinePanel() {
         Sync invoices, payments, and vendors automatically to your QBO account.
       </p>
 
-      <div className="mt-4 space-y-2">
+      <div className="mt-4">
         {loading ? (
           <div className="flex items-center justify-center py-8">
             <Loader2 className="h-5 w-5 animate-spin text-[#8f8f8f]" />
           </div>
+        ) : !connected ? (
+          /* ── Disconnected Empty State ── */
+          <div className="flex flex-col items-center rounded-[10px] border border-dashed border-[#333] bg-[#060606] px-5 py-8 text-center">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full border border-[#333] bg-[#111]">
+              <Plug className="h-5 w-5 text-[#8f8f8f]" />
+            </div>
+            <h3 className="mt-4 text-[15px] font-semibold text-white">Connect QuickBooks</h3>
+            <p className="mt-1.5 max-w-[320px] text-[12px] leading-[18px] text-[#7f7f7f]">
+              Link your QuickBooks sandbox account to fetch live invoices, sync payments, and manage vendors directly from your dashboard.
+            </p>
+            <Link
+              href="/api/auth/quickbooks/connect"
+              className="mt-5 inline-flex h-[34px] items-center gap-2 rounded-[7px] border border-white bg-white px-4 text-[12px] font-semibold text-black transition-colors hover:bg-[#e8e8e8]"
+            >
+              <Plug className="h-3.5 w-3.5" />
+              Connect Now
+            </Link>
+          </div>
+        ) : invoices.length === 0 ? (
+          /* ── Connected but no invoices ── */
+          <div className="flex flex-col items-center rounded-[10px] border border-dashed border-[#2a2a2a] bg-[#060606] px-5 py-6 text-center">
+            <p className="text-[13px] text-[#7f7f7f]">No invoices found in QuickBooks.</p>
+            <button
+              type="button"
+              onClick={handleDisconnect}
+              disabled={disconnecting}
+              className="mt-3 inline-flex h-[30px] items-center gap-1.5 rounded-[6px] border border-red-500/20 bg-red-500/5 px-3 text-[11px] font-semibold text-red-400 hover:bg-red-500/10 disabled:opacity-50"
+            >
+              {disconnecting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Unplug className="h-3 w-3" />}
+              Disconnect
+            </button>
+          </div>
         ) : (
-          invoices.slice(0, 5).map((inv) => {
-            const isOverdue = inv.daysText === "Overdue";
-            const isPaid = inv.status === "Paid";
-            const targetHref = isPaid
-              ? `/receipt/${inv.id}?tx=TX-AP-QBO-${inv.id}&mode=logged_in&returnTo=dashboard`
-              : `/dashboard/pay-flow/${inv.id}`;
+          /* ── Connected with invoices ── */
+          <div className="space-y-2">
+            {invoices.slice(0, 5).map((inv) => {
+              const isOverdue = inv.daysText === "Overdue";
+              const isPaid = inv.status === "Paid";
+              const targetHref = isPaid
+                ? `/receipt/${inv.id}?tx=TX-AP-QBO-${inv.id}&mode=logged_in&returnTo=dashboard`
+                : `/dashboard/pay-flow/${inv.id}`;
 
-            return (
+              return (
+                <Link
+                  key={inv.id}
+                  href={targetHref}
+                  className="flex items-center gap-3 rounded-[8px] border border-[#333] bg-black px-3 py-2 transition-colors hover:border-[#555] hover:bg-white/[0.04] cursor-pointer"
+                >
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] bg-transparent">
+                    <img src="/quickbook.png" alt="QuickBooks" className="h-full w-full object-contain" />
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[13px] font-semibold text-white">{inv.name}</p>
+                    <p className="truncate text-[11px] text-[#7f7f7f]">{inv.detail}</p>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <span
+                      className={cn(
+                        "inline-flex h-[22px] items-center rounded-full border px-2.5 text-[10px] font-bold",
+                        isPaid
+                          ? "border-[#10b95f]/30 bg-[#082315] text-[#70ff9e]"
+                          : isOverdue
+                            ? "border-[#ff3b30]/30 bg-[#250706] text-[#ff9088]"
+                            : "border-[#f59e0b]/30 bg-[#261a03] text-[#fbbf24]"
+                      )}
+                    >
+                      {inv.status}
+                    </span>
+
+                    <span
+                      className={cn(
+                        "hidden text-[11px] sm:inline-block w-28 text-left",
+                        isOverdue ? "text-[#ff9088]" : isPaid ? "text-[#70ff9e]" : "text-[#7f7f7f]"
+                      )}
+                    >
+                      {inv.daysText}
+                    </span>
+
+                    <div className="hidden text-right text-[11px] text-[#7f7f7f] md:block">{inv.date}</div>
+
+                    <div className="min-w-[72px] text-right text-[13px] font-semibold text-white">
+                      {new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(inv.amount)}
+                    </div>
+
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full text-[#7f7f7f] hover:text-white">
+                      <EllipsisVertical className="h-4 w-4" />
+                    </div>
+                  </div>
+                </Link>
+              );
+            })}
+
+            {/* Disconnect button below invoices */}
+            <div className="flex items-center justify-between pt-2">
               <Link
-                key={inv.id}
-                href={targetHref}
-                className="flex items-center gap-3 rounded-[8px] border border-[#333] bg-black px-3 py-2 transition-colors hover:border-[#555] hover:bg-white/[0.04] cursor-pointer"
+                href="/dashboard/settings/integrations/quickbooks"
+                className="text-[11px] font-semibold text-[#8f8f8f] hover:text-white"
               >
-                {/* Green qb logo */}
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] bg-transparent">
-                  <img src="/quickbook.png" alt="QuickBooks" className="h-full w-full object-contain" />
-                </div>
-
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-[13px] font-semibold text-white">{inv.name}</p>
-                  <p className="truncate text-[11px] text-[#7f7f7f]">{inv.detail}</p>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  {/* Status Pill */}
-                  <span
-                    className={cn(
-                      "inline-flex h-[22px] items-center rounded-full border px-2.5 text-[10px] font-bold",
-                      isPaid
-                        ? "border-[#10b95f]/30 bg-[#082315] text-[#70ff9e]"
-                        : isOverdue
-                          ? "border-[#ff3b30]/30 bg-[#250706] text-[#ff9088]"
-                          : "border-[#f59e0b]/30 bg-[#261a03] text-[#fbbf24]"
-                    )}
-                  >
-                    {inv.status}
-                  </span>
-
-                  {/* Days remaining/Overdue text */}
-                  <span
-                    className={cn(
-                      "hidden text-[11px] sm:inline-block w-28 text-left",
-                      isOverdue ? "text-[#ff9088]" : isPaid ? "text-[#70ff9e]" : "text-[#7f7f7f]"
-                    )}
-                  >
-                    {inv.daysText}
-                  </span>
-
-                  {/* Date */}
-                  <div className="hidden text-right text-[11px] text-[#7f7f7f] md:block">{inv.date}</div>
-
-                  {/* Amount */}
-                  <div className="min-w-[72px] text-right text-[13px] font-semibold text-white">
-                    {new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(inv.amount)}
-                  </div>
-
-                  {/* Ellipsis */}
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full text-[#7f7f7f] hover:text-white">
-                    <EllipsisVertical className="h-4 w-4" />
-                  </div>
-                </div>
+                View All Invoices →
               </Link>
-            );
-          })
+              <button
+                type="button"
+                onClick={handleDisconnect}
+                disabled={disconnecting}
+                className="inline-flex h-[28px] items-center gap-1.5 rounded-[6px] border border-red-500/20 bg-red-500/5 px-2.5 text-[11px] font-semibold text-red-400 hover:bg-red-500/10 disabled:opacity-50"
+              >
+                {disconnecting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Unplug className="h-3 w-3" />}
+                Disconnect
+              </button>
+            </div>
+          </div>
         )}
       </div>
     </Panel>

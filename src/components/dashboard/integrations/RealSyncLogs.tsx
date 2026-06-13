@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { AlertTriangle, CheckCircle2, Loader2, RefreshCw } from "lucide-react";
+import { mockSyncLogs } from "@/data/mock-integrations";
 
 type SyncLog = {
   id: string;
@@ -17,33 +18,103 @@ type SyncLog = {
   error?: string;
 };
 
-export function RealSyncLogs({ refreshKey }: { refreshKey: number }) {
+type QuickBooksInvoice = {
+  id: string;
+  docNumber?: string;
+  name?: string;
+  detail?: string;
+  date?: string;
+  amount?: number;
+  status?: "Paid" | "Pending" | "Overdue" | "Success" | "Failed";
+  daysText?: string;
+};
+
+type QuickBooksInvoicesResponse = {
+  connected?: boolean;
+  invoices?: QuickBooksInvoice[];
+};
+
+export function RealSyncLogs({
+  refreshKey,
+  providerId,
+  providerName,
+}: {
+  refreshKey: number;
+  providerId: string;
+  providerName: string;
+}) {
+  const isLiveProvider = providerId === "quickbooks";
   const [logs, setLogs] = useState<SyncLog[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(isLiveProvider);
   const [error, setError] = useState<string | null>(null);
 
   const fetchLogs = useCallback(async () => {
+    if (!isLiveProvider) {
+      setLogs(
+        mockSyncLogs.map((log, index) => ({
+          id: `${providerId}-${log.id}`,
+          date: log.date,
+          itemName: log.itemName,
+          docNumber: log.itemType === "Invoice" ? log.itemName : `PAY-${index + 1240}`,
+          customerName: ["Adidas Studios", "North Star Talent", "AMG Creative", "Luna Models"][index] || providerName,
+          amount: [4850, 13200, 3200, 7900][index] || 0,
+          currency: "USD",
+          itemType: log.itemType,
+          status: log.status,
+          error: log.error,
+        }))
+      );
+      setError(null);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/quickbooks/logs");
+      const res = await fetch("/api/quickbooks/invoices", { cache: "no-store" });
       if (!res.ok) {
-        throw new Error("Failed to fetch logs. Are you connected to QuickBooks?");
+        throw new Error(`Failed to fetch invoices. Are you connected to ${providerName}?`);
       }
-      const data = await res.json();
-      setLogs(data);
-    } catch (err: any) {
-      setError(err.message);
+      const data = (await res.json()) as QuickBooksInvoicesResponse;
+
+      if (data.connected === false) {
+        throw new Error(`${providerName} is not connected. Reconnect your sandbox company to fetch invoices.`);
+      }
+
+      setLogs(
+        (data.invoices || []).map((invoice) => ({
+          id: invoice.id,
+          date: invoice.date || new Date().toISOString(),
+          itemName: invoice.detail || "QuickBooks Synced Invoice",
+          docNumber: invoice.docNumber || invoice.id,
+          customerName: invoice.name || "Unknown Customer",
+          amount: invoice.amount || 0,
+          currency: "USD",
+          itemType: "Invoice",
+          status: invoice.status || "Pending",
+        }))
+      );
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to fetch invoices.");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [isLiveProvider, providerId, providerName]);
 
   useEffect(() => {
-    fetchLogs();
+    const timeout = window.setTimeout(() => {
+      fetchLogs();
+    }, 0);
+
+    return () => window.clearTimeout(timeout);
   }, [fetchLogs, refreshKey]);
 
   const getRowHref = (log: SyncLog) => {
+    if (!isLiveProvider) {
+      return "/dashboard/invoices";
+    }
+
     if (log.status === "Paid" || log.status === "Success") {
       return `/receipt/${log.id}?tx=TX-AP-QBO-${log.id}&mode=logged_in&returnTo=dashboard`;
     }
@@ -53,7 +124,7 @@ export function RealSyncLogs({ refreshKey }: { refreshKey: number }) {
   return (
     <section className="rounded-[13px] border border-[#303030] bg-black p-[28px]">
       <div className="flex items-center justify-between">
-        <h2 className="text-[20px] font-semibold text-white">Recent Sync Logs</h2>
+        <h2 className="text-[20px] font-semibold text-white">Recent Invoices & Sync Activity</h2>
         <button
           onClick={fetchLogs}
           disabled={loading}
@@ -80,7 +151,7 @@ export function RealSyncLogs({ refreshKey }: { refreshKey: number }) {
               <tr>
                 <td colSpan={5} className="px-[16px] py-[40px] text-center text-[#888]">
                   <Loader2 className="mx-auto mb-2 h-6 w-6 animate-spin text-[#555]" />
-                  Fetching live data from QuickBooks...
+                  Fetching live invoices from {providerName}...
                 </td>
               </tr>
             ) : error ? (
@@ -93,7 +164,7 @@ export function RealSyncLogs({ refreshKey }: { refreshKey: number }) {
             ) : logs.length === 0 ? (
               <tr>
                 <td colSpan={5} className="px-[16px] py-[40px] text-center text-[#888]">
-                  No recent activity found in QuickBooks.
+                  No recent activity found for {providerName}.
                 </td>
               </tr>
             ) : (
