@@ -6,9 +6,11 @@ import { useRouter } from "next/navigation";
 import {
   ArrowUpRight,
   BarChart3,
+  CheckCircle2,
   ChevronRight,
   CreditCard,
   EllipsisVertical,
+  GripVertical,
   Loader2,
   Play,
   Plug,
@@ -290,6 +292,72 @@ const payoutItems = dashboardInvoices.map((invoice, index) => ({
   status: invoice.status,
 }));
 
+const quickBooksInvoiceRows = [
+  {
+    id: "QB-inv#29475 - 2918...",
+    detailId: "INV-2845",
+    requested: "paid",
+    status: "Done",
+    due: "27",
+    amount: "$1,500.00",
+    client: "Nike, Inc.",
+  },
+  {
+    id: "QB-inv#38485 - 2299...",
+    detailId: "INV-2844",
+    requested: "request",
+    status: "In Process",
+    due: "2",
+    amount: "$5,400.00",
+    client: "The Gap, Inc.",
+  },
+  {
+    id: "QB-inv#88573 - 8857...",
+    detailId: "INV-2843",
+    requested: "request",
+    status: "In Process",
+    due: "20",
+    amount: "$12,000.00",
+    client: "Levi Strauss & Co.",
+  },
+  {
+    id: "QB-inv#88442 - 1184...",
+    detailId: "INV-2842",
+    requested: "request",
+    status: "In Process",
+    due: "19",
+    amount: "€2,800.00",
+    client: "Adidas AG",
+  },
+  {
+    id: "QB-inv#99781 - 7463...",
+    detailId: "INV-2841",
+    requested: "paid",
+    status: "Done",
+    due: "25",
+    amount: "£1,200.00",
+    client: "Burberry Group plc",
+  },
+  {
+    id: "QB-inv#77362 - 9911...",
+    detailId: "INV-2845",
+    requested: "paid",
+    status: "Done",
+    due: "7",
+    amount: "£800.65",
+    client: "Timberland LLC",
+  },
+  {
+    id: "QB-inv#65622 - 7712...",
+    detailId: "INV-2844",
+    requested: "paid",
+    status: "Done",
+    due: "30",
+    amount: "$1,100.11",
+    client: "Levi Strauss & Co.",
+  },
+] as const;
+
 const walletContacts = [
   { id: "john-adams", name: "John Adams", handle: "@agncy11174" },
   { id: "amy-holland", name: "Amy Holland", handle: "@agncy66122" },
@@ -341,6 +409,170 @@ function InvoiceStatusPill({ invoice }: { invoice: (typeof dashboardInvoices)[nu
     <span className={cn("inline-flex h-7 items-center rounded-[7px] border px-2.5 text-[12px] font-semibold", colorClass)}>
       {label}
     </span>
+  );
+}
+
+function RequestedPill({ state }: { state: (typeof quickBooksInvoiceRows)[number]["requested"] }) {
+  if (state === "paid") {
+    return (
+      <span className="inline-flex h-7 min-w-[70px] items-center justify-center rounded-full border border-[#2c2c2c] bg-black px-3 text-[10px] font-bold text-white">
+        <span className="mr-1 text-[11px] leading-none">A</span>
+        paid
+      </span>
+    );
+  }
+
+  return (
+    <span className="inline-flex h-8 min-w-[126px] items-center justify-center rounded-full border border-[#00d779] bg-black px-3 text-[11px] font-bold text-white shadow-[0_0_10px_rgba(0,215,121,0.1)]">
+      Request <span className="mx-1 text-[11px] leading-none">A</span> pay
+    </span>
+  );
+}
+
+function InvoiceStatusBadge({ status }: { status: (typeof quickBooksInvoiceRows)[number]["status"] }) {
+  if (status === "Done") {
+    return (
+      <span className="inline-flex h-7 items-center gap-1.5 rounded-full border border-[#242424] bg-[#0b0b0b] px-2.5 text-[12px] font-semibold text-[#bdbdbd]">
+        <span className="inline-flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[#00d779] text-black">
+          <CheckCircle2 className="h-2.5 w-2.5" />
+        </span>
+        Done
+      </span>
+    );
+  }
+
+  return (
+    <span className="inline-flex h-7 items-center gap-1.5 rounded-full border border-[#242424] bg-[#0b0b0b] px-2.5 text-[12px] font-semibold text-[#8f8f8f]">
+      <span className="relative h-3.5 w-3.5 rounded-full border border-[#555]">
+        <span className="absolute left-1/2 top-0 h-1.5 w-px -translate-x-1/2 bg-[#777]" />
+        <span className="absolute left-1/2 top-1/2 h-px w-1.5 -translate-y-1/2 bg-[#777]" />
+      </span>
+      In Process
+    </span>
+  );
+}
+
+function QuickBooksInvoicesList() {
+  const router = useRouter();
+  const [selectedInvoiceIds, setSelectedInvoiceIds] = useState<string[]>([]);
+  const allSelected = selectedInvoiceIds.length === quickBooksInvoiceRows.length;
+
+  const toggleInvoiceSelection = (invoiceId: string) => {
+    setSelectedInvoiceIds((current) =>
+      current.includes(invoiceId)
+        ? current.filter((id) => id !== invoiceId)
+        : [...current, invoiceId]
+    );
+  };
+
+  const toggleAllInvoices = () => {
+    setSelectedInvoiceIds(allSelected ? [] : quickBooksInvoiceRows.map((row) => row.id));
+  };
+
+  const openInvoiceDetail = (invoiceId: string) => {
+    router.push(`/dashboard/invoices/${invoiceId}`);
+  };
+
+  return (
+    <Panel className="overflow-hidden">
+      <div className="overflow-x-auto">
+        <table className="min-w-[860px] w-full text-left">
+          <thead>
+            <tr className="h-11 bg-[#232323] text-[12px] font-bold text-[#e6e6e6]">
+              <th className="w-[40px] px-2">
+                <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-[#2ca01c]">
+                  <span className="text-[15px] font-black tracking-[-0.08em] text-white">qb</span>
+                </div>
+              </th>
+              <th className="w-[40px] px-2">
+                <button
+                  type="button"
+                  onClick={toggleAllInvoices}
+                  aria-label={allSelected ? "Deselect all invoices" : "Select all invoices"}
+                  className={cn(
+                    "flex h-5 w-5 items-center justify-center rounded-[5px] border-2 transition-colors",
+                    allSelected ? "border-[#00d779] bg-[#00d779]" : "border-[#444] bg-transparent"
+                  )}
+                >
+                  {allSelected ? <CheckCircle2 className="h-3.5 w-3.5 text-black" /> : null}
+                </button>
+              </th>
+              <th className="px-3">Invoice(s)</th>
+              <th className="w-[160px] px-3 text-center">Requested</th>
+              <th className="w-[140px] px-3 text-center">Status</th>
+              <th className="w-[80px] px-3 text-center">Due</th>
+              <th className="w-[130px] px-3 text-center">Amount</th>
+              <th className="w-[160px] px-3 text-center">Client</th>
+              <th className="w-[36px]" />
+            </tr>
+          </thead>
+          <tbody>
+            {quickBooksInvoiceRows.map((row) => {
+              const isSelected = selectedInvoiceIds.includes(row.id);
+
+              return (
+              <tr
+                key={row.id}
+                role="button"
+                tabIndex={0}
+                onClick={() => openInvoiceDetail(row.detailId)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    openInvoiceDetail(row.detailId);
+                  }
+                }}
+                className={cn(
+                  "h-[52px] cursor-pointer border-t border-[#1f1f1f] bg-black text-[#e6e6e6] transition-colors hover:bg-[#080808] focus:bg-[#0b0b0b] focus:outline-none",
+                  isSelected && "bg-[#06140d] shadow-[inset_3px_0_0_#00d779]"
+                )}
+              >
+                <td className="px-2 text-center text-[#8a8a8a]">
+                  <GripVertical className="mx-auto h-4 w-4" />
+                </td>
+                <td className="px-2">
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      toggleInvoiceSelection(row.id);
+                    }}
+                    aria-label={isSelected ? `Deselect ${row.id}` : `Select ${row.id}`}
+                    className={cn(
+                      "flex h-5 w-5 items-center justify-center rounded-[5px] border-2 transition-colors",
+                      isSelected ? "border-[#00d779] bg-[#00d779]" : "border-[#2e2e2e] bg-transparent hover:border-[#777]"
+                    )}
+                  >
+                    {isSelected ? <CheckCircle2 className="h-3.5 w-3.5 text-black" /> : null}
+                  </button>
+                </td>
+                <td className="px-3 text-[13px] font-semibold">{row.id}</td>
+                <td className="px-3 text-center">
+                  <RequestedPill state={row.requested} />
+                </td>
+                <td className="px-3 text-center">
+                  <InvoiceStatusBadge status={row.status} />
+                </td>
+                <td className="px-3 text-center text-[13px] font-semibold text-[#d8d8d8]">{row.due}</td>
+                <td className="px-3 text-center text-[13px] font-semibold text-white">{row.amount}</td>
+                <td className="px-3 text-center text-[13px] font-semibold text-[#e8e8e8]">{row.client}</td>
+                <td className="px-2 text-[#8a8a8a]">
+                  <button
+                    type="button"
+                    onClick={(event) => event.stopPropagation()}
+                    aria-label={`More actions for ${row.id}`}
+                    className="flex h-7 w-7 items-center justify-center rounded-full text-[#8a8a8a] hover:text-white"
+                  >
+                    <EllipsisVertical className="h-4 w-4" />
+                  </button>
+                </td>
+              </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </Panel>
   );
 }
 
@@ -1034,6 +1266,12 @@ export default function DashboardHomePage() {
           <div className="space-y-5">
             <FinanceAppPromoCard />
 
+            {workspaceType === "agency" && (
+              <ModelPayoutsList />
+            )}
+
+            <QuickBooksInvoicesList />
+
             <Panel className="p-4 sm:p-5">
               <div className="flex items-center justify-between gap-4">
                 <div>
@@ -1072,10 +1310,6 @@ export default function DashboardHomePage() {
                 ))}
               </div>
             </Panel>
-
-            {workspaceType === "agency" && (
-              <ModelPayoutsList />
-            )}
 
             {/* Old invoices table preserved for reuse.
             <Panel className="overflow-hidden">
