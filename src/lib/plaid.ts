@@ -7,7 +7,8 @@ const TOKEN_FILE_PATH = path.join(process.cwd(), "plaid-tokens.json");
 
 // Derive a 32-byte key from the configured ENCRYPTION_KEY or PLAID_SECRET
 function getEncryptionKey(): Buffer {
-  const keySource = process.env.ENCRYPTION_KEY || process.env.PLAID_SECRET || "agncypay-fallback-encryption-secret-key-32";
+  const rawSource = process.env.ENCRYPTION_KEY || process.env.PLAID_SECRET || "agncypay-fallback-encryption-secret-key-32";
+  const keySource = rawSource.replace(/^["']|["']$/g, "");
   return crypto.createHash("sha256").update(keySource).digest();
 }
 
@@ -48,8 +49,14 @@ export function decrypt(encryptedText: string): string {
 }
 
 export function isPlaidConfigured(): boolean {
-  const clientId = process.env.PLAID_CLIENT_ID;
-  const secret = process.env.PLAID_SECRET;
+  const rawClientId = process.env.PLAID_CLIENT_ID;
+  const rawSecret = process.env.PLAID_SECRET;
+  
+  if (!rawClientId || !rawSecret) return false;
+  
+  const clientId = rawClientId.replace(/^["']|["']$/g, "");
+  const secret = rawSecret.replace(/^["']|["']$/g, "");
+  
   return !!(
     clientId &&
     secret &&
@@ -61,7 +68,8 @@ export function isPlaidConfigured(): boolean {
 }
 
 // Plaid Client Configuration
-const plaidEnv = process.env.PLAID_ENV || "sandbox";
+const plaidEnvRaw = process.env.PLAID_ENV || "sandbox";
+const plaidEnv = plaidEnvRaw.replace(/^["']|["']$/g, "");
 // Make sure environment string matches standard Plaid api keys
 const basePath = PlaidEnvironments[plaidEnv] || PlaidEnvironments.sandbox;
 
@@ -69,8 +77,8 @@ const configuration = new Configuration({
   basePath,
   baseOptions: {
     headers: {
-      "PLAID-CLIENT-ID": process.env.PLAID_CLIENT_ID || "",
-      "PLAID-SECRET": process.env.PLAID_SECRET || "",
+      "PLAID-CLIENT-ID": (process.env.PLAID_CLIENT_ID || "").replace(/^["']|["']$/g, ""),
+      "PLAID-SECRET": (process.env.PLAID_SECRET || "").replace(/^["']|["']$/g, ""),
     },
   },
 });

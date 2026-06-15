@@ -18,17 +18,19 @@ export async function POST(req: Request) {
     const appUrl = `${protocol}://${host}`;
     
     // In production/sandbox Plaid requires a redirect URI registered in the Plaid dashboard
-    const redirectUri = process.env.PLAID_REDIRECT_URI || `${appUrl}/dashboard`;
+    const redirectUriRaw = process.env.PLAID_REDIRECT_URI || `${appUrl}/dashboard`;
+    const redirectUri = redirectUriRaw.replace(/^["']|["']$/g, "");
 
     // Retrieve webhook URL
-    const webhookUrl = process.env.PLAID_WEBHOOK_URL || `${appUrl}/api/plaid/webhook`;
+    const webhookUrlRaw = process.env.PLAID_WEBHOOK_URL || `${appUrl}/api/plaid/webhook`;
+    const webhookUrl = webhookUrlRaw.replace(/^["']|["']$/g, "");
 
     console.log("Creating Plaid link token with parameters:", {
       redirect_uri: redirectUri,
       webhook: webhookUrl,
     });
 
-    const response = await plaidClient.linkTokenCreate({
+    const tokenRequest: any = {
       user: {
         client_user_id: "agncypay-user-session-id-123",
       },
@@ -36,18 +38,48 @@ export async function POST(req: Request) {
       products: [Products.Auth, Products.Transactions],
       country_codes: [CountryCode.Us],
       language: "en",
-      redirect_uri: redirectUri,
       webhook: webhookUrl,
-    });
+    };
+
+    // Only add redirect_uri if it is set in environment
+    if (redirectUri) {
+      tokenRequest.redirect_uri = redirectUri;
+    }
+
+    let response;
+    try {
+      response = await plaidClient.linkTokenCreate(tokenRequest);
+    } catch (apiError: any) {
+      const errorData = apiError.response?.data;
+      if (errorData?.error_code === "INVALID_REDIRECT_URI" || errorData?.error_message?.includes("redirect_uri")) {
+        console.warn("Plaid returned redirect_uri error. Retrying link token creation without redirect_uri...");
+        delete tokenRequest.redirect_uri;
+        response = await plaidClient.linkTokenCreate(tokenRequest);
+      } else {
+        throw apiError;
+      }
+    }
 
     return NextResponse.json({ link_token: response.data.link_token, isMock: false });
   } catch (error: any) {
-    console.error("Error creating Plaid link token (falling back to mock mode):", error.response?.data || error.message || error);
-    // Fallback to mock mode in case of developer/credential API failures
+    const errorDetails = error.response?.data || error.message || error;
+    console.error("Error creating Plaid link token:", errorDetails);
+    
+    if (isPlaidConfigured()) {
+      return NextResponse.json(
+        { 
+          error: "Failed to create Plaid link token", 
+          details: errorDetails 
+        }, 
+        { status: 500 }
+      );
+    }
+
+    // Fallback to mock mode in case of developer/credential API failures (when Plaid keys are not configured or placeholder)
     return NextResponse.json({
       link_token: null,
       isMock: true,
-      errorDetails: error.response?.data || error.message,
+      errorDetails: errorDetails,
     });
   }
 }

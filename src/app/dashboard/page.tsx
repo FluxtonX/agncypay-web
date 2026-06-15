@@ -1335,6 +1335,7 @@ export default function DashboardHomePage() {
     setCardErrors({});
     setPlaidErrors({});
     setModalLoadingText("");
+    setDashboardPlaidError(null);
   };
 
   const handlePlaidLogin = (e: React.FormEvent) => {
@@ -1438,6 +1439,9 @@ export default function DashboardHomePage() {
   const [plaidLinkToken, setPlaidLinkToken] = useState<string | null>(null);
   const [isDashboardMockPlaid, setIsDashboardMockPlaid] = useState(false);
   const [plaidLoading, setPlaidLoading] = useState(true);
+  const [plaidDisconnecting, setPlaidDisconnecting] = useState(false);
+  const [plaidInstitutionName, setPlaidInstitutionName] = useState("");
+  const [dashboardPlaidError, setDashboardPlaidError] = useState<string | null>(null);
 
   const [connectedIntegrations, setConnectedIntegrations] = useState<string[]>([]);
   const [isAddIntegrationModalOpen, setIsAddIntegrationModalOpen] = useState(false);
@@ -1525,20 +1529,23 @@ export default function DashboardHomePage() {
       if (res.ok) {
         const data = await res.json();
         setPlaidConnected(data.connected);
-        
-        // If connected, add a representation of the bank to linkedCards if not already in there
-        if (data.connected && data.institutionName) {
-          setLinkedCards((prev) => {
-            const exists = prev.some((card) => card.name.includes(data.institutionName));
-            if (exists) return prev;
-            const newBank = {
-              name: `${data.institutionName} Business Account`,
-              detail: `Checking ****${data.itemId ? data.itemId.slice(-4) : "8827"}`,
-              cardImage: CHASE_INK_BUSINESS_UNLIMITED_IMAGE,
-              fallback: data.institutionName,
-            };
-            return [newBank, ...prev];
-          });
+        if (data.connected) {
+          setPlaidInstitutionName(data.institutionName || "Linked Bank");
+          
+          // If connected, add a representation of the bank to linkedCards if not already in there
+          if (data.institutionName) {
+            setLinkedCards((prev) => {
+              const exists = prev.some((card) => card.name.includes(data.institutionName));
+              if (exists) return prev;
+              const newBank = {
+                name: `${data.institutionName} Business Account`,
+                detail: `Checking ****${data.itemId ? data.itemId.slice(-4) : "8827"}`,
+                cardImage: CHASE_INK_BUSINESS_UNLIMITED_IMAGE,
+                fallback: data.institutionName,
+              };
+              return [newBank, ...prev];
+            });
+          }
         }
       }
     } catch (err) {
@@ -1548,8 +1555,21 @@ export default function DashboardHomePage() {
     }
   };
 
+  // Check if we are resuming from an OAuth redirect
+  const [dashboardReceivedRedirectUri, setDashboardReceivedRedirectUri] = useState<string | undefined>(undefined);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const url = window.location.href;
+      if (url.includes("oauth_state_id=") || url.includes("link_session_id=")) {
+        setDashboardReceivedRedirectUri(url);
+      }
+    }
+  }, []);
+
   const fetchPlaidLinkToken = async () => {
     try {
+      setDashboardPlaidError(null);
       const res = await fetch("/api/plaid/create-link-token", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1562,9 +1582,17 @@ export default function DashboardHomePage() {
         } else if (data.isMock) {
           setIsDashboardMockPlaid(true);
         }
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        const errMsg = errData.details
+          ? (typeof errData.details === "object" ? JSON.stringify(errData.details) : errData.details)
+          : errData.error || "Server response error";
+        console.error("Plaid Link initialization failed in dashboard API:", errMsg);
+        setDashboardPlaidError(errMsg || "Failed to retrieve link token");
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error fetching Plaid link token on dashboard:", err);
+      setDashboardPlaidError(err.message || "Failed to retrieve link token");
     }
   };
 
@@ -1587,6 +1615,7 @@ export default function DashboardHomePage() {
           });
           if (res.ok) {
             setPlaidConnected(true);
+            setPlaidInstitutionName("Plaid Sandbox Bank");
             setSelectedBank("Plaid Sandbox Bank");
             const newBank = {
               name: "Plaid Sandbox Bank Business Account",
@@ -1601,12 +1630,16 @@ export default function DashboardHomePage() {
             });
             setLinkModalStep("plaid_success");
           } else {
-            resetLinkModal();
-            alert("Failed to exchange Plaid token.");
+            const errData = await res.json().catch(() => ({}));
+            const errMsg = errData.details || errData.error || "Failed to exchange Plaid token";
+            console.error("Mock exchange failed:", errMsg);
+            setDashboardPlaidError(`Exchange Error: ${errMsg}`);
+            setLinkModalStep("plaid_intro");
           }
-        } catch (err) {
-          resetLinkModal();
+        } catch (err: any) {
           console.error("Plaid mock exchange error:", err);
+          setDashboardPlaidError(`Exchange Error: ${err.message || err}`);
+          setLinkModalStep("plaid_intro");
         }
       }, 1000);
     }, 1000);
@@ -1626,6 +1659,7 @@ export default function DashboardHomePage() {
       });
       if (res.ok) {
         setPlaidConnected(true);
+        setPlaidInstitutionName(metadata.institution?.name || "Plaid Connected Bank");
         setSelectedBank(metadata.institution?.name || "Plaid Connected Bank");
         const newBank = {
           name: `${metadata.institution?.name || "Plaid Connected Bank"} Business Account`,
@@ -1640,21 +1674,39 @@ export default function DashboardHomePage() {
         });
         setLinkModalStep("plaid_success");
       } else {
-        resetLinkModal();
-        alert("Failed to exchange Plaid token. Please try again.");
+        const errData = await res.json().catch(() => ({}));
+        const errMsg = errData.details || errData.error || "Failed to exchange Plaid token";
+        console.error("Failed to exchange Plaid token:", errMsg);
+        setDashboardPlaidError(`Plaid Token Exchange Error: ${errMsg}`);
+        setLinkModalStep("plaid_intro");
       }
-    } catch (err) {
-      resetLinkModal();
+    } catch (err: any) {
       console.error("Plaid token exchange error:", err);
+      setDashboardPlaidError(`Plaid Token Exchange Error: ${err.message || err}`);
+      setLinkModalStep("plaid_intro");
     }
   }, []);
 
   const { open: openDashboardPlaid, ready: dashboardPlaidReady } = usePlaidLink({
     token: plaidLinkToken,
     onSuccess: onPlaidSuccess,
-    onExit: () => {
+    receivedRedirectUri: dashboardReceivedRedirectUri,
+    onExit: (error, metadata) => {
+      if (error) {
+        console.error("Dashboard Plaid Link onExit Error:", error);
+        setDashboardPlaidError(`Plaid Link Error: ${error.error_message} (${error.error_code})`);
+      } else {
+        console.log("Dashboard Plaid Link exited. Metadata:", metadata);
+      }
       if (linkModalStep === "plaid_verifying") {
         setLinkModalStep("plaid_intro");
+      }
+    },
+    onEvent: (eventName, metadata) => {
+      console.log(`Dashboard Plaid Link Event: ${eventName}`, metadata);
+      if (eventName === "ERROR" && metadata.error_code) {
+        console.error("Dashboard Plaid Link error event:", metadata);
+        setDashboardPlaidError(`Plaid Link Error Event: ${metadata.error_message || metadata.error_code}`);
       }
     },
   });
@@ -1679,6 +1731,24 @@ export default function DashboardHomePage() {
       console.error("Failed to disconnect QuickBooks:", err);
     } finally {
       setDisconnecting(false);
+    }
+  };
+
+  const handlePlaidDisconnect = async () => {
+    setPlaidDisconnecting(true);
+    try {
+      const res = await fetch("/api/plaid/disconnect", { method: "POST" });
+      if (res.ok) {
+        setPlaidConnected(false);
+        // Clear bank cards from dynamic UI state
+        setLinkedCards((prev) =>
+          prev.filter((card) => !card.name.includes("Business Account") && !card.name.includes("Plaid"))
+        );
+      }
+    } catch (err) {
+      console.error("Failed to disconnect Plaid bank account:", err);
+    } finally {
+      setPlaidDisconnecting(false);
     }
   };
 
@@ -2288,9 +2358,13 @@ export default function DashboardHomePage() {
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
                   <p className="text-[13px] font-black uppercase tracking-[0.12em] text-[#a9a9a9]">Plaid</p>
-                  <h2 className="mt-1 text-[22px] font-semibold text-white">Connect Bank</h2>
+                  <h2 className="mt-1 text-[22px] font-semibold text-white">
+                    {plaidConnected ? plaidInstitutionName : "Connect Bank"}
+                  </h2>
                   <p className="mt-2 max-w-[280px] text-[13px] leading-5 text-[#8f8f8f]">
-                    Link your payout method to receive monthly royalty distributions automatically.
+                    {plaidConnected
+                      ? "Your bank account is securely linked for monthly royalty distributions."
+                      : "Link your payout method to receive monthly royalty distributions automatically."}
                   </p>
                 </div>
                 <span className={cn(
@@ -2306,12 +2380,38 @@ export default function DashboardHomePage() {
                 </span>
               </div>
               <div className="mt-5 flex items-center justify-between gap-4">
-                <Link
-                  href={plaidConnected ? "/dashboard/wallet" : "/verification/instant/connect-bank"}
-                  className="inline-flex h-9 items-center rounded-[7px] border border-white bg-white px-3 text-[12px] font-semibold text-black"
-                >
-                  {plaidConnected ? "Manage Payouts" : "Set Up Payouts"}
-                </Link>
+                {plaidConnected ? (
+                  <button
+                    type="button"
+                    onClick={handlePlaidDisconnect}
+                    disabled={plaidDisconnecting}
+                    className="inline-flex h-9 items-center justify-center gap-1.5 rounded-[7px] border border-red-500/20 bg-red-500/5 px-3 text-[12px] font-semibold text-red-400 hover:bg-red-500/10 disabled:opacity-50"
+                  >
+                    {plaidDisconnecting ? (
+                      <>
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        Disconnecting...
+                      </>
+                    ) : (
+                      <>
+                        <Unplug className="h-3.5 w-3.5" />
+                        Disconnect Bank
+                      </>
+                    )}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      resetLinkModal();
+                      setLinkModalStep("plaid_intro");
+                      setIsLinkModalOpen(true);
+                    }}
+                    className="inline-flex h-9 items-center rounded-[7px] border border-white bg-white px-3 text-[12px] font-semibold text-black hover:bg-[#e8e8e8]"
+                  >
+                    Set Up Payouts
+                  </button>
+                )}
                 <span className="text-[11px] text-[#7f7f7f]">
                   {plaidConnected ? "Active Plaid connection" : "Secure bank linking"}
                 </span>
@@ -2394,6 +2494,13 @@ export default function DashboardHomePage() {
                     Connecting your bank allows you to instantly verify account credentials, balances, and routing numbers securely.
                   </p>
                   
+                  {dashboardPlaidError && (
+                    <div className="mt-4 rounded-[6px] border border-red-500/20 bg-red-500/5 p-3 text-left text-[12px] text-red-400 font-semibold leading-relaxed">
+                      <p className="font-bold mb-1">Plaid Connection Error:</p>
+                      <pre className="whitespace-pre-wrap font-mono text-[10px] select-text">{dashboardPlaidError}</pre>
+                    </div>
+                  )}
+
                   <div className="mt-4 flex flex-col gap-2 rounded-[8px] border border-[#222] bg-[#070707] p-3 text-left">
                     <div className="flex items-center gap-2 text-[12px] text-[#8f8f8f]">
                       <Lock className="h-3.5 w-3.5 text-green-400 shrink-0" />
@@ -2415,6 +2522,8 @@ export default function DashboardHomePage() {
                         if (isDashboardMockPlaid) {
                           triggerDashboardMockPlaidFlow();
                         } else if (dashboardPlaidReady) {
+                          setLinkModalStep("plaid_verifying");
+                          setModalLoadingText("Connecting to secure Plaid Link portal...");
                           openDashboardPlaid();
                         } else {
                           alert("Plaid Link is loading, please try again in a moment.");
