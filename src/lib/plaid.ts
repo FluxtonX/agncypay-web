@@ -3,7 +3,27 @@ import crypto from "crypto";
 import fs from "fs";
 import path from "path";
 
-const TOKEN_FILE_PATH = path.join(process.cwd(), "plaid-tokens.json");
+let cachedTokenPath: string | null = null;
+
+function getTokenFilePath(): string {
+  if (cachedTokenPath) return cachedTokenPath;
+  
+  const localPath = path.join(process.cwd(), "plaid-tokens.json");
+  const tempPath = path.join("/tmp", "plaid-tokens.json");
+  
+  // Try to write to local path to test if it's writable (will throw on read-only systems like Vercel)
+  try {
+    const testFile = path.join(process.cwd(), ".plaid-write-test");
+    fs.writeFileSync(testFile, "test");
+    fs.unlinkSync(testFile);
+    cachedTokenPath = localPath;
+  } catch (e) {
+    console.warn("Project root is read-only. Storing Plaid tokens in /tmp/plaid-tokens.json instead.");
+    cachedTokenPath = tempPath;
+  }
+  
+  return cachedTokenPath;
+}
 
 // Derive a 32-byte key from the configured ENCRYPTION_KEY or PLAID_SECRET
 function getEncryptionKey(): Buffer {
@@ -110,7 +130,7 @@ export async function savePlaidToken(data: {
       connectedAt: new Date().toISOString(),
     };
     
-    fs.writeFileSync(TOKEN_FILE_PATH, JSON.stringify(fileData, null, 2), "utf8");
+    fs.writeFileSync(getTokenFilePath(), JSON.stringify(fileData, null, 2), "utf8");
     console.log("Plaid tokens stored successfully.");
   } catch (error) {
     console.error("Error saving Plaid tokens:", error);
@@ -121,11 +141,12 @@ export async function savePlaidToken(data: {
 // Get and decrypt Plaid token from plaid-tokens.json
 export async function getPlaidToken(): Promise<PlaidConnectionData | null> {
   try {
-    if (!fs.existsSync(TOKEN_FILE_PATH)) {
+    const tokenPath = getTokenFilePath();
+    if (!fs.existsSync(tokenPath)) {
       return null;
     }
     
-    const fileContent = fs.readFileSync(TOKEN_FILE_PATH, "utf8");
+    const fileContent = fs.readFileSync(tokenPath, "utf8");
     const parsedData = JSON.parse(fileContent);
     
     if (!parsedData.accessToken) {
@@ -150,8 +171,9 @@ export async function getPlaidToken(): Promise<PlaidConnectionData | null> {
 // Delete token (disconnect)
 export async function deletePlaidToken() {
   try {
-    if (fs.existsSync(TOKEN_FILE_PATH)) {
-      fs.unlinkSync(TOKEN_FILE_PATH);
+    const tokenPath = getTokenFilePath();
+    if (fs.existsSync(tokenPath)) {
+      fs.unlinkSync(tokenPath);
       console.log("Plaid tokens cleared.");
     }
   } catch (error) {

@@ -2309,7 +2309,7 @@ export default function DashboardHomePage() {
             )}
 
             {/* 5. Upload File Section */}
-            <CsvDropzonePanel />
+            {/* <CsvDropzonePanel /> */}
 
             {/* 6. Banks and Cards */}
             <Panel className="p-4 sm:p-5">
