@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { usePlaidLink } from "react-plaid-link";
 import {
   AlertTriangle,
   ArrowUpRight,
@@ -1432,6 +1433,12 @@ export default function DashboardHomePage() {
   const [qboLoading, setQboLoading] = useState(true);
   const [disconnecting, setDisconnecting] = useState(false);
 
+  // Plaid connection states
+  const [plaidConnected, setPlaidConnected] = useState(false);
+  const [plaidLinkToken, setPlaidLinkToken] = useState<string | null>(null);
+  const [isDashboardMockPlaid, setIsDashboardMockPlaid] = useState(false);
+  const [plaidLoading, setPlaidLoading] = useState(true);
+
   const [connectedIntegrations, setConnectedIntegrations] = useState<string[]>([]);
   const [isAddIntegrationModalOpen, setIsAddIntegrationModalOpen] = useState(false);
   const [addIntegrationModalStep, setAddIntegrationModalStep] = useState<"select" | "connecting" | "success">("select");
@@ -1512,8 +1519,150 @@ export default function DashboardHomePage() {
     }
   };
 
+  const fetchPlaidStatus = async () => {
+    try {
+      const res = await fetch("/api/plaid/status", { cache: "no-store" });
+      if (res.ok) {
+        const data = await res.json();
+        setPlaidConnected(data.connected);
+        
+        // If connected, add a representation of the bank to linkedCards if not already in there
+        if (data.connected && data.institutionName) {
+          setLinkedCards((prev) => {
+            const exists = prev.some((card) => card.name.includes(data.institutionName));
+            if (exists) return prev;
+            const newBank = {
+              name: `${data.institutionName} Business Account`,
+              detail: `Checking ****${data.itemId ? data.itemId.slice(-4) : "8827"}`,
+              cardImage: CHASE_INK_BUSINESS_UNLIMITED_IMAGE,
+              fallback: data.institutionName,
+            };
+            return [newBank, ...prev];
+          });
+        }
+      }
+    } catch (err) {
+      console.error("Failed to fetch Plaid status:", err);
+    } finally {
+      setPlaidLoading(false);
+    }
+  };
+
+  const fetchPlaidLinkToken = async () => {
+    try {
+      const res = await fetch("/api/plaid/create-link-token", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.link_token) {
+          setPlaidLinkToken(data.link_token);
+          setIsDashboardMockPlaid(false);
+        } else if (data.isMock) {
+          setIsDashboardMockPlaid(true);
+        }
+      }
+    } catch (err) {
+      console.error("Error fetching Plaid link token on dashboard:", err);
+    }
+  };
+
+  const triggerDashboardMockPlaidFlow = useCallback(async () => {
+    setLinkModalStep("plaid_verifying");
+    setModalLoadingText("Connecting to simulated Plaid Sandbox environment...");
+    
+    setTimeout(async () => {
+      setModalLoadingText("Exchanging credentials and verifying checking account...");
+      
+      setTimeout(async () => {
+        try {
+          const res = await fetch("/api/plaid/exchange-token", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              public_token: "mock-public-token-12345",
+              institution: { name: "Plaid Sandbox Bank", institution_id: "ins_sandbox" },
+            }),
+          });
+          if (res.ok) {
+            setPlaidConnected(true);
+            setSelectedBank("Plaid Sandbox Bank");
+            const newBank = {
+              name: "Plaid Sandbox Bank Business Account",
+              detail: "Checking ****9988",
+              cardImage: CHASE_INK_BUSINESS_UNLIMITED_IMAGE,
+              fallback: "Plaid Sandbox Bank",
+            };
+            setLinkedCards((prev) => {
+              const exists = prev.some((card) => card.name.includes(newBank.name));
+              if (exists) return prev;
+              return [newBank, ...prev];
+            });
+            setLinkModalStep("plaid_success");
+          } else {
+            resetLinkModal();
+            alert("Failed to exchange Plaid token.");
+          }
+        } catch (err) {
+          resetLinkModal();
+          console.error("Plaid mock exchange error:", err);
+        }
+      }, 1000);
+    }, 1000);
+  }, []);
+
+  const onPlaidSuccess = useCallback(async (public_token: string, metadata: any) => {
+    setLinkModalStep("plaid_verifying");
+    setModalLoadingText("Exchanging credentials and verifying checking account...");
+    try {
+      const res = await fetch("/api/plaid/exchange-token", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          public_token,
+          institution: metadata.institution,
+        }),
+      });
+      if (res.ok) {
+        setPlaidConnected(true);
+        setSelectedBank(metadata.institution?.name || "Plaid Connected Bank");
+        const newBank = {
+          name: `${metadata.institution?.name || "Plaid Connected Bank"} Business Account`,
+          detail: `Checking ****${metadata.accounts?.[0]?.mask || "8827"}`,
+          cardImage: CHASE_INK_BUSINESS_UNLIMITED_IMAGE,
+          fallback: metadata.institution?.name || "Bank",
+        };
+        setLinkedCards((prev) => {
+          const exists = prev.some((card) => card.name.includes(newBank.name));
+          if (exists) return prev;
+          return [newBank, ...prev];
+        });
+        setLinkModalStep("plaid_success");
+      } else {
+        resetLinkModal();
+        alert("Failed to exchange Plaid token. Please try again.");
+      }
+    } catch (err) {
+      resetLinkModal();
+      console.error("Plaid token exchange error:", err);
+    }
+  }, []);
+
+  const { open: openDashboardPlaid, ready: dashboardPlaidReady } = usePlaidLink({
+    token: plaidLinkToken,
+    onSuccess: onPlaidSuccess,
+    onExit: () => {
+      if (linkModalStep === "plaid_verifying") {
+        setLinkModalStep("plaid_intro");
+      }
+    },
+  });
+
   useEffect(() => {
     fetchStatus();
+    fetchPlaidStatus();
+    fetchPlaidLinkToken();
   }, []);
 
   const handleDisconnect = async () => {
@@ -2146,7 +2295,7 @@ export default function DashboardHomePage() {
                 </div>
                 <span className={cn(
                   "inline-flex h-10 shrink-0 items-center rounded-[7px] border bg-white px-3",
-                  qboConnected ? "border-green-500/30" : "border-[#333]"
+                  plaidConnected ? "border-green-500/30" : "border-[#333]"
                 )}>
                   <img
                     src="/plaid-logo.svg"
@@ -2158,13 +2307,13 @@ export default function DashboardHomePage() {
               </div>
               <div className="mt-5 flex items-center justify-between gap-4">
                 <Link
-                  href={qboConnected ? "/dashboard/wallet" : "/verification/instant/connect-bank"}
+                  href={plaidConnected ? "/dashboard/wallet" : "/verification/instant/connect-bank"}
                   className="inline-flex h-9 items-center rounded-[7px] border border-white bg-white px-3 text-[12px] font-semibold text-black"
                 >
-                  {qboConnected ? "Manage Payouts" : "Set Up Payouts"}
+                  {plaidConnected ? "Manage Payouts" : "Set Up Payouts"}
                 </Link>
                 <span className="text-[11px] text-[#7f7f7f]">
-                  {qboConnected ? "Active Plaid connection" : "Secure bank linking"}
+                  {plaidConnected ? "Active Plaid connection" : "Secure bank linking"}
                 </span>
               </div>
             </Panel>
@@ -2262,8 +2411,17 @@ export default function DashboardHomePage() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => setLinkModalStep("plaid_banks")}
-                      className="flex-1 h-10 rounded-[7px] bg-white text-[13px] font-semibold text-black hover:bg-[#e8e8e8]"
+                      onClick={() => {
+                        if (isDashboardMockPlaid) {
+                          triggerDashboardMockPlaidFlow();
+                        } else if (dashboardPlaidReady) {
+                          openDashboardPlaid();
+                        } else {
+                          alert("Plaid Link is loading, please try again in a moment.");
+                        }
+                      }}
+                      disabled={!dashboardPlaidReady && !isDashboardMockPlaid}
+                      className="flex-1 h-10 rounded-[7px] bg-white text-[13px] font-semibold text-black hover:bg-[#e8e8e8] disabled:opacity-50"
                     >
                       Continue
                     </button>

@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
-import { Download } from "lucide-react";
+import Link from "next/link";
+import { Download, ChevronLeft } from "lucide-react";
 import { cn } from "../../../lib/utils";
 import { useDynamicIncomes, modelIncomeItems, RemoteBrandImage } from "../../../components/dashboard/ModelAgencyDashboard";
 
@@ -21,6 +22,16 @@ export default function IncomesPage() {
 
   return (
     <div className="mx-auto w-full max-w-[1048px] px-4 py-8 sm:px-6 lg:px-8">
+      <div className="mb-6">
+        <Link
+          href="/dashboard"
+          className="inline-flex items-center gap-2 text-[14px] font-semibold text-[#8f8f8f] transition-colors hover:text-white"
+        >
+          <ChevronLeft className="h-4 w-4" />
+          Back to Dashboard
+        </Link>
+      </div>
+
       <div>
         <h1 className="text-[34px] font-semibold leading-none text-white">
           Recent Incomes

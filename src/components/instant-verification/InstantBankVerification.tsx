@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -13,6 +13,7 @@ import {
   MapPin,
   ShieldCheck,
 } from "lucide-react";
+import { usePlaidLink } from "react-plaid-link";
 import { useApp } from "../../context/AppContext";
 import { cn } from "../../lib/utils";
 import { InstantFlowSummary } from "./InstantFlowSummary";
@@ -50,6 +51,8 @@ export function InstantBankVerification() {
     setVerificationStatusDirectly,
   } = useApp();
   const [plaidState, setPlaidState] = useState<PlaidState>("idle");
+  const [linkToken, setLinkToken] = useState<string | null>(null);
+  const [isMockPlaid, setIsMockPlaid] = useState(false);
   const [reviewState, setReviewState] = useState<ReviewState>("idle");
   const [formData, setFormData] = useState({
     website:
@@ -64,23 +67,120 @@ export function InstantBankVerification() {
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // Check active Plaid connection on load and fetch link_token
   useEffect(() => {
-    if (plaidState !== "connecting") return;
+    fetch("/api/plaid/status")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.connected) {
+          setPlaidState("connected");
+          updateBankDetails({
+            accountHolderName: state.businessSetup.legalName || "Business account",
+            bankName: data.institutionName || "Plaid Connected Bank",
+            routingNumber: "Verified via Plaid",
+            accountNumber: "Verified via Plaid",
+            statementUploaded: true,
+            status: "approved",
+          });
+        }
+      })
+      .catch((err) => console.error("Error checking Plaid status:", err));
 
-    const timer = window.setTimeout(() => {
-      setPlaidState("connected");
-      updateBankDetails({
-        accountHolderName: state.businessSetup.legalName || "Business account",
-        bankName: "Plaid verified bank",
-        routingNumber: "Verified via Plaid",
-        accountNumber: "Verified via Plaid",
-        statementUploaded: true,
-        status: "approved",
-      });
-    }, 1100);
+    fetch("/api/plaid/create-link-token", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.link_token) {
+          setLinkToken(data.link_token);
+          setIsMockPlaid(false);
+        } else if (data.isMock) {
+          setIsMockPlaid(true);
+        } else {
+          console.error("No link token returned:", data);
+        }
+      })
+      .catch((err) => console.error("Error fetching link token:", err));
+  }, [state.businessSetup.legalName, updateBankDetails]);
 
-    return () => window.clearTimeout(timer);
-  }, [plaidState, state.businessSetup.legalName, updateBankDetails]);
+  const triggerMockPlaidFlow = useCallback(async () => {
+    setPlaidState("connecting");
+    setTimeout(async () => {
+      try {
+        const response = await fetch("/api/plaid/exchange-token", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            public_token: "mock-public-token-12345",
+            institution: { name: "Chase Bank", institution_id: "ins_1" },
+          }),
+        });
+
+        if (response.ok) {
+          setPlaidState("connected");
+          updateBankDetails({
+            accountHolderName: state.businessSetup.legalName || "Business account",
+            bankName: "Chase Bank (Simulated)",
+            routingNumber: "Verified via Plaid",
+            accountNumber: "Verified via Plaid",
+            statementUploaded: true,
+            status: "approved",
+          });
+        } else {
+          setPlaidState("idle");
+        }
+      } catch (error) {
+        setPlaidState("idle");
+        console.error("Error exchanging mock public token:", error);
+      }
+    }, 1500);
+  }, [state.businessSetup.legalName, updateBankDetails]);
+
+  const onSuccess = useCallback(
+    async (public_token: string, metadata: any) => {
+      setPlaidState("connecting");
+      try {
+        const response = await fetch("/api/plaid/exchange-token", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            public_token,
+            institution: metadata.institution,
+          }),
+        });
+
+        if (response.ok) {
+          setPlaidState("connected");
+          updateBankDetails({
+            accountHolderName: state.businessSetup.legalName || "Business account",
+            bankName: metadata.institution?.name || "Plaid Connected Bank",
+            routingNumber: "Verified via Plaid",
+            accountNumber: "Verified via Plaid",
+            statementUploaded: true,
+            status: "approved",
+          });
+        } else {
+          setPlaidState("idle");
+          console.error("Failed to exchange public token");
+        }
+      } catch (error) {
+        setPlaidState("idle");
+        console.error("Error exchanging public token:", error);
+      }
+    },
+    [state.businessSetup.legalName, updateBankDetails]
+  );
+
+  const { open, ready } = usePlaidLink({
+    token: linkToken,
+    onSuccess,
+    onExit: () => {
+      if (plaidState !== "connected") {
+        setPlaidState("idle");
+      }
+    },
+  });
 
   useEffect(() => {
     if (reviewState !== "running") return;
@@ -157,13 +257,20 @@ export function InstantBankVerification() {
 
               <button
                 type="button"
-                onClick={() => setPlaidState("connecting")}
-                disabled={plaidState !== "idle"}
+                onClick={() => {
+                  setPlaidState("connecting");
+                  if (isMockPlaid) {
+                    triggerMockPlaidFlow();
+                  } else {
+                    open();
+                  }
+                }}
+                disabled={(!ready && !isMockPlaid) || plaidState !== "idle"}
                 className={cn(
                   "flex h-11 min-w-[160px] items-center justify-center gap-2 rounded-[7px] px-5 text-[15px] font-semibold transition-colors sm:text-[16px]",
                   plaidState === "connected"
                     ? "border border-[#5E5E5E] bg-black text-white"
-                    : "bg-white text-black hover:bg-[#EDEDED]",
+                    : "bg-white text-black hover:bg-[#EDEDED] disabled:opacity-50",
                   plaidState === "connecting" && "cursor-wait opacity-85"
                 )}
               >
