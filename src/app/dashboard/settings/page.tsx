@@ -104,7 +104,7 @@ function Modal({
 
 export default function SettingsPage() {
   const router = useRouter();
-  const { resetState } = useApp();
+  const { logoutUser } = useApp();
   const [organization, setOrganization] = useState({
     companyName: "Acme Corporation Inc.",
     ein: "XX-XXXXXXX",
@@ -159,9 +159,7 @@ export default function SettingsPage() {
     } catch (error) {
       console.warn("QuickBooks disconnect failed during logout; clearing local session anyway.", error);
     } finally {
-      resetState();
-      localStorage.removeItem("agncypay_state");
-      localStorage.removeItem("agncypay_mock_connected_integrations");
+      await logoutUser();
       router.push("/auth/login");
     }
   };

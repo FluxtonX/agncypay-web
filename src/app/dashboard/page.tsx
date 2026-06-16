@@ -1268,6 +1268,7 @@ export default function DashboardHomePage() {
   const { state } = useApp();
   const activeWorkspace = state.workspaces.find((w) => w.id === state.activeWorkspaceId);
   const workspaceType = activeWorkspace?.type || state.user?.accountType || "brand";
+  const workspaceName = activeWorkspace?.name || "Acme Corp";
 
   const [autosplitInvoiceIds, setAutosplitInvoiceIds] = useState<string[]>([dashboardInvoices[0]?.id || ""]);
   const [autosplitContactIds, setAutosplitContactIds] = useState<string[]>([]);
@@ -1828,6 +1829,10 @@ export default function DashboardHomePage() {
       <div className="mx-auto max-w-[1520px] px-4 py-4 sm:px-6 lg:px-8">
         <div className="flex flex-nowrap items-center justify-start gap-4 pb-4">
           <img src="/agncypaybrand.png" alt="AgncyPay" className="h-[52px] w-auto shrink-0 object-contain scale-[1.5] origin-left" />
+          <div className="h-6 w-[1px] bg-[#333] self-center ml-8"></div>
+          <span className="text-[17px] font-semibold text-[#A1A1AA] tracking-wide self-center ml-2">
+            {workspaceType === "talent_independent" ? "Talent" : workspaceName}
+          </span>
         </div>
 
         <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(360px,0.85fr)]">

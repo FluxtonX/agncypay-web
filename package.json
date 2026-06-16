@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@google/genai": "^2.8.0",
+    "@supabase/supabase-js": "^2.108.2",
     "framer-motion": "^12.39.0",
     "intuit-oauth": "^4.2.3",
     "lucide-react": "^1.16.0",
