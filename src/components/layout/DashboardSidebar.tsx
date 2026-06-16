@@ -179,12 +179,16 @@ export function DashboardSidebar() {
   return (
     <aside className="hidden h-screen w-[312px] shrink-0 overflow-y-auto border-r border-[#171717] bg-black lg:flex lg:flex-col">
       <div className="flex h-[78px] shrink-0 items-center border-b border-[#111] px-[26px]">
-        <Link href="/dashboard" aria-label="AgncyPay dashboard" className="flex items-center">
+        <Link href="/dashboard" aria-label="AgncyPay dashboard" className="flex items-center gap-3">
           <img
             src="/agncypaybrand.png"
             alt="AgncyPay"
-            className="h-[36px] w-auto object-contain object-left sm:h-[42px]"
+            className="h-[26px] w-auto object-contain object-left"
           />
+          <div className="h-4 w-[1px] bg-[#222]"></div>
+          <span className="text-[14px] font-semibold text-[#A1A1AA] tracking-wide truncate max-w-[130px]" title={workspaceType === "talent_independent" ? "Talent" : workspaceName}>
+            {workspaceType === "talent_independent" ? "Talent" : workspaceName}
+          </span>
         </Link>
       </div>
 

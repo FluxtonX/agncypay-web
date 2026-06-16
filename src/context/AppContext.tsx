@@ -321,6 +321,46 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               ? prev.activeWorkspaceId
               : activeWorkspaceIdState,
           }));
+        } else {
+          // Fallback logic for legacy accounts lacking database rows (created before triggers)
+          const fullName = session.user.user_metadata?.full_name || "AgncyPay User";
+          const role = session.user.user_metadata?.role || "brand";
+          const workspaceName = session.user.user_metadata?.workspace_name || `${fullName}'s Workspace`;
+          const workspaceType = role === "talent" ? "talent_independent" : (role as WorkspaceType);
+
+          const fallbackWorkspace = {
+            id: `ws-fallback-${userId}`,
+            name: workspaceName,
+            type: workspaceType,
+            agncyId: "ORG-000000",
+            verificationTrack: getVerificationTrack(workspaceType),
+            verificationStatus: "draft" as const,
+          };
+
+          const fallbackMembership = {
+            id: `mem-fallback-${userId}`,
+            userEmail: session.user.email!,
+            workspaceId: fallbackWorkspace.id,
+            role: getDefaultWorkspaceRole(workspaceType),
+            permissions: getDefaultPermissions(getDefaultWorkspaceRole(workspaceType)),
+            status: "active" as const,
+          };
+
+          setState((prev) => ({
+            ...prev,
+            user: {
+              agncyId: userId,
+              fullName,
+              email: session.user.email!,
+              accountType: workspaceType,
+              isLoggedIn: true,
+              emailVerified: session.user.email_confirmed_at ? true : false,
+              activeWorkspaceId: fallbackWorkspace.id,
+            },
+            workspaces: [fallbackWorkspace],
+            memberships: [fallbackMembership],
+            activeWorkspaceId: fallbackWorkspace.id,
+          }));
         }
       } else {
         // Clear user session if no Supabase session exists
