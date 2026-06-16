@@ -19,6 +19,8 @@ import {
   getVerificationTrack,
   normalizeWorkspaceType,
 } from "../types/workspace";
+import { supabase } from "../supabase/client";
+import { getUserProfileAndWorkspaces } from "../supabase/auth";
 
 interface AppState {
   user: {
@@ -224,6 +226,7 @@ interface AppContextType {
   payInvoice: (invoiceId: string) => Promise<{ success: boolean; error?: string }>;
   switchWorkspace: (workspaceId: string) => void;
   resetState: () => void;
+  logoutUser: () => Promise<void>;
   setVerificationStatusDirectly: (status: AppState["verificationStatus"]) => void;
 }
 
@@ -265,6 +268,76 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       console.error("Failed to load local storage state:", e);
     }
     setIsLoaded(true);
+  }, []);
+
+  // Listen to Supabase Auth state changes
+  useEffect(() => {
+    let active = true;
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session?.user) {
+        const userId = session.user.id;
+        const result = await getUserProfileAndWorkspaces(userId);
+        if (!active) return;
+
+        if (result && result.profile) {
+          const { profile, memberships } = result;
+
+          const mappedWorkspaces = memberships.map((m) => ({
+            id: m.workspaces.id,
+            name: m.workspaces.name,
+            type: m.workspaces.type,
+            agncyId: m.workspaces.agncy_id,
+            verificationTrack: getVerificationTrack(m.workspaces.type),
+            verificationStatus: "draft" as const,
+          }));
+
+          const mappedMemberships = memberships.map((m) => ({
+            id: m.id,
+            userEmail: session.user.email!,
+            workspaceId: m.workspace_id,
+            role: m.role as any,
+            permissions: getDefaultPermissions(m.role as any),
+            status: m.status,
+          }));
+
+          const activeWorkspaceIdState = mappedWorkspaces[0]?.id || null;
+          const activeWorkspaceIdUser = mappedWorkspaces[0]?.id || undefined;
+
+          setState((prev) => ({
+            ...prev,
+            user: {
+              agncyId: profile.id,
+              fullName: profile.full_name,
+              email: session.user.email!,
+              accountType: profile.role === "talent" ? "talent_independent" : (profile.role as AccountType),
+              isLoggedIn: true,
+              emailVerified: session.user.email_confirmed_at ? true : false,
+              activeWorkspaceId: activeWorkspaceIdUser,
+            },
+            workspaces: mappedWorkspaces,
+            memberships: mappedMemberships,
+            activeWorkspaceId: prev.activeWorkspaceId && mappedWorkspaces.some(w => w.id === prev.activeWorkspaceId)
+              ? prev.activeWorkspaceId
+              : activeWorkspaceIdState,
+          }));
+        }
+      } else {
+        // Clear user session if no Supabase session exists
+        setState((prev) => ({
+          ...prev,
+          user: null,
+          workspaces: [],
+          memberships: [],
+          activeWorkspaceId: null,
+        }));
+      }
+    });
+
+    return () => {
+      active = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   // Save state to localStorage on state changes
@@ -587,6 +660,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setState(DEFAULT_STATE);
   };
 
+  const logoutUser = async () => {
+    await supabase.auth.signOut();
+    resetState();
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("agncypay_state");
+      localStorage.removeItem("agncypay_mock_connected_integrations");
+    }
+  };
+
   return (
     <AppContext.Provider
       value={{
@@ -606,6 +688,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         payInvoice,
         switchWorkspace,
         resetState,
+        logoutUser,
         setVerificationStatusDirectly,
       }}
     >

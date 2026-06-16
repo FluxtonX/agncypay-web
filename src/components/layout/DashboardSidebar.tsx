@@ -107,7 +107,7 @@ function isNavActive(pathname: string, item: DashboardNavItem) {
 export function DashboardSidebar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { state, resetState, switchWorkspace } = useApp();
+  const { state, logoutUser, switchWorkspace } = useApp();
   const [isAccountOpen, setIsAccountOpen] = useState(false);
   const accountMenuRef = useRef<HTMLDivElement>(null);
   const workspaceType = state.user ? normalizeWorkspaceType(state.user.accountType) : "brand";
@@ -138,9 +138,7 @@ export function DashboardSidebar() {
     } catch (error) {
       console.warn("QuickBooks disconnect failed during logout; clearing local session anyway.", error);
     } finally {
-      resetState();
-      localStorage.removeItem("agncypay_state");
-      localStorage.removeItem("agncypay_mock_connected_integrations");
+      await logoutUser();
       setIsAccountOpen(false);
       router.push("/auth/login");
     }
@@ -336,7 +334,7 @@ export function DashboardSidebar() {
 export function MobileDashboardNav() {
   const pathname = usePathname();
   const router = useRouter();
-  const { state, resetState, switchWorkspace } = useApp();
+  const { state, logoutUser, switchWorkspace } = useApp();
   const [isWorkspaceOpen, setIsWorkspaceOpen] = useState(false);
   const workspaceType = state.user ? normalizeWorkspaceType(state.user.accountType) : "brand";
   const activeWorkspace = state.workspaces.find((workspace) => workspace.id === state.activeWorkspaceId);
@@ -360,9 +358,7 @@ export function MobileDashboardNav() {
     } catch (error) {
       console.warn("QuickBooks disconnect failed during logout; clearing local session anyway.", error);
     } finally {
-      resetState();
-      localStorage.removeItem("agncypay_state");
-      localStorage.removeItem("agncypay_mock_connected_integrations");
+      await logoutUser();
       setIsWorkspaceOpen(false);
       router.push("/auth/login");
     }

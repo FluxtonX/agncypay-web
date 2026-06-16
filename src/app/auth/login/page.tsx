@@ -3,8 +3,9 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Eye, EyeOff } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
-import { getRegisteredUsers } from "../../../lib/authStorage";
+import { supabase } from "../../../supabase/client";
 
 const DEMO_EMAIL = "martin.safi@adidas.com";
 const DEMO_PASSWORD = "password123";
@@ -16,7 +17,8 @@ export default function LoginPage() {
   
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [roleType, setRoleType] = useState<"business" | "individual">("business");
+  const [roleType, setRoleType] = useState<"brand" | "agency" | "talent">("brand");
+  const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
@@ -55,46 +57,54 @@ export default function LoginPage() {
     if (!validate()) return;
 
     const normalizedEmail = email.trim().toLowerCase();
-    const registeredUser = getRegisteredUsers().find(
-      (user) => user.email.toLowerCase() === normalizedEmail
-    );
-    const isDemoLogin = normalizedEmail === DEMO_EMAIL && password === DEMO_PASSWORD;
-    const isGmailLogin = isGmailAddress(normalizedEmail);
-
-    if (!registeredUser && !isDemoLogin && !isGmailLogin) {
-      setErrors({ email: "Use a Gmail address, demo account, or create an account first." });
-      return;
-    }
-
-    if (registeredUser && !isGmailLogin && registeredUser.password !== password) {
-      setErrors({ password: "Incorrect password for this account." });
-      return;
-    }
 
     setIsLoading(true);
-    setTimeout(() => {
-      // Login inside AppContext
-      const fallbackName = normalizedEmail
-        .split("@")[0]
-        .split(/[._-]/)
-        .filter(Boolean)
-        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-        .join(" ");
-      const accountType = roleType === "business" ? "agency" : "talent_independent";
-      loginUser(
-        normalizedEmail,
-        registeredUser?.fullName || fallbackName || "AgncyPay User",
-        accountType,
-        {
-          workspaceName: registeredUser?.workspaceName,
-          workspaceType: accountType,
-          agencyId: registeredUser?.agencyId,
+    supabase.auth
+      .signInWithPassword({
+        email: normalizedEmail,
+        password,
+      })
+      .then(async ({ data: authData, error }) => {
+        if (error) {
+          setIsLoading(false);
+          let errorMsg = error.message;
+          if (errorMsg.toLowerCase().includes("email not confirmed")) {
+            errorMsg = "Email not confirmed yet. Please verify your email or disable 'Confirm email' in Supabase Dashboard (Auth > Providers > Email).";
+          }
+          setErrors({ submit: errorMsg });
+          return;
         }
-      );
-      setIsLoading(false);
 
-      router.push(safeNextPath || "/dashboard");
-    }, 1500);
+        if (authData.user) {
+          // Fetch profile directly to verify selected role
+          const { data: profile, error: profileErr } = await supabase
+            .from("profiles")
+            .select("role")
+            .eq("id", authData.user.id)
+            .single();
+
+          if (profileErr || !profile) {
+            setIsLoading(false);
+            setErrors({ submit: "Failed to load user profile. Please try again." });
+            await supabase.auth.signOut();
+            return;
+          }
+
+          if (profile.role !== roleType) {
+            setIsLoading(false);
+            setErrors({ submit: `Account role mismatch. This user is registered as a ${profile.role}, not a ${roleType}.` });
+            await supabase.auth.signOut();
+            return;
+          }
+        }
+
+        // Proceed to dashboard if matches
+        router.push(safeNextPath || "/dashboard");
+      })
+      .catch((err) => {
+        setIsLoading(false);
+        setErrors({ submit: err?.message || "An unexpected error occurred." });
+      });
   };
 
   return (
@@ -206,14 +216,15 @@ export default function LoginPage() {
             {/* Account Type */}
             <div className="mb-2">
               <label className="text-[13px] font-medium text-[#E5E5EA] mb-3 block">Account Type</label>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-3 gap-3">
                 {[
-                  { id: "business", label: "Business (Agency / Brand)" },
-                  { id: "individual", label: "Individual (Model / Talent)" },
+                  { id: "brand", label: "Brand" },
+                  { id: "agency", label: "Agency" },
+                  { id: "talent", label: "Talent" },
                 ].map((role) => (
                   <label
                     key={role.id}
-                    className={`flex cursor-pointer items-center justify-center rounded-lg border px-3 py-2 text-center text-[12px] font-semibold transition-colors ${
+                    className={`flex cursor-pointer items-center justify-center rounded-lg border px-3 py-2.5 text-center text-[12px] font-semibold transition-colors ${
                       roleType === role.id
                         ? "border-white bg-white text-black"
                         : "border-[#262626] bg-[#0B0B0B] text-[#8E8E93] hover:border-white/40"
@@ -224,7 +235,7 @@ export default function LoginPage() {
                       name="roleType"
                       value={role.id}
                       checked={roleType === role.id}
-                      onChange={() => setRoleType(role.id as "business" | "individual")}
+                      onChange={() => setRoleType(role.id as "brand" | "agency" | "talent")}
                       className="hidden"
                     />
                     {role.label}
@@ -267,17 +278,26 @@ export default function LoginPage() {
                   Forgot?
                 </Link>
               </div>
-              <input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => {
-                  setPassword(e.target.value);
-                  if (errors.password) setErrors({});
-                }}
-                className={`w-full border !bg-[#0B0B0B] !border-[#262626] ${errors.password ? "border-white/40" : ""} focus:border-white/30 focus:outline-none rounded-lg px-4 py-3 text-sm text-[#F8FAFC] placeholder-[#5A5A62] transition-colors`}
-                placeholder="••••••••"
-              />
+              <div className="relative w-full">
+                <input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    if (errors.password) setErrors({});
+                  }}
+                  className={`w-full border !bg-[#0B0B0B] !border-[#262626] ${errors.password ? "border-white/40" : ""} focus:border-white/30 focus:outline-none rounded-lg pl-4 pr-10 py-3 text-sm text-[#F8FAFC] placeholder-[#5A5A62] transition-colors`}
+                  placeholder="••••••••"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8E8E93] hover:text-white transition-colors cursor-pointer"
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
               {errors.password && (
                 <span className="text-xs text-white mt-0.5">{errors.password}</span>
               )}
@@ -299,6 +319,12 @@ export default function LoginPage() {
                 Remember me for 30 days
               </label>
             </div>
+
+            {errors.submit ? (
+              <div className="rounded-lg border border-red-950 bg-red-950/30 p-3 text-xs text-red-200">
+                {errors.submit}
+              </div>
+            ) : null}
 
             {/* Sign In CTA */}
             <button

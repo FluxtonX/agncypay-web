@@ -3,8 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Check, ShieldCheck } from "lucide-react";
-import { saveRegisteredUser } from "../../../lib/authStorage";
+import { Check, ShieldCheck, Eye, EyeOff } from "lucide-react";
 import { WorkspaceType } from "../../../types/workspace";
 
 const DEMO_EMAIL = "martin.safi@adidas.com";
@@ -27,19 +26,34 @@ function FormField({
   error?: string;
   type?: string;
 }) {
+  const [showPassword, setShowPassword] = useState(false);
+  const isPassword = type === "password";
+  const inputType = isPassword ? (showPassword ? "text" : "password") : type;
+
   return (
     <label className="flex w-full flex-col gap-2" htmlFor={id}>
       <span className="text-[13px] font-medium text-[#E5E5EA]">{label}</span>
-      <input
-        id={id}
-        type={type}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className={`w-full rounded-lg border bg-[#0B0B0B] px-4 py-3 text-sm text-[#F8FAFC] placeholder-[#5A5A62] transition-colors focus:border-white/30 focus:outline-none ${
-          error ? "border-white/40" : "border-[#262626]"
-        }`}
-        placeholder={placeholder}
-      />
+      <div className="relative w-full">
+        <input
+          id={id}
+          type={inputType}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          className={`w-full rounded-lg border bg-[#0B0B0B] pl-4 pr-10 py-3 text-sm text-[#F8FAFC] placeholder-[#5A5A62] transition-colors focus:border-white/30 focus:outline-none ${
+            error ? "border-white/40" : "border-[#262626]"
+          }`}
+          placeholder={placeholder}
+        />
+        {isPassword && (
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8E8E93] hover:text-white transition-colors cursor-pointer"
+          >
+            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+          </button>
+        )}
+      </div>
       {error ? <span className="text-xs text-white">{error}</span> : null}
     </label>
   );
@@ -52,8 +66,7 @@ export default function RegisterPage() {
   const [email, setEmail] = useState("");
   const [workspaceName, setWorkspaceName] = useState("");
   const [password, setPassword] = useState("");
-  const [roleType, setRoleType] = useState<"business" | "individual">("business");
-  const accountType: WorkspaceType = roleType === "business" ? "agency" : "talent_independent";
+  const [roleType, setRoleType] = useState<"brand" | "agency" | "talent">("brand");
   const [agree, setAgree] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
@@ -64,6 +77,7 @@ export default function RegisterPage() {
     setEmail(DEMO_EMAIL);
     setWorkspaceName("Adidas");
     setPassword(DEMO_PASSWORD);
+    setRoleType("brand");
     setAgree(true);
     setErrors({});
     setShowDemoHelper(false);
@@ -78,7 +92,9 @@ export default function RegisterPage() {
     } else if (!/\S+@\S+\.\S+/.test(email)) {
       nextErrors.email = "Invalid email format";
     }
-    if (!workspaceName.trim()) nextErrors.workspaceName = "Workspace name is required";
+    if (roleType !== "talent" && !workspaceName.trim()) {
+      nextErrors.workspaceName = "Workspace name is required";
+    }
     if (!password) {
       nextErrors.password = "Password is required";
     } else if (password.length < 8) {
@@ -98,22 +114,35 @@ export default function RegisterPage() {
 
     const normalizedEmail = email.trim().toLowerCase();
     const normalizedName = fullName.trim();
-    const normalizedWorkspaceName = workspaceName.trim();
+    const normalizedWorkspaceName = roleType === "talent" ? `${normalizedName}'s Workspace` : workspaceName.trim();
 
     setIsLoading(true);
-    window.setTimeout(() => {
-      saveRegisteredUser({
+    fetch("/api/auth/register", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
         email: normalizedEmail,
         password,
         fullName: normalizedName,
-        accountType: accountType,
-        workspaceType: accountType,
+        roleType,
         workspaceName: normalizedWorkspaceName,
+      }),
+    })
+      .then(async (res) => {
+        const data = await res.json();
+        setIsLoading(false);
+        if (!res.ok) {
+          setErrors({ submit: data.error || "Failed to register." });
+        } else {
+          router.push("/auth/login?registered=true");
+        }
+      })
+      .catch((err) => {
+        setIsLoading(false);
+        setErrors({ submit: err?.message || "An unexpected error occurred." });
       });
-
-      setIsLoading(false);
-      router.push("/auth/login");
-    }, 900);
   };
 
   return (
@@ -223,14 +252,15 @@ export default function RegisterPage() {
             <div className="rounded-[10px] border border-[#262626] bg-black/30 p-4 sm:p-5">
               <div className="mb-6">
                 <label className="text-[13px] font-medium text-[#E5E5EA] mb-3 block">Account Type</label>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-3 gap-3">
                   {[
-                    { id: "business", label: "Business (Agency / Brand)" },
-                    { id: "individual", label: "Individual (Model / Talent)" },
+                    { id: "brand", label: "Brand" },
+                    { id: "agency", label: "Agency" },
+                    { id: "talent", label: "Talent" },
                   ].map((role) => (
                     <label
                       key={role.id}
-                      className={`flex cursor-pointer items-center justify-center rounded-lg border px-3 py-2 text-center text-[12px] font-semibold transition-colors ${
+                      className={`flex cursor-pointer items-center justify-center rounded-lg border px-3 py-2.5 text-center text-[12px] font-semibold transition-colors ${
                         roleType === role.id
                           ? "border-white bg-white text-black"
                           : "border-[#262626] bg-[#0B0B0B] text-[#8E8E93] hover:border-white/40"
@@ -241,7 +271,7 @@ export default function RegisterPage() {
                         name="roleType"
                         value={role.id}
                         checked={roleType === role.id}
-                        onChange={() => setRoleType(role.id as "business" | "individual")}
+                        onChange={() => setRoleType(role.id as "brand" | "agency" | "talent")}
                         className="hidden"
                       />
                       {role.label}
@@ -250,7 +280,7 @@ export default function RegisterPage() {
                 </div>
               </div>
 
-              {roleType === "business" && (
+              {(roleType === "brand" || roleType === "agency") && (
                 <div className="mb-6">
                   <label className="text-[13px] font-medium text-[#E5E5EA] mb-3 block">Connect Accounting (Optional)</label>
                   <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -290,17 +320,19 @@ export default function RegisterPage() {
                   placeholder="you@company.com"
                   error={errors.email}
                 />
-                <FormField
-                  id="workspaceName"
-                  label="Company / Workspace Name"
-                  value={workspaceName}
-                  onChange={(value) => {
-                    setWorkspaceName(value);
-                    if (errors.workspaceName) setErrors({});
-                  }}
-                  placeholder="Adidas"
-                  error={errors.workspaceName}
-                />
+                {roleType !== "talent" && (
+                  <FormField
+                    id="workspaceName"
+                    label="Company / Workspace Name"
+                    value={workspaceName}
+                    onChange={(value) => {
+                      setWorkspaceName(value);
+                      if (errors.workspaceName) setErrors({});
+                    }}
+                    placeholder="Adidas"
+                    error={errors.workspaceName}
+                  />
+                )}
                 <FormField
                   id="password"
                   type="password"
@@ -333,6 +365,12 @@ export default function RegisterPage() {
               </label>
             </div>
             {errors.agree ? <span className="block text-xs text-white">{errors.agree}</span> : null}
+
+            {errors.submit ? (
+              <div className="rounded-lg border border-red-950 bg-red-950/30 p-3 text-xs text-red-200">
+                {errors.submit}
+              </div>
+            ) : null}
 
             <button
               type="submit"
