@@ -107,7 +107,7 @@ function isNavActive(pathname: string, item: DashboardNavItem) {
 export function DashboardSidebar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { state, resetState, switchWorkspace } = useApp();
+  const { state, logoutUser, switchWorkspace } = useApp();
   const [isAccountOpen, setIsAccountOpen] = useState(false);
   const accountMenuRef = useRef<HTMLDivElement>(null);
   const workspaceType = state.user ? normalizeWorkspaceType(state.user.accountType) : "brand";
@@ -132,11 +132,16 @@ export function DashboardSidebar() {
     return () => document.removeEventListener("mousedown", closeAccountMenu);
   }, []);
 
-  const handleLogout = () => {
-    resetState();
-    localStorage.removeItem("agncypay_state");
-    setIsAccountOpen(false);
-    router.push("/auth/login");
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/quickbooks/disconnect", { method: "POST" });
+    } catch (error) {
+      console.warn("QuickBooks disconnect failed during logout; clearing local session anyway.", error);
+    } finally {
+      await logoutUser();
+      setIsAccountOpen(false);
+      router.push("/auth/login");
+    }
   };
 
   const handleWorkspaceSwitch = (workspaceId: string) => {
@@ -174,12 +179,16 @@ export function DashboardSidebar() {
   return (
     <aside className="hidden h-screen w-[312px] shrink-0 overflow-y-auto border-r border-[#171717] bg-black lg:flex lg:flex-col">
       <div className="flex h-[78px] shrink-0 items-center border-b border-[#111] px-[26px]">
-        <Link href="/dashboard" aria-label="AgncyPay dashboard" className="flex items-center">
+        <Link href="/dashboard" aria-label="AgncyPay dashboard" className="flex items-center gap-3">
           <img
             src="/agncypaybrand.png"
             alt="AgncyPay"
-            className="h-[36px] w-auto object-contain object-left sm:h-[42px]"
+            className="h-[26px] w-auto object-contain object-left"
           />
+          <div className="h-4 w-[1px] bg-[#222]"></div>
+          <span className="text-[14px] font-semibold text-[#A1A1AA] tracking-wide truncate max-w-[130px]" title={workspaceType === "talent_independent" ? "Talent" : workspaceName}>
+            {workspaceType === "talent_independent" ? "Talent" : workspaceName}
+          </span>
         </Link>
       </div>
 
@@ -329,7 +338,7 @@ export function DashboardSidebar() {
 export function MobileDashboardNav() {
   const pathname = usePathname();
   const router = useRouter();
-  const { state, resetState, switchWorkspace } = useApp();
+  const { state, logoutUser, switchWorkspace } = useApp();
   const [isWorkspaceOpen, setIsWorkspaceOpen] = useState(false);
   const workspaceType = state.user ? normalizeWorkspaceType(state.user.accountType) : "brand";
   const activeWorkspace = state.workspaces.find((workspace) => workspace.id === state.activeWorkspaceId);
@@ -347,11 +356,16 @@ export function MobileDashboardNav() {
     router.push("/dashboard");
   };
 
-  const handleMobileLogout = () => {
-    resetState();
-    localStorage.removeItem("agncypay_state");
-    setIsWorkspaceOpen(false);
-    router.push("/auth/login");
+  const handleMobileLogout = async () => {
+    try {
+      await fetch("/api/quickbooks/disconnect", { method: "POST" });
+    } catch (error) {
+      console.warn("QuickBooks disconnect failed during logout; clearing local session anyway.", error);
+    } finally {
+      await logoutUser();
+      setIsWorkspaceOpen(false);
+      router.push("/auth/login");
+    }
   };
 
   return (

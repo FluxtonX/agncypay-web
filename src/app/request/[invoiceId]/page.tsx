@@ -11,7 +11,7 @@ import {
   formatMainboardMoney,
 } from "../../../lib/mainboard";
 
-export default function RequestPage() {
+function RequestPageContent() {
   const params = useParams<{ invoiceId: string }>();
   const searchParams = useSearchParams();
   const rawInvoiceId = Array.isArray(params.invoiceId) ? params.invoiceId[0] : params.invoiceId;
@@ -218,5 +218,20 @@ export default function RequestPage() {
         </section>
       </main>
     </div>
+  );
+}
+
+export default function RequestPage() {
+  return (
+    <React.Suspense fallback={
+      <div className="min-h-screen bg-[#4d4d4d] text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#333] border-t-white mx-auto mb-4"></div>
+          <p className="text-[14px] text-[#bdbdbd]">Loading invoice...</p>
+        </div>
+      </div>
+    }>
+      <RequestPageContent />
+    </React.Suspense>
   );
 }
