@@ -17,6 +17,7 @@ function FormField({
   placeholder,
   error,
   type = "text",
+  autoComplete,
 }: {
   id: string;
   label: string;
@@ -25,6 +26,7 @@ function FormField({
   placeholder: string;
   error?: string;
   type?: string;
+  autoComplete?: string;
 }) {
   const [showPassword, setShowPassword] = useState(false);
   const isPassword = type === "password";
@@ -36,11 +38,13 @@ function FormField({
       <div className="relative w-full">
         <input
           id={id}
+          name={id}
           type={inputType}
           value={value}
+          autoComplete={autoComplete}
           onChange={(event) => onChange(event.target.value)}
-          className={`w-full rounded-lg border bg-[#0B0B0B] pl-4 pr-10 py-3 text-sm text-[#F8FAFC] placeholder-[#5A5A62] transition-colors focus:border-white/30 focus:outline-none ${
-            error ? "border-white/40" : "border-[#262626]"
+          className={`w-full rounded-lg border bg-[#0B0B0B] pl-4 ${isPassword ? 'pr-10' : 'pr-4'} py-3 text-sm text-[#F8FAFC] placeholder-[#5A5A62] transition-colors focus:border-white/50 focus:outline-none ${
+            error ? "border-red-500/50" : "border-[#3A3A3A]"
           }`}
           placeholder={placeholder}
         />
@@ -66,6 +70,7 @@ export default function RegisterPage() {
   const [email, setEmail] = useState("");
   const [workspaceName, setWorkspaceName] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [roleType, setRoleType] = useState<"brand" | "agency" | "talent">("brand");
   const [agree, setAgree] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -77,6 +82,7 @@ export default function RegisterPage() {
     setEmail(DEMO_EMAIL);
     setWorkspaceName("Adidas");
     setPassword(DEMO_PASSWORD);
+    setConfirmPassword(DEMO_PASSWORD);
     setRoleType("brand");
     setAgree(true);
     setErrors({});
@@ -99,6 +105,9 @@ export default function RegisterPage() {
       nextErrors.password = "Password is required";
     } else if (password.length < 8) {
       nextErrors.password = "Password must be at least 8 characters";
+    }
+    if (password && password !== confirmPassword) {
+      nextErrors.confirmPassword = "Passwords do not match";
     }
     if (!agree) {
       nextErrors.agree = "You must agree to the Terms of Service and Privacy Policy";
@@ -148,21 +157,13 @@ export default function RegisterPage() {
   return (
     <div className="grid min-h-screen w-full grid-cols-1 bg-black font-sans text-white lg:grid-cols-[minmax(360px,0.95fr)_minmax(520px,1.05fr)]">
       <style dangerouslySetInnerHTML={{ __html: `
-        #fullName, #email, #workspaceName, #password {
-          background-color: #0B0B0B !important;
-          border-color: #262626 !important;
-          color: #F8FAFC !important;
-        }
-        #fullName:focus, #email:focus, #workspaceName:focus, #password:focus {
-          border-color: rgba(255, 255, 255, 0.3) !important;
-        }
         input:-webkit-autofill,
         input:-webkit-autofill:hover,
         input:-webkit-autofill:focus,
         input:-webkit-autofill:active {
           -webkit-box-shadow: 0 0 0 1000px #0B0B0B inset !important;
           -webkit-text-fill-color: #F8FAFC !important;
-          border-color: #262626 !important;
+          border-color: #3A3A3A !important;
           transition: background-color 5000s ease-in-out 0s;
         }
       ` }} />
@@ -249,59 +250,34 @@ export default function RegisterPage() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="rounded-[10px] border border-[#262626] bg-black/30 p-4 sm:p-5">
+            <div className="rounded-[10px] border border-[#3A3A3A] bg-black/30 p-4 sm:p-5 shadow-[0_0_15px_rgba(0,0,0,0.5)]">
               <div className="mb-6">
-                <label className="text-[13px] font-medium text-[#E5E5EA] mb-3 block">Account Type</label>
-                <div className="grid grid-cols-3 gap-3">
-                  {[
-                    { id: "brand", label: "Brand" },
-                    { id: "agency", label: "Agency" },
-                    { id: "talent", label: "Talent" },
-                  ].map((role) => (
-                    <label
-                      key={role.id}
-                      className={`flex cursor-pointer items-center justify-center rounded-lg border px-3 py-2.5 text-center text-[12px] font-semibold transition-colors ${
-                        roleType === role.id
-                          ? "border-white bg-white text-black"
-                          : "border-[#262626] bg-[#0B0B0B] text-[#8E8E93] hover:border-white/40"
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="roleType"
-                        value={role.id}
-                        checked={roleType === role.id}
-                        onChange={() => setRoleType(role.id as "brand" | "agency" | "talent")}
-                        className="hidden"
-                      />
-                      {role.label}
-                    </label>
-                  ))}
+                <label className="text-[13px] font-medium text-[#E5E5EA] mb-3 block" htmlFor="roleType">Account Type</label>
+                <div className="relative w-full">
+                  <select
+                    id="roleType"
+                    value={roleType}
+                    onChange={(e) => setRoleType(e.target.value as "brand" | "agency" | "talent")}
+                    className="w-full appearance-none rounded-lg border border-[#3A3A3A] bg-[#0B0B0B] px-4 py-3 text-sm text-[#F8FAFC] transition-colors focus:border-white/50 focus:outline-none cursor-pointer"
+                  >
+                    <option value="brand" className="bg-[#0B0B0B] text-white">Brand</option>
+                    <option value="agency" className="bg-[#0B0B0B] text-white">Agency</option>
+                    <option value="talent" className="bg-[#0B0B0B] text-white">Talent</option>
+                  </select>
+                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-[#8E8E93]">
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
+                    </svg>
+                  </div>
                 </div>
               </div>
 
-              {(roleType === "brand" || roleType === "agency") && (
-                <div className="mb-6">
-                  <label className="text-[13px] font-medium text-[#E5E5EA] mb-3 block">Connect Accounting (Optional)</label>
-                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                    {["QuickBooks", "Xero", "NetSuite", "Sage"].map((erp) => (
-                      <button
-                        key={erp}
-                        type="button"
-                        className="flex h-10 items-center justify-center rounded-lg border border-[#262626] bg-[#0B0B0B] text-[11px] font-semibold text-[#8E8E93] transition-colors hover:border-white/40 hover:text-white"
-                      >
-                        {erp}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="flex flex-col gap-4">
                 <FormField
                   id="fullName"
                   label="Enter your Name"
                   value={fullName}
+                  autoComplete="name"
                   onChange={(value) => {
                     setFullName(value);
                     if (errors.fullName) setErrors({});
@@ -313,6 +289,7 @@ export default function RegisterPage() {
                   id="email"
                   label="Email Address"
                   value={email}
+                  autoComplete="email"
                   onChange={(value) => {
                     setEmail(value);
                     if (errors.email) setErrors({});
@@ -325,6 +302,7 @@ export default function RegisterPage() {
                     id="workspaceName"
                     label="Company / Workspace Name"
                     value={workspaceName}
+                    autoComplete="organization"
                     onChange={(value) => {
                       setWorkspaceName(value);
                       if (errors.workspaceName) setErrors({});
@@ -338,12 +316,26 @@ export default function RegisterPage() {
                   type="password"
                   label="Password"
                   value={password}
+                  autoComplete="new-password"
                   onChange={(value) => {
                     setPassword(value);
                     if (errors.password) setErrors({});
                   }}
                   placeholder="Minimum 8 characters"
                   error={errors.password}
+                />
+                <FormField
+                  id="confirmPassword"
+                  type="password"
+                  label="Confirm Password"
+                  value={confirmPassword}
+                  autoComplete="new-password"
+                  onChange={(value) => {
+                    setConfirmPassword(value);
+                    if (errors.confirmPassword) setErrors({});
+                  }}
+                  placeholder="Confirm your password"
+                  error={errors.confirmPassword}
                 />
               </div>
             </div>
@@ -354,7 +346,7 @@ export default function RegisterPage() {
                 id="agree"
                 checked={agree}
                 onChange={() => setAgree(!agree)}
-                className="mt-0.5 h-4 w-4 cursor-pointer rounded border-[#262626] bg-[#0B0B0B] accent-white"
+                className="mt-0.5 h-4 w-4 cursor-pointer rounded border-[#3A3A3A] bg-[#0B0B0B] accent-white"
               />
               <label
                 htmlFor="agree"
@@ -380,7 +372,7 @@ export default function RegisterPage() {
               {isLoading ? "Creating Account..." : "Create Account"}
             </button>
 
-            <div className="flex items-center justify-center gap-2 rounded-[10px] border border-[#262626] bg-[#0B0B0B] px-4 py-3 text-[13px] text-[#8E8E93]">
+            <div className="flex items-center justify-center gap-2 rounded-[10px] border border-[#3A3A3A] bg-[#0B0B0B] px-4 py-3 text-[13px] text-[#8E8E93]">
               <Check className="h-4 w-4 text-white" />
               Sign in after signup to open your dashboard
             </div>
