@@ -255,9 +255,27 @@ export function ModelPayoutsList() {
 
 export function CsvDropzonePanel() {
   const [isDragActive, setIsDragActive] = useState(false);
-  const [uploadState, setUploadState] = useState<"idle" | "parsing" | "success" | "error">("idle");
+  const [uploadState, setUploadState] = useState<"idle" | "analyzing" | "file_selected" | "preparing" | "parsing" | "success" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState("");
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  // Restore cached upload state on mount
+  useEffect(() => {
+    try {
+      const savedUploadId = localStorage.getItem("uploadedUploadId");
+      const savedFileName = localStorage.getItem("uploadedFileName");
+      const savedSize = localStorage.getItem("uploadedFileSize");
+      
+      if (savedUploadId && savedFileName) {
+        setUploadState("file_selected");
+        setSelectedFiles([{
+          name: savedFileName,
+          size: savedSize ? parseInt(savedSize) : 0,
+        } as File]);
+      }
+    } catch {}
+  }, []);
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -269,111 +287,243 @@ export function CsvDropzonePanel() {
     setIsDragActive(false);
   };
 
-  const uploadFiles = async (files: File[]) => {
+  const handleFilesSelected = async (files: File[]) => {
     setIsDragActive(false);
-    setUploadState("parsing");
+    const file = files[0];
+    if (!file) return;
+
+    // Check if it's an Excel file
+    const isExcel = file.name.endsWith(".xlsx") || file.name.endsWith(".xls");
+    if (!isExcel) {
+      setUploadState("error");
+      setErrorMessage("Please upload an Excel file (.xlsx or .xls) only.");
+      setTimeout(() => {
+        setUploadState("idle");
+        setErrorMessage("");
+      }, 4000);
+      return;
+    }
+
+    setSelectedFiles([file]);
+    setUploadState("analyzing");
     setErrorMessage("");
 
     try {
-      let accumulatedIncomes: any[] = [];
-      let hasError = false;
+      const formData = new FormData();
+      formData.append("file", file);
 
-      for (const file of files) {
-        const formData = new FormData();
-        formData.append("file", file);
+      const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "https://agencypay-website-backend.onrender.com";
+      
+      const startTime = Date.now();
+      const response = await fetch(`${apiBaseUrl}/api/excel/uploads`, {
+        method: "POST",
+        body: formData,
+      });
 
-        const response = await fetch("/api/extract-income", {
-          method: "POST",
-          body: formData,
-        });
+      const data = await response.json();
+      
+      const elapsedTime = Date.now() - startTime;
+      const remainingTime = Math.max(0, 1500 - elapsedTime);
+      await new Promise((resolve) => setTimeout(resolve, remainingTime));
 
-        let data;
-        try {
-          data = await response.json();
-        } catch (err) {
-          data = null;
-        }
-
-        if (response.ok && data?.success) {
-          const aiIncomes = data.data || [];
-          
-          const newIncomes = aiIncomes.map((v: any, index: number) => ({
-            slug: `ai-vendor-${Date.now()}-${index}`,
-            name: v.name,
-            detail: v.detail || "AI Extracted Data",
-            date: v.date || new Date().toLocaleDateString(),
-            amount: v.amount,
-            src: `https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://${v.name.toLowerCase().replace(/[^a-z0-9]/g, '')}.com&size=128`,
-            fallback: v.name.substring(0, 2).toUpperCase(),
-            className: "bg-[#111]",
-            imageClassName: "scale-[1]",
-          }));
-
-          accumulatedIncomes = [...accumulatedIncomes, ...newIncomes];
-        } else {
-          hasError = true;
-          setErrorMessage(data?.error || `Failed to parse ${file.name}`);
-        }
-      }
-
-      if (accumulatedIncomes.length > 0) {
-        const existingIncomes = JSON.parse(localStorage.getItem("uploadedIncomes") || "[]");
-        const updatedIncomes = [...accumulatedIncomes, ...existingIncomes];
-        localStorage.setItem("uploadedIncomes", JSON.stringify(updatedIncomes));
+      if (response.ok && data?.success && data?.data?.uploadId) {
+        localStorage.setItem("uploadedUploadId", data.data.uploadId);
+        localStorage.setItem("uploadedFileName", file.name);
+        localStorage.setItem("uploadedFileSize", file.size.toString());
         
-        // Dispatch event to update the UI
-        window.dispatchEvent(new Event("incomesUpdated"));
+        // Save the summary totals and vendor list in localStorage
+        localStorage.setItem("uploadedTotals", JSON.stringify(data.data.totals || {}));
+        localStorage.setItem("uploadedOriginalName", data.data.originalName || file.name);
+        localStorage.setItem("uploadedRowCount", (data.data.rowCount ?? 0).toString());
+        localStorage.setItem("uploadedVendors", JSON.stringify(data.data.vendors || []));
 
-        setUploadState("success");
-        setTimeout(() => setUploadState("idle"), 4000);
-      } else if (hasError) {
-        setUploadState("error");
-        setTimeout(() => setUploadState("idle"), 5000);
+        // Add to recent income lists in dashboard
+        const vendors = data.data.vendors || [];
+        if (vendors.length > 0) {
+          const newIncomes = vendors.map((v: any, index: number) => {
+            const vName = v.vendor || "Unknown Vendor";
+            const vRowCount = typeof v.rowCount === "number" ? v.rowCount : 0;
+            const vNetIncome = typeof v.totalNetIncome === "number" ? v.totalNetIncome : 0;
+            return {
+              slug: `api-vendor-${Date.now()}-${index}`,
+              name: vName,
+              detail: `${vRowCount.toLocaleString()} transactions parsed`,
+              date: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }),
+              amount: `$${vNetIncome.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+              src: `https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://${vName.toLowerCase().replace(/[^a-z0-9]/g, "")}.com&size=128`,
+              fallback: vName.substring(0, 2).toUpperCase(),
+              className: "bg-[#111]",
+              imageClassName: "scale-[1]",
+            };
+          });
+          
+          const existingIncomes = JSON.parse(localStorage.getItem("uploadedIncomes") || "[]");
+          const updatedIncomes = [...newIncomes, ...existingIncomes];
+          localStorage.setItem("uploadedIncomes", JSON.stringify(updatedIncomes));
+          window.dispatchEvent(new Event("incomesUpdated"));
+        }
+
+        setUploadState("file_selected");
       } else {
         setUploadState("error");
-        setErrorMessage("No income data found in the provided files.");
-        setTimeout(() => setUploadState("idle"), 5000);
+        setErrorMessage(data?.message || data?.error || "Failed to upload and analyze Excel file.");
+        setTimeout(() => {
+          setUploadState("idle");
+          setSelectedFiles([]);
+          setErrorMessage("");
+        }, 5000);
       }
     } catch (error: any) {
       setUploadState("error");
-      setErrorMessage(error.message || "Network error occurred");
-      setTimeout(() => setUploadState("idle"), 5000);
+      setErrorMessage(error.message || "Network error occurred while connecting to backend.");
+      setTimeout(() => {
+        setUploadState("idle");
+        setSelectedFiles([]);
+        setErrorMessage("");
+      }, 5000);
     }
   };
+
+  const handleContinue = () => {
+    setUploadState("preparing");
+    setTimeout(() => {
+      window.location.href = "/dashboard/incomes/preview";
+    }, 1500);
+  };
+
+  const handleRemoveFile = () => {
+    setSelectedFiles([]);
+    setUploadState("idle");
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    
+    // Clear localStorage upload cache
+    localStorage.removeItem("uploadedUploadId");
+    localStorage.removeItem("uploadedFileName");
+    localStorage.removeItem("uploadedFileSize");
+    localStorage.removeItem("uploadedTotals");
+    localStorage.removeItem("uploadedOriginalName");
+    localStorage.removeItem("uploadedRowCount");
+    localStorage.removeItem("uploadedVendors");
+    localStorage.removeItem("uploadedIncomes");
+    window.dispatchEvent(new Event("incomesUpdated"));
+  };
+
+  // --- GROQ/OPENAI API CALL (COMMENTED OUT) ---
+  // const uploadFiles = async (files: File[]) => {
+  //   setIsDragActive(false);
+  //   setUploadState("parsing");
+  //   setErrorMessage("");
+  //
+  //   try {
+  //     let accumulatedIncomes: any[] = [];
+  //     let hasError = false;
+  //
+  //     for (const file of files) {
+  //       const formData = new FormData();
+  //       formData.append("file", file);
+  //
+  //       const response = await fetch("/api/extract-income", {
+  //         method: "POST",
+  //         body: formData,
+  //       });
+  //
+  //       let data;
+  //       try {
+  //         data = await response.json();
+  //       } catch (err) {
+  //         data = null;
+  //       }
+  //
+  //       if (response.ok && data?.success) {
+  //         const aiIncomes = data.data || [];
+  //         
+  //         const newIncomes = aiIncomes.map((v: any, index: number) => ({
+  //           slug: `ai-vendor-${Date.now()}-${index}`,
+  //           name: v.name,
+  //           detail: v.detail || "AI Extracted Data",
+  //           date: v.date || new Date().toLocaleDateString(),
+  //           amount: v.amount,
+  //           src: `https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://${v.name.toLowerCase().replace(/[^a-z0-9]/g, '')}.com&size=128`,
+  //           fallback: v.name.substring(0, 2).toUpperCase(),
+  //           className: "bg-[#111]",
+  //           imageClassName: "scale-[1]",
+  //         }));
+  //
+  //         accumulatedIncomes = [...accumulatedIncomes, ...newIncomes];
+  //       } else {
+  //         hasError = true;
+  //         setErrorMessage(data?.error || `Failed to parse ${file.name}`);
+  //       }
+  //     }
+  //
+  //     if (accumulatedIncomes.length > 0) {
+  //       const existingIncomes = JSON.parse(localStorage.getItem("uploadedIncomes") || "[]");
+  //       const updatedIncomes = [...accumulatedIncomes, ...existingIncomes];
+  //       localStorage.setItem("uploadedIncomes", JSON.stringify(updatedIncomes));
+  //       
+  //       // Dispatch event to update the UI
+  //       window.dispatchEvent(new Event("incomesUpdated"));
+  //
+  //       setUploadState("success");
+  //       setTimeout(() => setUploadState("idle"), 4000);
+  //     } else if (hasError) {
+  //       setUploadState("error");
+  //       setTimeout(() => setUploadState("idle"), 5000);
+  //     } else {
+  //       setUploadState("error");
+  //       setErrorMessage("No income data found in the provided files.");
+  //       setTimeout(() => setUploadState("idle"), 5000);
+  //     }
+  //   } catch (error: any) {
+  //     setUploadState("error");
+  //     setErrorMessage(error.message || "Network error occurred");
+  //     setTimeout(() => setUploadState("idle"), 5000);
+  //   }
+  // };
+  // --- END GROQ/OPENAI API CALL ---
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragActive(false);
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      uploadFiles(Array.from(e.dataTransfer.files));
+      handleFilesSelected(Array.from(e.dataTransfer.files));
     }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      uploadFiles(Array.from(e.target.files));
+      handleFilesSelected(Array.from(e.target.files));
     }
+  };
+
+  // Format file size
+  const formatSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
   return (
     <div 
       className={cn(
         "rounded-[13px] bg-[#050505]",
-        "px-6 py-10 flex flex-col items-center justify-center border-2 border-dashed transition-all duration-300 mb-5 relative overflow-hidden cursor-pointer group",
+        "px-6 py-10 flex flex-col items-center justify-center border-2 border-dashed transition-all duration-300 mb-5 relative overflow-hidden",
+        uploadState === "file_selected" ? "border-[#3a3a3a] cursor-default" : "cursor-pointer group",
         isDragActive ? "border-[#13d463] bg-[#13d463]/10" : "border-[#3a3a3a] hover:border-[#777] hover:bg-[#0a0a0a]"
       )}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
-      onClick={() => fileInputRef.current?.click()}
+      onClick={() => {
+        if (uploadState === "idle") fileInputRef.current?.click();
+      }}
     >
       <input 
         type="file" 
         className="hidden" 
         ref={fileInputRef} 
         onChange={handleFileChange}
-        accept=".csv,.pdf,.xlsx,.xls,image/*" 
-        multiple
+        accept=".xlsx,.xls" 
       />
 
       {uploadState === "idle" && (
@@ -399,7 +549,7 @@ export function CsvDropzonePanel() {
           </div>
           <h3 className="text-[18px] font-semibold text-white">Manual Data Ingestion</h3>
           <p className="mt-2 text-center text-[13px] leading-5 text-[#8f8f8f] max-w-[280px]">
-            Drag & Drop your Paystub, CSV, or PDF file here to parse and split income automatically.
+            Drag & Drop your Digital Sales Excel file (.xlsx, .xls) here to parse automatically.
           </p>
           <button 
             onClick={(e) => {
@@ -411,6 +561,63 @@ export function CsvDropzonePanel() {
             Browse Files
           </button>
         </>
+      )}
+
+      {uploadState === "analyzing" && (
+        <div className="flex flex-col items-center justify-center py-6 w-full">
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#333] border-t-[#13d463] mb-4"></div>
+          <h3 className="text-[16px] font-semibold text-white">Analyzing File...</h3>
+          <p className="mt-2 text-[13px] text-[#8f8f8f]">Reading and validating your document</p>
+        </div>
+      )}
+
+      {uploadState === "preparing" && (
+        <div className="flex flex-col items-center justify-center py-6 w-full">
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#333] border-t-[#13d463] mb-4"></div>
+          <h3 className="text-[16px] font-semibold text-white">Preparing Preview...</h3>
+          <p className="mt-2 text-[13px] text-[#8f8f8f]">Extracting income data from your file</p>
+        </div>
+      )}
+
+      {uploadState === "file_selected" && (
+        <div className="flex flex-col items-center justify-center py-4 w-full animate-in fade-in zoom-in duration-300">
+          {/* File card */}
+          <div className="w-full max-w-[320px] rounded-[10px] border border-[#303030] bg-[#0a0a0a] p-4">
+            {selectedFiles.map((file, i) => (
+              <div key={i} className="flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[#303030] bg-[#111]">
+                  <FileText className="h-5 w-5 text-[#13d463]" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[13px] font-semibold text-white">{file.name}</p>
+                  <p className="text-[11px] text-[#777]">{formatSize(file.size)}</p>
+                </div>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRemoveFile();
+                  }}
+                  className="flex h-7 w-7 items-center justify-center rounded-full text-[#666] hover:bg-white/10 hover:text-white transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+
+          {/* Continue Button */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              handleContinue();
+            }}
+            className="mt-5 inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-[#13d463] px-8 text-[14px] font-bold text-black transition-all hover:bg-[#0fba54] hover:shadow-[0_0_20px_rgba(19,212,99,0.3)] active:scale-[0.98]"
+          >
+            Continue
+            <ArrowUpRight className="h-4 w-4" />
+          </button>
+          <p className="mt-3 text-[12px] text-[#666]">Preview extracted income data</p>
+        </div>
       )}
 
       {uploadState === "parsing" && (

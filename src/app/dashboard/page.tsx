@@ -1276,6 +1276,8 @@ export default function DashboardHomePage() {
   const [isWalletContactsOpen, setIsWalletContactsOpen] = useState(false);
   const [walletContactQuery, setWalletContactQuery] = useState("");
   const [dynamicIncomes, setDynamicIncomes] = useState<any[]>([]);
+  const [isLoadingIncomes, setIsLoadingIncomes] = useState(true);
+  const [hasUpload, setHasUpload] = useState(false);
 
   // Banks & Cards list state
   const [linkedCards, setLinkedCards] = useState<any[]>([
@@ -1754,54 +1756,137 @@ export default function DashboardHomePage() {
   };
 
   useEffect(() => {
-    const loadIncomes = () => {
+    const fetchRealData = async () => {
+      // 1. Synchronously check and load from localStorage first (Stale-While-Revalidate)
+      let uploadId = "";
+      let cachedVendors = "";
       try {
-        const stored = localStorage.getItem("uploadedIncomes");
-        if (stored) {
-          setDynamicIncomes(JSON.parse(stored));
+        uploadId = localStorage.getItem("uploadedUploadId") || "";
+        cachedVendors = localStorage.getItem("uploadedVendors") || "";
+      } catch {}
+
+      const userHasUpload = !!(uploadId || cachedVendors);
+      setHasUpload(userHasUpload);
+
+      // Load cached data immediately so there is zero delay for the user
+      let hasRenderedCache = false;
+      if (cachedVendors) {
+        try {
+          const parsed = JSON.parse(cachedVendors);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            const mapped = parsed.map((v: any) => {
+              const vName = v.vendor || "Unknown Vendor";
+              const vRowCount = typeof v.rowCount === "number" ? v.rowCount : 0;
+              const vNetIncome = typeof v.totalNetIncome === "number" ? v.totalNetIncome : 0;
+              return {
+                slug: "uploaded-preview",
+                name: vName,
+                detail: `${vRowCount.toLocaleString()} transactions parsed`,
+                date: "Parsed from Excel",
+                amount: `$${vNetIncome.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+                rawAmount: vNetIncome,
+                src: `https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://${vName.toLowerCase().replace(/[^a-z0-9]/g, "")}.com&size=128`,
+                fallback: vName.substring(0, 2).toUpperCase(),
+                className: "bg-[#111]",
+                imageClassName: "scale-[1]",
+              };
+            });
+            mapped.sort((a: any, b: any) => b.rawAmount - a.rawAmount);
+            setDynamicIncomes(mapped);
+            setIsLoadingIncomes(false);
+            hasRenderedCache = true;
+          }
+        } catch (e) {
+          console.error("Error parsing cached vendors on dashboard load:", e);
         }
-      } catch (e) {
-        // ignore
+      }
+
+      // If there was no cached data to show, show the skeleton loader while we fetch
+      if (!hasRenderedCache) {
+        setIsLoadingIncomes(true);
+      }
+
+      // 2. Fetch live data from API in background
+      if (uploadId) {
+        try {
+          const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "https://agencypay-website-backend.onrender.com";
+          const response = await fetch(`${apiBaseUrl}/api/excel/uploads/${uploadId}/summary`);
+          
+          if (response.status === 404) {
+            // Upload was not found on the backend (e.g. after container restart or expiration)
+            try {
+              localStorage.removeItem("uploadedUploadId");
+              localStorage.removeItem("uploadedFileName");
+              localStorage.removeItem("uploadedFileSize");
+              localStorage.removeItem("uploadedTotals");
+              localStorage.removeItem("uploadedOriginalName");
+              localStorage.removeItem("uploadedRowCount");
+              localStorage.removeItem("uploadedVendors");
+              localStorage.removeItem("uploadedIncomes");
+            } catch {}
+            setHasUpload(false);
+            setDynamicIncomes([]);
+            setIsLoadingIncomes(false);
+          } else {
+            const data = await response.json();
+
+            if (response.ok && data?.success && data?.data?.vendors) {
+              const vendors = data.data.vendors || [];
+              localStorage.setItem("uploadedVendors", JSON.stringify(vendors));
+
+              const mapped = vendors.map((v: any) => {
+                const vName = v.vendor || "Unknown Vendor";
+                const vRowCount = typeof v.rowCount === "number" ? v.rowCount : 0;
+                const vNetIncome = typeof v.totalNetIncome === "number" ? v.totalNetIncome : 0;
+                return {
+                  slug: "uploaded-preview",
+                  name: vName,
+                  detail: `${vRowCount.toLocaleString()} transactions parsed`,
+                  date: "Parsed from Excel",
+                  amount: `$${vNetIncome.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+                  rawAmount: vNetIncome,
+                  src: `https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://${vName.toLowerCase().replace(/[^a-z0-9]/g, "")}.com&size=128`,
+                  fallback: vName.substring(0, 2).toUpperCase(),
+                  className: "bg-[#111]",
+                  imageClassName: "scale-[1]",
+                };
+              });
+              mapped.sort((a: any, b: any) => b.rawAmount - a.rawAmount);
+              setDynamicIncomes(mapped);
+              setIsLoadingIncomes(false);
+              return;
+            } else if (data?.success === false && data?.error?.code === "NOT_FOUND") {
+              try {
+                localStorage.removeItem("uploadedUploadId");
+                localStorage.removeItem("uploadedFileName");
+                localStorage.removeItem("uploadedFileSize");
+                localStorage.removeItem("uploadedTotals");
+                localStorage.removeItem("uploadedOriginalName");
+                localStorage.removeItem("uploadedRowCount");
+                localStorage.removeItem("uploadedVendors");
+                localStorage.removeItem("uploadedIncomes");
+              } catch {}
+              setHasUpload(false);
+              setDynamicIncomes([]);
+              setIsLoadingIncomes(false);
+            }
+          }
+        } catch (err) {
+          console.error("Dashboard API fetch failed, falling back to cached state:", err);
+          setIsLoadingIncomes(false);
+        }
+      } else {
+        setIsLoadingIncomes(false);
       }
     };
-    loadIncomes();
-    window.addEventListener("incomesUpdated", loadIncomes);
-    return () => window.removeEventListener("incomesUpdated", loadIncomes);
+
+    fetchRealData();
+    window.addEventListener("incomesUpdated", fetchRealData);
+    return () => window.removeEventListener("incomesUpdated", fetchRealData);
   }, []);
 
-  // Compute dynamic shortcuts based on connection status
-  const shortcuts = React.useMemo(() => {
-    if (!qboConnected) {
-      return Array(5).fill({
-        label: "N/A",
-        fallback: "N/A",
-        tileClassName: "bg-transparent p-0",
-        imageClassName: "scale-[3.2]",
-      });
-    }
-
-    // Extract synced QuickBooks client brand names
-    const qboClientNames = Array.from(new Set(qboInvoices.map((inv) => inv.name).filter(Boolean)));
-    const dynamicShortcuts = qboClientNames.map((name) => ({
-      label: name,
-      fallback: name.substring(0, 2).toUpperCase(),
-      href: `/dashboard/incomes`,
-      tileClassName: "bg-transparent p-0",
-      imageClassName: "scale-[3.2]",
-    }));
-
-    const standardBrands = [
-      { label: "TikTok", src: "/tiktok.png", fallback: "TikTok", href: "/dashboard/income/tiktok" },
-      { label: "iHeartRadio", src: "/iheart.png", fallback: "iHeart", href: "/dashboard/income/iheart-radio" },
-      { label: "Instagram", src: "/instagram.png", fallback: "Instagram", href: "/dashboard/income/instagram" },
-      { label: "Pandora", src: "/pandora.png", fallback: "Pandora", href: "/dashboard/income/pandora" },
-      { label: "Tidal", src: "/tidal.png", fallback: "Tidal", href: "/dashboard/income/tidal" },
-    ];
-
-    return [...dynamicShortcuts, ...standardBrands].slice(0, 5);
-  }, [qboConnected, qboInvoices]);
-
-  const allIncomes = dynamicIncomes.length > 0 ? dynamicIncomes : musicIncomeItems;
+  // Only fall back to static data if user has NEVER uploaded anything
+  const allIncomes = (hasUpload || dynamicIncomes.length > 0) ? dynamicIncomes : musicIncomeItems;
 
   const toggleAutosplitInvoice = (invoiceId: string) => {
     const isActive = autosplitInvoiceIds.includes(invoiceId);
@@ -1976,21 +2061,45 @@ export default function DashboardHomePage() {
               </div>
             </Panel>
 
-            {/* 2. Recent Payouts Panel */}
-            <Panel className="p-4 sm:p-5">
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <h2 className="text-[18px] font-semibold text-white">Recent Payouts</h2>
-                  <p className="mt-1 text-[13px] text-[#8f8f8f]">Money sent to talent and agencies you owe a cut.</p>
-                </div>
-                {qboConnected && (
-                  <Link
-                    href="/dashboard/payouts"
-                    className="inline-flex items-center gap-2 rounded-[7px] border border-[#333] bg-[#0b0b0b] px-3 py-2 text-[12px] font-semibold text-white hover:border-[#555]"
-                  >
-                    View All
-                    <ChevronRight className="h-4 w-4" />
-                  </Link>
+              <div className="mt-4 space-y-2">
+                {isLoadingIncomes ? (
+                  // Skeleton loader — never shows static data while fetching
+                  [1, 2, 3].map((i) => (
+                    <div key={i} className="flex items-center gap-3 rounded-[8px] border border-[#222] bg-black px-3 py-2 animate-pulse">
+                      <div className="h-12 w-12 shrink-0 rounded-[10px] bg-[#1a1a1a]" />
+                      <div className="flex-1 space-y-2">
+                        <div className="h-3 w-32 rounded bg-[#1a1a1a]" />
+                        <div className="h-2 w-20 rounded bg-[#141414]" />
+                      </div>
+                      <div className="h-3 w-16 rounded bg-[#1a1a1a]" />
+                    </div>
+                  ))
+                ) : allIncomes.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-8 text-center">
+                    <p className="text-[13px] text-[#555]">No income data yet.</p>
+                    <p className="mt-1 text-[12px] text-[#444]">Upload a Digital Sales Excel file to see your income here.</p>
+                  </div>
+                ) : (
+                  allIncomes.slice(0, 5).map((item) => (
+                    <Link
+                      key={`${item.name}-${item.date}`}
+                      href={item.slug === "uploaded-preview" ? "/dashboard/incomes/preview" : `/dashboard/income/${item.slug}`}
+                      className="flex items-center gap-3 rounded-[8px] border border-[#333] bg-black px-3 py-2 transition-colors hover:border-[#555] hover:bg-white/[0.04]"
+                    >
+                      <MusicIncomeLogo item={item} />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-[13px] font-semibold text-white">{item.name}</p>
+                        <p className="truncate text-[11px] text-[#7f7f7f]">{item.detail}</p>
+                      </div>
+                      <div className="hidden text-right text-[11px] text-[#7f7f7f] sm:block">{item.date}</div>
+                      <div className="min-w-[92px] text-right text-[13px] font-semibold text-white">
+                        {item.amount}
+                      </div>
+                      <span className="flex h-8 w-8 items-center justify-center rounded-full text-[#7f7f7f]">
+                        <EllipsisVertical className="h-4 w-4" />
+                      </span>
+                    </Link>
+                  ))
                 )}
               </div>
 
