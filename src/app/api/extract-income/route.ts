@@ -4,8 +4,8 @@ import { zodResponseFormat } from "openai/helpers/zod";
 import { z } from "zod";
 
 // Check if API Key is configured
-if (!process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY === "your_openai_api_key_here") {
-  console.warn("OPENAI_API_KEY is not set correctly in environment variables");
+if (!process.env.GROQ_API_KEY) {
+  console.warn("GROQ_API_KEY is not set correctly in environment variables");
 }
 
 const IncomesResponseSchema = z.object({
@@ -30,9 +30,28 @@ export async function POST(req: Request) {
     }
 
     // Initialize OpenAI inside the request
-    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    // const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
     
+    // --- START GROQ ---
+    if (!process.env.GROQ_API_KEY) {
+      console.warn("GROQ_API_KEY is not set correctly in environment variables");
+    }
+    const groqClient = new OpenAI({ 
+      apiKey: process.env.GROQ_API_KEY || "dummy_key", 
+      baseURL: "https://api.groq.com/openai/v1" 
+    });
+    // --- END GROQ ---
+
     let allIncomes: any[] = [];
+
+    // Helper to chunk text to prevent context limit errors
+    const chunkText = (text: string, size: number) => {
+      const chunks = [];
+      for (let i = 0; i < text.length; i += size) {
+        chunks.push(text.slice(i, i + size));
+      }
+      return chunks;
+    };
 
     // Process each file
     for (const file of files) {
@@ -40,37 +59,24 @@ export async function POST(req: Request) {
       const mimeType = file.type;
       const fileName = file.name.toLowerCase();
 
-      // We will build the userMessage content array based on the file type
-      let userMessageContent: any[] = [];
+      let hasImage = false;
+      let textChunks: string[] = [];
+      let base64Image = "";
 
       if (mimeType.startsWith("image/")) {
-        // It's an image, pass the Base64 data to Vision model
-        const base64Image = buffer.toString("base64");
-        userMessageContent.push({
-          type: "text",
-          text: `Please extract all income and payout details from this image.`,
-        });
-        userMessageContent.push({
-          type: "image_url",
-          image_url: {
-            url: `data:${mimeType};base64,${base64Image}`,
-          },
-        });
+        hasImage = true;
+        base64Image = buffer.toString("base64");
       } else if (mimeType === "application/pdf" || fileName.endsWith(".pdf")) {
-        // It's a PDF, extract text using pdf-parse dynamically to avoid build errors
         try {
           const pdfParse = require("pdf-parse");
           const pdfData = await pdfParse(buffer);
-          userMessageContent.push({
-            type: "text",
-            text: `Here is the extracted text from a PDF document:\n\n${pdfData.text}\n\nPlease extract all income and payout details from this text.`,
-          });
+          // 15,000 characters is ~3,500 tokens, perfectly safe for 8k limits
+          textChunks = chunkText(pdfData.text, 15000); 
         } catch (err: any) {
           console.error("Failed to parse PDF text:", err);
           return NextResponse.json({ error: "Could not parse the PDF file." }, { status: 400 });
         }
       } else if (fileName.endsWith(".xlsx") || fileName.endsWith(".xls")) {
-        // It's an Excel file, extract text using xlsx
         try {
           const xlsx = require("xlsx");
           const workbook = xlsx.read(buffer, { type: "buffer" });
@@ -79,45 +85,83 @@ export async function POST(req: Request) {
              const sheet = workbook.Sheets[sheetName];
              excelText += xlsx.utils.sheet_to_csv(sheet) + "\n\n";
           }
-          userMessageContent.push({
-            type: "text",
-            text: `Here is the extracted data from an Excel document (CSV format):\n\n${excelText}\n\nPlease extract all income and payout details from this text.`,
-          });
+          textChunks = chunkText(excelText, 15000);
         } catch (err: any) {
           console.error("Failed to parse Excel file:", err);
           return NextResponse.json({ error: "Could not parse the Excel file." }, { status: 400 });
         }
       } else {
-        // It's a raw text or CSV file
         const textContent = buffer.toString("utf-8");
-        userMessageContent.push({
-          type: "text",
-          text: `Here is raw text from a CSV/TXT document:\n\n${textContent}\n\nPlease extract all income and payout details from this text.`,
-        });
+        textChunks = chunkText(textContent, 15000);
       }
 
-      // Call OpenAI with Structured Outputs
-      const completion = await openai.chat.completions.parse({
-        model: "gpt-4o",
-        messages: [
-          {
-            role: "system",
-            content:
-              "You are an expert financial data extraction engine. You extract structured data from raw text, spreadsheets, and screenshots. Convert everything into a standardized JSON response matching the exact schema provided. Try to format the date correctly. Do not add conversational markdown.",
-          },
-          {
-            role: "user",
-            content: userMessageContent,
-          },
-        ],
-        response_format: zodResponseFormat(IncomesResponseSchema, "incomes_response"),
-      });
+      // --- START OPENAI (COMMENTED OUT) ---
+      // const completion = await openai.chat.completions.parse({
+      //   model: "gpt-4o-mini",
+      //   messages: [
+      //     {
+      //       role: "system",
+      //       content: "You are an expert financial data extraction engine. You extract structured data from raw text, spreadsheets, and screenshots. Convert everything into a standardized JSON response matching the exact schema provided. Try to format the date correctly. Do not add conversational markdown.",
+      //     },
+      //     {
+      //       role: "user",
+      //       content: hasImage 
+      //         ? [{ type: "text", text: "Extract details from this image." }, { type: "image_url", image_url: { url: `data:${mimeType};base64,${base64Image}` } }]
+      //         : [{ type: "text", text: `Extract details from this text:\n\n${textChunks.join("\n\n")}` }],
+      //     },
+      //   ],
+      //   response_format: zodResponseFormat(IncomesResponseSchema, "incomes_response"),
+      // });
+      // const parsedData = completion.choices[0].message.parsed;
+      // if (parsedData && parsedData.incomes) {
+      //   allIncomes = allIncomes.concat(parsedData.incomes);
+      // }
+      // --- END OPENAI ---
 
-      const parsedData = completion.choices[0].message.parsed;
-      
-      if (parsedData && parsedData.incomes) {
-        allIncomes = allIncomes.concat(parsedData.incomes);
+      // --- START GROQ ---
+      const groqModel = hasImage ? "llama-3.2-90b-vision-preview" : "llama-3.3-70b-versatile";
+      const systemPrompt = "You are an expert financial data extraction engine. Extract structured data from the text or image. You MUST return ONLY valid JSON in this exact structure: {\"incomes\": [{\"name\": \"Vendor Name\", \"amount\": \"+$200.00\", \"date\": \"28 Feb, 2024\", \"detail\": \"Paid\"}]}. Try to format the date correctly. Do NOT add conversational text or markdown blocks. ONLY output the raw JSON object.";
+
+      const processGroqChunk = async (messages: any[], isImage: boolean) => {
+        const requestPayload: any = {
+          model: groqModel,
+          messages,
+        };
+        if (!isImage) {
+          requestPayload.response_format = { type: "json_object" };
+        }
+        try {
+          const completionGroq = await groqClient.chat.completions.create(requestPayload);
+          let responseText = completionGroq.choices[0]?.message?.content || "{}";
+          responseText = responseText.replace(/```json/g, "").replace(/```/g, "").trim();
+          const parsedDataGroq = JSON.parse(responseText);
+          if (parsedDataGroq && parsedDataGroq.incomes) {
+            allIncomes = allIncomes.concat(parsedDataGroq.incomes);
+          }
+        } catch (err) {
+          console.error("Groq extraction error:", err);
+        }
+      };
+
+      if (hasImage) {
+        // Groq vision processing
+        await processGroqChunk([
+          { role: "system", content: systemPrompt },
+          { role: "user", content: [
+            { type: "text", text: "Please extract all income and payout details from this image." },
+            { type: "image_url", image_url: { url: `data:${mimeType};base64,${base64Image}` } }
+          ]}
+        ], true);
+      } else {
+        // Groq text chunk processing to prevent token limit errors!
+        for (let i = 0; i < textChunks.length; i++) {
+          await processGroqChunk([
+            { role: "system", content: systemPrompt },
+            { role: "user", content: `Here is part ${i + 1} of the document text:\n\n${textChunks[i]}\n\nPlease extract all income and payout details from this text.` }
+          ], false);
+        }
       }
+      // --- END GROQ ---
     }
 
     // Return the aggregated structured data back to the frontend
