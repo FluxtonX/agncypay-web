@@ -111,21 +111,13 @@ export default function LoginPage() {
     <div className="grid grid-cols-1 md:grid-cols-2 min-h-screen w-full bg-[#000000] text-white font-sans relative">
       {/* Strict CSS overrides to force input elements to stay dark `#0B0B0B` and handle browser autofills */}
       <style dangerouslySetInnerHTML={{__html: `
-        #email, #password {
-          background-color: #0B0B0B !important;
-          border-color: #262626 !important;
-          color: #F8FAFC !important;
-        }
-        #email:focus, #password:focus {
-          border-color: rgba(255, 255, 255, 0.3) !important;
-        }
         input:-webkit-autofill,
         input:-webkit-autofill:hover,
         input:-webkit-autofill:focus,
         input:-webkit-autofill:active {
           -webkit-box-shadow: 0 0 0 1000px #0B0B0B inset !important;
           -webkit-text-fill-color: #F8FAFC !important;
-          border-color: #262626 !important;
+          border-color: #3A3A3A !important;
           transition: background-color 5000s ease-in-out 0s;
         }
       `}} />
@@ -213,94 +205,87 @@ export default function LoginPage() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Account Type */}
-            <div className="mb-2">
-              <label className="text-[13px] font-medium text-[#E5E5EA] mb-3 block">Account Type</label>
-              <div className="grid grid-cols-3 gap-3">
-                {[
-                  { id: "brand", label: "Brand" },
-                  { id: "agency", label: "Agency" },
-                  { id: "talent", label: "Talent" },
-                ].map((role) => (
-                  <label
-                    key={role.id}
-                    className={`flex cursor-pointer items-center justify-center rounded-lg border px-3 py-2.5 text-center text-[12px] font-semibold transition-colors ${
-                      roleType === role.id
-                        ? "border-white bg-white text-black"
-                        : "border-[#262626] bg-[#0B0B0B] text-[#8E8E93] hover:border-white/40"
-                    }`}
+            <div className="rounded-[10px] border border-[#3A3A3A] bg-black/30 p-4 sm:p-5 shadow-[0_0_15px_rgba(0,0,0,0.5)] flex flex-col gap-5">
+              {/* Account Type */}
+              <div>
+                <label className="text-[13px] font-medium text-[#E5E5EA] mb-3 block" htmlFor="roleType">Account Type</label>
+                <div className="relative w-full">
+                  <select
+                    id="roleType"
+                    value={roleType}
+                    onChange={(e) => setRoleType(e.target.value as "brand" | "agency" | "talent")}
+                    className="w-full appearance-none rounded-lg border border-[#3A3A3A] bg-[#0B0B0B] px-4 py-3 text-sm text-[#F8FAFC] transition-colors focus:border-white/50 focus:outline-none cursor-pointer"
                   >
-                    <input
-                      type="radio"
-                      name="roleType"
-                      value={role.id}
-                      checked={roleType === role.id}
-                      onChange={() => setRoleType(role.id as "brand" | "agency" | "talent")}
-                      className="hidden"
-                    />
-                    {role.label}
-                  </label>
-                ))}
+                    <option value="brand" className="bg-[#0B0B0B] text-white">Brand</option>
+                    <option value="agency" className="bg-[#0B0B0B] text-white">Agency</option>
+                    <option value="talent" className="bg-[#0B0B0B] text-white">Talent</option>
+                  </select>
+                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-[#8E8E93]">
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
+                    </svg>
+                  </div>
+                </div>
               </div>
-            </div>
 
-            {/* Email Address */}
-            <div className="flex flex-col gap-2 w-full">
-              <label htmlFor="email" className="text-[13px] font-medium text-[#E5E5EA]">
-                Email Address
-              </label>
-              <input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => {
-                  setEmail(e.target.value);
-                  if (errors.email) setErrors({});
-                }}
-                className={`w-full border !bg-[#0B0B0B] !border-[#262626] ${errors.email ? "border-white/40" : ""} focus:border-white/30 focus:outline-none rounded-lg px-4 py-3 text-sm text-[#F8FAFC] placeholder-[#5A5A62] transition-colors`}
-                placeholder="you@company.com"
-              />
-              {errors.email && (
-                <span className="text-xs text-white mt-0.5">{errors.email}</span>
-              )}
-            </div>
-
-            {/* Password */}
-            <div className="flex flex-col gap-2 w-full">
-              <div className="flex justify-between items-center">
-                <label htmlFor="password" className="text-[13px] font-medium text-[#E5E5EA]">
-                  Password
+              {/* Email Address */}
+              <div className="flex flex-col gap-2 w-full">
+                <label htmlFor="email" className="text-[13px] font-medium text-[#E5E5EA]">
+                  Email Address
                 </label>
-                <Link
-                  href="/auth/forgot-password"
-                  className="text-xs text-[#8E8E93] hover:text-white transition-colors"
-                >
-                  Forgot?
-                </Link>
-              </div>
-              <div className="relative w-full">
                 <input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  value={password}
+                  id="email"
+                  type="email"
+                  value={email}
                   onChange={(e) => {
-                    setPassword(e.target.value);
-                    if (errors.password) setErrors({});
+                    setEmail(e.target.value);
+                    if (errors.email) setErrors({});
                   }}
-                  className={`w-full border !bg-[#0B0B0B] !border-[#262626] ${errors.password ? "border-white/40" : ""} focus:border-white/30 focus:outline-none rounded-lg pl-4 pr-10 py-3 text-sm text-[#F8FAFC] placeholder-[#5A5A62] transition-colors`}
-                  placeholder="••••••••"
+                  className={`w-full border !bg-[#0B0B0B] !border-[#3A3A3A] ${errors.email ? "border-red-500/50" : ""} focus:border-white/50 focus:outline-none rounded-lg px-4 py-3 text-sm text-[#F8FAFC] placeholder-[#5A5A62] transition-colors`}
+                  placeholder="you@company.com"
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8E8E93] hover:text-white transition-colors cursor-pointer"
-                >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
+                {errors.email && (
+                  <span className="text-xs text-white mt-0.5">{errors.email}</span>
+                )}
               </div>
-              {errors.password && (
-                <span className="text-xs text-white mt-0.5">{errors.password}</span>
-              )}
+
+              {/* Password */}
+              <div className="flex flex-col gap-2 w-full">
+                <div className="flex justify-between items-center">
+                  <label htmlFor="password" className="text-[13px] font-medium text-[#E5E5EA]">
+                    Password
+                  </label>
+                  <Link
+                    href="/auth/forgot-password"
+                    className="text-xs text-[#8E8E93] hover:text-white transition-colors"
+                  >
+                    Forgot?
+                  </Link>
+                </div>
+                <div className="relative w-full">
+                  <input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      if (errors.password) setErrors({});
+                    }}
+                    className={`w-full border !bg-[#0B0B0B] !border-[#3A3A3A] ${errors.password ? "border-red-500/50" : ""} focus:border-white/50 focus:outline-none rounded-lg pl-4 pr-10 py-3 text-sm text-[#F8FAFC] placeholder-[#5A5A62] transition-colors`}
+                    placeholder="••••••••"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8E8E93] hover:text-white transition-colors cursor-pointer"
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+                {errors.password && (
+                  <span className="text-xs text-white mt-0.5">{errors.password}</span>
+                )}
+              </div>
             </div>
 
             {/* Remember Me */}
@@ -310,7 +295,7 @@ export default function LoginPage() {
                 id="remember"
                 checked={rememberMe}
                 onChange={() => setRememberMe(!rememberMe)}
-                className="w-4 h-4 rounded border-[#262626] bg-[#0B0B0B] checked:bg-white checked:border-white accent-white cursor-pointer"
+                className="w-4 h-4 rounded border-[#3A3A3A] bg-[#0B0B0B] checked:bg-white checked:border-white accent-white cursor-pointer"
               />
               <label
                 htmlFor="remember"
@@ -360,7 +345,7 @@ export default function LoginPage() {
           </div>
 
           {/* Divider and Encryption footer matching the screenshot exactly */}
-          <div className="border-t border-[#262626] my-6"></div>
+          <div className="border-t border-[#3A3A3A] my-6"></div>
         </div>
 
         {/* Bank security disclaimer */}
