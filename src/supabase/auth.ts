@@ -28,9 +28,7 @@ export type SupabaseMembership = {
   workspaces: SupabaseWorkspace;
 };
 
-/**
- * Fetches the user profile and all associated workspaces + memberships
- */
+
 export async function getUserProfileAndWorkspaces(userId: string) {
   try {
     // 1. Fetch profile
