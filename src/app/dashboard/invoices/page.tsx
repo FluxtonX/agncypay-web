@@ -21,6 +21,7 @@ import {
   RefreshCw,
   Search,
   ShieldCheck,
+  Split,
   Trash2,
   TrendingUp,
   X,
@@ -134,6 +135,7 @@ const filterOptions = ["All Invoices", "Pending", "Approved", "Processing", "Pai
 
 type InvoiceFilter = (typeof filterOptions)[number];
 type InvoiceRow = (typeof initialInvoices)[number];
+type PaymentMode = "pay_now" | "batch_pay" | "multi_pay" | "pay_all" | "split_pay";
 type MetricCard = {
   title: string;
   value: string;
@@ -150,8 +152,10 @@ type CreateInvoiceForm = {
 type PaymentStage = "review" | "processing" | "success";
 type PaymentFlow = {
   stage: PaymentStage;
+  mode: PaymentMode;
   invoiceIds: string[];
   fundingMethod: "ach" | "card";
+  settlementSpeed: "instant" | "standard";
   activeStep: number;
   transactionId: string;
 };
@@ -173,11 +177,90 @@ type InvoiceWorkspaceCopy = {
 };
 
 const pageSize = 6;
-const paymentSteps = [
-  "Validating selected invoice IDs",
-  "Checking wallet funding source",
-  "Submitting settlement batch",
-  "Reconciling paid invoice records",
+const paymentModeCopy: Record<
+  PaymentMode,
+  {
+    title: string;
+    shortLabel: string;
+    successTitle: string;
+    description: string;
+    primaryAction: string;
+  }
+> = {
+  pay_now: {
+    title: "Pay Now",
+    shortLabel: "Pay Now",
+    successTitle: "Invoice Paid Successfully",
+    description: "Settle one approved invoice immediately through the selected AgncyPay rail.",
+    primaryAction: "Pay invoice now",
+  },
+  batch_pay: {
+    title: "Batch Pay",
+    shortLabel: "Batch Pay",
+    successTitle: "Batch Settled Successfully",
+    description: "Bundle selected invoices into one treasury-approved payment run.",
+    primaryAction: "Run batch pay",
+  },
+  multi_pay: {
+    title: "Multi Pay",
+    shortLabel: "Multi Pay",
+    successTitle: "Multi Pay Completed",
+    description: "Pay several recipients in one flow while keeping each invoice reconciled separately.",
+    primaryAction: "Run multi pay",
+  },
+  pay_all: {
+    title: "Pay All",
+    shortLabel: "Pay All",
+    successTitle: "All Payable Invoices Settled",
+    description: "Pay every currently payable invoice in the register, excluding paid and processing items.",
+    primaryAction: "Pay all invoices",
+  },
+  split_pay: {
+    title: "Split Pay",
+    shortLabel: "Split Pay",
+    successTitle: "Split Payment Released",
+    description: "Release invoice funds across talent, agency, and platform splits in one demo payout.",
+    primaryAction: "Release split pay",
+  },
+};
+
+const paymentStepsByMode: Record<PaymentMode, string[]> = {
+  pay_now: [
+    "Validating invoice and recipient wallet",
+    "Authorizing funding source",
+    "Submitting payment instruction",
+    "Writing receipt and reconciliation status",
+  ],
+  batch_pay: [
+    "Validating selected invoice IDs",
+    "Checking wallet funding source",
+    "Submitting settlement batch",
+    "Reconciling paid invoice records",
+  ],
+  multi_pay: [
+    "Grouping recipients and invoice rails",
+    "Checking treasury limits",
+    "Submitting parallel payment instructions",
+    "Reconciling each recipient ledger",
+  ],
+  pay_all: [
+    "Scanning payable invoice queue",
+    "Applying treasury approval controls",
+    "Submitting full register payment run",
+    "Closing every paid invoice record",
+  ],
+  split_pay: [
+    "Calculating talent, agency, and platform splits",
+    "Locking payout recipients",
+    "Releasing split instructions",
+    "Reconciling split ledger entries",
+  ],
+};
+
+const splitPayRecipients = [
+  { label: "Talent payout", percent: 70 },
+  { label: "Agency commission", percent: 20 },
+  { label: "Platform and fees", percent: 10 },
 ];
 
 const invoiceSourceCopy: Record<WorkspaceType, InvoiceWorkspaceCopy> = {
@@ -523,6 +606,8 @@ export default function InvoicesPortalPage() {
   const paymentInvoices = paymentFlow
     ? invoiceRows.filter((invoice) => paymentFlow.invoiceIds.includes(invoice.id))
     : [];
+  const paymentCopy = paymentFlow ? paymentModeCopy[paymentFlow.mode] : null;
+  const paymentSteps = paymentFlow ? paymentStepsByMode[paymentFlow.mode] : paymentStepsByMode.batch_pay;
   const paymentTotalAmount = paymentInvoices.reduce(
     (total, invoice) => total + parseMoney(invoice.amount),
     0
@@ -534,6 +619,33 @@ export default function InvoicesPortalPage() {
   const allPagedSelected =
     pagedInvoices.length > 0 &&
     pagedInvoices.every((invoice) => selectedIds.includes(invoice.id));
+  const payableInvoices = invoiceRows.filter(
+    (invoice) => invoice.status !== "Paid" && invoice.status !== "Processing"
+  );
+
+  const openPaymentFlow = (mode: PaymentMode, invoiceIds: string[]) => {
+    const payableIds = invoiceIds.filter((invoiceId) =>
+      invoiceRows.some(
+        (invoice) =>
+          invoice.id === invoiceId &&
+          invoice.status !== "Paid" &&
+          invoice.status !== "Processing"
+      )
+    );
+
+    if (!canProcessInvoices || payableIds.length === 0) return;
+
+    setOpenMenuId(null);
+    setPaymentFlow({
+      stage: "review",
+      mode,
+      invoiceIds: Array.from(new Set(payableIds)),
+      fundingMethod: "ach",
+      settlementSpeed: mode === "pay_now" ? "instant" : "standard",
+      activeStep: 0,
+      transactionId: "",
+    });
+  };
 
   const updateDueDate = (invoiceId: string, value: string) => {
     if (!value) return;
@@ -604,16 +716,8 @@ export default function InvoicesPortalPage() {
     setOpenMenuId(null);
   };
 
-  const processSelectedInvoices = () => {
-    if (!canProcessInvoices || selectedIds.length === 0) return;
-
-    setPaymentFlow({
-      stage: "review",
-      invoiceIds: selectedIds,
-      fundingMethod: "ach",
-      activeStep: 0,
-      transactionId: "",
-    });
+  const processSelectedInvoices = (mode: PaymentMode = "batch_pay") => {
+    openPaymentFlow(mode, selectedIds);
   };
 
   const exportSelectedInvoices = () => {
@@ -657,7 +761,7 @@ export default function InvoicesPortalPage() {
 
   const handleSelectedAction = () => {
     if (canProcessInvoices) {
-      processSelectedInvoices();
+      processSelectedInvoices(selectedInvoices.length > 1 ? "batch_pay" : "pay_now");
       return;
     }
 
@@ -686,6 +790,10 @@ export default function InvoicesPortalPage() {
 
   const updatePaymentFundingMethod = (fundingMethod: PaymentFlow["fundingMethod"]) => {
     setPaymentFlow((flow) => (flow ? { ...flow, fundingMethod } : flow));
+  };
+
+  const updateSettlementSpeed = (settlementSpeed: PaymentFlow["settlementSpeed"]) => {
+    setPaymentFlow((flow) => (flow ? { ...flow, settlementSpeed } : flow));
   };
 
   const closePaymentFlow = () => {
@@ -756,7 +864,7 @@ export default function InvoicesPortalPage() {
           ? {
               ...flow,
               stage: "success",
-              activeStep: paymentSteps.length - 1,
+              activeStep: paymentStepsByMode[flow.mode].length - 1,
               transactionId,
             }
           : flow
@@ -822,6 +930,17 @@ export default function InvoicesPortalPage() {
         </div>
 
         <div className="flex w-full flex-col gap-3 sm:flex-row md:mt-[21px] md:w-auto">
+          {canProcessInvoices && (
+            <button
+              type="button"
+              onClick={() => openPaymentFlow("pay_all", payableInvoices.map((invoice) => invoice.id))}
+              disabled={payableInvoices.length === 0}
+              className="inline-flex h-[36px] items-center justify-center gap-[8px] rounded-[6px] border border-[#5a5a5a] bg-[#0c0c0c] px-5 text-[14px] font-semibold text-white transition-colors hover:border-[#777] disabled:cursor-not-allowed disabled:opacity-45"
+            >
+              <ShieldCheck className="h-4 w-4" />
+              Pay All
+            </button>
+          )}
           <button
             type="button"
             onClick={exportInvoices}
@@ -844,7 +963,7 @@ export default function InvoicesPortalPage() {
       </div>
 
       <section className="mt-[27px] rounded-[8px] border border-[#4f4f4f] bg-[#050505] px-5 py-4">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div>
             <p className="text-[18px] font-semibold leading-6 text-white">
               {invoiceSource.title}
@@ -852,6 +971,19 @@ export default function InvoicesPortalPage() {
             <p className="mt-1 text-[14px] leading-5 text-[#8f8f8f]">
               Source: {invoiceSource.source}
             </p>
+            <div className="mt-4 grid grid-cols-1 gap-2 text-[12px] font-semibold text-[#a8a8a8] sm:grid-cols-4">
+              {(["pay_now", "batch_pay", "multi_pay", "split_pay"] as PaymentMode[]).map((mode) => (
+                <div key={mode} className="rounded-[7px] border border-[#303030] bg-black px-3 py-2">
+                  <span className="block text-white">{paymentModeCopy[mode].shortLabel}</span>
+                  <span className="mt-1 block font-medium text-[#777]">
+                    {mode === "pay_now" && "Single invoice"}
+                    {mode === "batch_pay" && "Selected run"}
+                    {mode === "multi_pay" && "Many recipients"}
+                    {mode === "split_pay" && "Talent splits"}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
           <span className="inline-flex h-8 w-fit items-center rounded-[7px] border border-[#444] px-3 text-[13px] font-semibold text-[#d7d7d7]">
             {canProcessInvoices
@@ -1070,6 +1202,16 @@ export default function InvoicesPortalPage() {
                   </button>
                   {openMenuId === invoice.id && (
                     <div className="absolute right-[20px] top-[48px] z-30 w-[188px] rounded-[7px] border border-[#555] bg-[#0b0b0b] p-2 text-left shadow-xl">
+                      {canProcessInvoices && invoice.status !== "Paid" && invoice.status !== "Processing" && (
+                        <button
+                          type="button"
+                          onClick={() => openPaymentFlow("pay_now", [invoice.id])}
+                          className="flex w-full items-center gap-2 rounded-[5px] px-2 py-2 text-left text-[13px] text-[#d7d7d7] hover:bg-white/[0.06] hover:text-white"
+                        >
+                          <ShieldCheck className="h-4 w-4" />
+                          Pay Now
+                        </button>
+                      )}
                       <button
                         type="button"
                         onClick={() => viewInvoiceDetail(invoice)}
@@ -1164,6 +1306,25 @@ export default function InvoicesPortalPage() {
             >
               {selectedActionLabel}
             </button>
+            {canProcessInvoices && selectedInvoices.length > 1 && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => processSelectedInvoices("multi_pay")}
+                  className="h-[42px] rounded-[7px] border border-[#555] bg-[#151515] px-[20px] text-[15px] font-semibold text-white transition-colors hover:border-[#777]"
+                >
+                  Multi Pay
+                </button>
+                <button
+                  type="button"
+                  onClick={() => processSelectedInvoices("split_pay")}
+                  className="inline-flex h-[42px] items-center justify-center gap-2 rounded-[7px] border border-[#555] bg-[#151515] px-[20px] text-[15px] font-semibold text-white transition-colors hover:border-[#777]"
+                >
+                  <Split className="h-4 w-4" />
+                  Split
+                </button>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -1300,9 +1461,9 @@ export default function InvoicesPortalPage() {
                 </div>
                 <div className="min-w-0">
                   <h2 className="truncate text-[20px] font-semibold leading-tight text-white sm:text-[24px]">
-                    {paymentFlow.stage === "review" && "Review Selected Payment"}
+                    {paymentFlow.stage === "review" && `Review ${paymentCopy?.title}`}
                     {paymentFlow.stage === "processing" && "Processing Payment"}
-                    {paymentFlow.stage === "success" && "Payment Successful"}
+                    {paymentFlow.stage === "success" && paymentCopy?.successTitle}
                   </h2>
                   <p className="mt-2 text-[14px] leading-4 text-[#888]">
                     {paymentInvoices.length} invoice{paymentInvoices.length === 1 ? "" : "s"} selected
@@ -1325,6 +1486,15 @@ export default function InvoicesPortalPage() {
             <div className="min-h-0 flex-1 overflow-y-auto px-4 py-5 sm:px-[25px] sm:py-[24px]">
               {paymentFlow.stage === "review" && (
                 <div className="space-y-[22px]">
+                  <div className="rounded-[8px] border border-[#303030] bg-[#050505] px-4 py-3">
+                    <p className="text-[13px] font-semibold uppercase tracking-[0.12em] text-[#777]">
+                      {paymentCopy?.shortLabel}
+                    </p>
+                    <p className="mt-2 text-[15px] leading-5 text-[#d7d7d7]">
+                      {paymentCopy?.description}
+                    </p>
+                  </div>
+
                   <div className="max-h-[160px] space-y-2 overflow-y-auto pr-1 sm:max-h-[184px]">
                     {paymentInvoices.map((invoice) => (
                       <div
@@ -1411,9 +1581,68 @@ export default function InvoicesPortalPage() {
                     </div>
                   </div>
 
+                  <div>
+                    <p className="text-[14px] font-semibold leading-4 text-[#8d8d8d]">
+                      Settlement Option
+                    </p>
+                    <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      <button
+                        type="button"
+                        onClick={() => updateSettlementSpeed("instant")}
+                        className={cn(
+                          "rounded-[8px] border px-4 py-4 text-left transition-colors",
+                          paymentFlow.settlementSpeed === "instant"
+                            ? "border-white bg-white text-black"
+                            : "border-[#444] bg-[#050505] text-white hover:border-[#777]"
+                        )}
+                      >
+                        <span className="text-[15px] font-semibold">Instant settlement</span>
+                        <span className={cn("mt-2 block text-[13px]", paymentFlow.settlementSpeed === "instant" ? "text-[#333]" : "text-[#777]")}>
+                          Demo release in seconds with immediate receipt.
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => updateSettlementSpeed("standard")}
+                        className={cn(
+                          "rounded-[8px] border px-4 py-4 text-left transition-colors",
+                          paymentFlow.settlementSpeed === "standard"
+                            ? "border-white bg-white text-black"
+                            : "border-[#444] bg-[#050505] text-white hover:border-[#777]"
+                        )}
+                      >
+                        <span className="text-[15px] font-semibold">Standard ACH</span>
+                        <span className={cn("mt-2 block text-[13px]", paymentFlow.settlementSpeed === "standard" ? "text-[#333]" : "text-[#777]")}>
+                          Normal treasury rail with next-day reconciliation.
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {paymentFlow.mode === "split_pay" && (
+                    <div className="rounded-[8px] border border-[#303030] bg-[#050505] p-4">
+                      <p className="text-[14px] font-semibold text-[#8d8d8d]">Split Preview</p>
+                      <div className="mt-3 space-y-3">
+                        {splitPayRecipients.map((recipient) => {
+                          const splitAmount = ((paymentTotalAmount + paymentTotalTax) * recipient.percent) / 100;
+
+                          return (
+                            <div key={recipient.label} className="flex items-center justify-between gap-4 text-[14px]">
+                              <div>
+                                <p className="font-semibold text-white">{recipient.label}</p>
+                                <p className="mt-0.5 text-[12px] text-[#777]">{recipient.percent}% allocation</p>
+                              </div>
+                              <p className="font-semibold text-white">{formatMoney(splitAmount)}</p>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
                   <div className="flex items-start gap-3 rounded-[8px] border border-[#333] bg-[#050505] px-4 py-3 text-[13px] leading-5 text-[#9b9b9b]">
                     <Lock className="mt-0.5 h-4 w-4 shrink-0 text-[#d7d7d7]" />
-                    Payment will move selected invoices to Processing, settle the batch, then mark every invoice as Paid after reconciliation.
+                    {paymentCopy?.title} will move the invoice queue to Processing, run the selected rail, then mark every completed invoice as Paid after reconciliation.
                   </div>
 
                   <div className="flex flex-col gap-3 pt-1 sm:flex-row sm:justify-end">
@@ -1430,7 +1659,7 @@ export default function InvoicesPortalPage() {
                       className="inline-flex h-[42px] items-center justify-center gap-2 rounded-[7px] border border-white bg-white px-[22px] text-[15px] font-semibold text-black transition-colors hover:bg-[#e8e8e8]"
                     >
                       <AgncyPayLogo imageClassName="h-4" />
-                      <span>Now</span>
+                      <span>{paymentCopy?.primaryAction}</span>
                     </button>
                   </div>
                 </div>
@@ -1447,7 +1676,7 @@ export default function InvoicesPortalPage() {
                     Settling {formatMoney(paymentTotalAmount + paymentTotalTax)}
                   </h3>
                   <p className="mt-3 text-[15px] leading-5 text-[#8f8f8f]">
-                    Keep this window open while the batch is reconciled.
+                    Keep this window open while AgncyPay runs {paymentCopy?.shortLabel.toLowerCase()} reconciliation.
                   </p>
 
                   <div className="mt-7 w-full space-y-3 rounded-[8px] border border-[#303030] bg-[#050505] p-4 text-left">
@@ -1485,10 +1714,10 @@ export default function InvoicesPortalPage() {
                   </div>
 
                   <h3 className="mt-5 text-[25px] font-semibold leading-none text-white">
-                    Payment Settled Successfully
+                    {paymentCopy?.successTitle}
                   </h3>
                   <p className="mt-3 max-w-[420px] text-[15px] leading-5 text-[#8f8f8f]">
-                    Selected invoices are now marked Paid and the transaction reference is ready for records.
+                    Completed invoices are now marked Paid and the transaction reference is ready for demo records.
                   </p>
 
                   <div className="mt-7 w-full rounded-[8px] border border-[#303030] bg-[#050505] p-4 text-left">
@@ -1508,6 +1737,12 @@ export default function InvoicesPortalPage() {
                       <span className="text-[14px] text-[#777]">Final Amount</span>
                       <span className="break-words text-[14px] font-semibold text-white sm:text-right">
                         {formatMoney(paymentTotalAmount + paymentTotalTax)}
+                      </span>
+                    </div>
+                    <div className="flex flex-col gap-2 border-t border-[#222] pt-3 sm:flex-row sm:justify-between">
+                      <span className="text-[14px] text-[#777]">Rail</span>
+                      <span className="break-words text-[14px] font-semibold text-white sm:text-right">
+                        {paymentFlow.fundingMethod === "ach" ? "Primary ACH" : "Corporate Card"} / {paymentFlow.settlementSpeed === "instant" ? "Instant" : "Standard ACH"}
                       </span>
                     </div>
                   </div>

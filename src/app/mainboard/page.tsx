@@ -109,12 +109,20 @@ export default function MainboardPage() {
             </div>
           </div>
 
-          <Link
-            href={`/request/${selectedInvoice.id}?mode=guest`}
-            className="inline-flex h-11 items-center gap-2 rounded-[7px] border border-white bg-white px-4 text-[13px] font-semibold text-black hover:bg-[#ededed]"
-          >
-            Pay with AgncyPay
-          </Link>
+          <div className="flex items-center gap-3">
+            <Link
+              href="/api/auth/quickbooks/connect"
+              className="inline-flex h-11 items-center gap-2 rounded-[7px] border border-[#23812C] bg-[#2CA01C] px-4 text-[13px] font-semibold text-white hover:bg-[#23812C]"
+            >
+              Connect to QuickBooks
+            </Link>
+            <Link
+              href={`/request/${selectedInvoice.id}?mode=guest`}
+              className="inline-flex h-11 items-center gap-2 rounded-[7px] border border-white bg-white px-4 text-[13px] font-semibold text-black hover:bg-[#ededed]"
+            >
+              Pay with AgncyPay
+            </Link>
+          </div>
         </div>
       </header>
 

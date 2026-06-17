@@ -19,6 +19,7 @@ import {
   formatMainboardMoney,
   mainboardInvoices,
   type MainboardInvoice,
+  type MainboardInvoiceStatus,
 } from "../../../lib/mainboard";
 import { AgncyPayLogo } from "../../../components/payment/AgncyPayLogo";
 
@@ -192,24 +193,90 @@ function SummaryCard({
   );
 }
 
-export default function PayRequestPage() {
+function PayRequestPageContent() {
   const params = useParams<{ invoiceId: string }>();
   const searchParams = useSearchParams();
   const rawInvoiceId = Array.isArray(params.invoiceId) ? params.invoiceId[0] : params.invoiceId;
-  const invoice = findMainboardInvoice(rawInvoiceId || "") || mainboardInvoices[0];
   const isLoggedInMode = searchParams.get("mode") === "logged_in";
   const returnTo = searchParams.get("returnTo") === "dashboard" ? "dashboard" : "mainboard";
   const returnHref = returnTo === "dashboard" ? "/dashboard" : "/mainboard";
   const returnLabel = returnTo === "dashboard" ? "Dashboard" : "Mainboard";
-  const total = invoice.amount + invoice.fee;
 
-  const [stage, setStage] = useState<CheckoutStage>("payment");
-  const [activeRail, setActiveRail] = useState<CardRail>("agncypay");
+  const [invoice, setInvoice] = useState<MainboardInvoice | null>(null);
+  const [loading, setLoading] = useState(true);
   const [cardNumber, setCardNumber] = useState("1234 5678 9000 0000");
   const [expiry, setExpiry] = useState("MM/YY");
   const [cvc, setCvc] = useState("123");
-  const [nameOnCard, setNameOnCard] = useState(invoice.payer);
+  const [nameOnCard, setNameOnCard] = useState("");
+  const [stage, setStage] = useState<CheckoutStage>("payment");
+  const [activeRail, setActiveRail] = useState<CardRail>("agncypay");
   const [transactionId, setTransactionId] = useState("");
+
+  useEffect(() => {
+    const cleanInvoiceId = (rawInvoiceId || "").replace(/^inv-/, "");
+    const localInv = findMainboardInvoice(cleanInvoiceId);
+    if (localInv) {
+      setInvoice(localInv);
+      setNameOnCard(localInv.payer);
+      setLoading(false);
+      return;
+    }
+
+    async function fetchQboInvoice() {
+      try {
+        const res = await fetch("/api/quickbooks/invoices");
+        if (res.ok) {
+          const data = await res.json();
+          const qboInv = data.invoices.find((inv: any) => inv.id === cleanInvoiceId || inv.id === rawInvoiceId);
+          if (qboInv) {
+            const mapped: MainboardInvoice = {
+              id: qboInv.id,
+              invoiceNumber: qboInv.docNumber,
+              recipient: qboInv.name,
+              email: "qbo-recipient@agncypay.com",
+              walletId: "AGNCY-QBO-" + qboInv.id,
+              mobile: "+1 (555) 019-2834",
+              brand: "QuickBooks Online",
+              payer: "Client Workspace",
+              payerEmail: "billing@clientworkspace.com",
+              payerAddress: ["123 Business Way", "Suite 100", "New York, NY 10001"],
+              payeeAddress: ["QuickBooks Online Sync"],
+              amount: qboInv.amount,
+              fee: 0,
+              due: qboInv.daysText,
+              invoiceDate: qboInv.date,
+              settlementEta: "Immediate sync",
+              status: (qboInv.status === "Paid" ? "Paid" : "Ready") as MainboardInvoiceStatus,
+              source: "QuickBooks Online",
+              note: qboInv.detail,
+              jobType: "QuickBooks Invoice",
+              jobNumber: "QBO-" + qboInv.docNumber,
+              poNumber: "QBO-PO-" + qboInv.docNumber,
+              talentName: qboInv.name,
+              talentRealName: qboInv.name,
+              items: [
+                {
+                  title: qboInv.detail,
+                  qty: 1,
+                  rate: qboInv.amount,
+                  feeType: "Fee" as const,
+                }
+              ]
+            };
+            setInvoice(mapped);
+            setNameOnCard(mapped.payer);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch QBO invoice:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchQboInvoice();
+  }, [rawInvoiceId]);
+
+  const total = invoice ? invoice.amount + invoice.fee : 0;
 
   const paymentLabel = useMemo(
     () => (isLoggedInMode ? "Signed-in AgncyPay payment" : "Pay without AgncyPay account"),
@@ -221,6 +288,30 @@ export default function PayRequestPage() {
     const timeout = window.setTimeout(() => setStage("success"), 1200);
     return () => window.clearTimeout(timeout);
   }, [stage]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#333] border-t-white mx-auto mb-4"></div>
+          <p className="text-[14px] text-[#bdbdbd]">Loading checkout details...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!invoice) {
+    return (
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-[28px] font-black text-white">Invoice not found</h1>
+          <p className="mt-2 text-[#9a9a9a]">This checkout link does not match an active invoice.</p>
+        </div>
+      </div>
+    );
+  }
+
+
 
   const submitPayment = () => {
     setTransactionId(`TX-AP-${Math.floor(100000 + Math.random() * 900000)}`);
@@ -403,5 +494,20 @@ export default function PayRequestPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function PayRequestPage() {
+  return (
+    <React.Suspense fallback={
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#333] border-t-white mx-auto mb-4"></div>
+          <p className="text-[14px] text-[#bdbdbd]">Loading checkout details...</p>
+        </div>
+      </div>
+    }>
+      <PayRequestPageContent />
+    </React.Suspense>
   );
 }

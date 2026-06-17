@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -13,6 +13,7 @@ import {
   MapPin,
   ShieldCheck,
 } from "lucide-react";
+import { usePlaidLink } from "react-plaid-link";
 import { useApp } from "../../context/AppContext";
 import { cn } from "../../lib/utils";
 import { InstantFlowSummary } from "./InstantFlowSummary";
@@ -50,6 +51,9 @@ export function InstantBankVerification() {
     setVerificationStatusDirectly,
   } = useApp();
   const [plaidState, setPlaidState] = useState<PlaidState>("idle");
+  const [linkToken, setLinkToken] = useState<string | null>(null);
+  const [isMockPlaid, setIsMockPlaid] = useState(false);
+  const [plaidError, setPlaidError] = useState<string | null>(null);
   const [reviewState, setReviewState] = useState<ReviewState>("idle");
   const [formData, setFormData] = useState({
     website:
@@ -64,23 +68,165 @@ export function InstantBankVerification() {
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // Check active Plaid connection on load and fetch link_token
   useEffect(() => {
-    if (plaidState !== "connecting") return;
+    fetch("/api/plaid/status")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.connected) {
+          setPlaidState("connected");
+          updateBankDetails({
+            accountHolderName: state.businessSetup.legalName || "Business account",
+            bankName: data.institutionName || "Plaid Connected Bank",
+            routingNumber: "Verified via Plaid",
+            accountNumber: "Verified via Plaid",
+            statementUploaded: true,
+            status: "approved",
+          });
+        }
+      })
+      .catch((err) => console.error("Error checking Plaid status:", err));
 
-    const timer = window.setTimeout(() => {
-      setPlaidState("connected");
-      updateBankDetails({
-        accountHolderName: state.businessSetup.legalName || "Business account",
-        bankName: "Plaid verified bank",
-        routingNumber: "Verified via Plaid",
-        accountNumber: "Verified via Plaid",
-        statementUploaded: true,
-        status: "approved",
+    fetch("/api/plaid/create-link-token", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+    })
+      .then((res) => {
+        if (!res.ok) {
+          return res.json().then((errData) => {
+            const errMsg = errData.details
+              ? (typeof errData.details === "object" ? JSON.stringify(errData.details) : errData.details)
+              : "Server response error";
+            throw new Error(errMsg);
+          });
+        }
+        return res.json();
+      })
+      .then((data) => {
+        if (data.link_token) {
+          setLinkToken(data.link_token);
+          setIsMockPlaid(false);
+          setPlaidError(null);
+        } else if (data.isMock) {
+          setIsMockPlaid(true);
+          setPlaidError(null);
+        } else {
+          console.error("No link token returned:", data);
+        }
+      })
+      .catch((err) => {
+        console.error("Plaid Link initialization failed in console:", err.message || err);
+        setPlaidError(err.message || "Failed to retrieve link token");
       });
-    }, 1100);
+  }, [state.businessSetup.legalName, updateBankDetails]);
 
-    return () => window.clearTimeout(timer);
-  }, [plaidState, state.businessSetup.legalName, updateBankDetails]);
+  const triggerMockPlaidFlow = useCallback(async () => {
+    setPlaidState("connecting");
+    setTimeout(async () => {
+      try {
+        const response = await fetch("/api/plaid/exchange-token", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            public_token: "mock-public-token-12345",
+            institution: { name: "Chase Bank", institution_id: "ins_1" },
+          }),
+        });
+
+        if (response.ok) {
+          setPlaidState("connected");
+          updateBankDetails({
+            accountHolderName: state.businessSetup.legalName || "Business account",
+            bankName: "Chase Bank (Simulated)",
+            routingNumber: "Verified via Plaid",
+            accountNumber: "Verified via Plaid",
+            statementUploaded: true,
+            status: "approved",
+          });
+        } else {
+          setPlaidState("idle");
+        }
+      } catch (error) {
+        setPlaidState("idle");
+        console.error("Error exchanging mock public token:", error);
+      }
+    }, 1500);
+  }, [state.businessSetup.legalName, updateBankDetails]);
+
+  // Check if we are resuming from an OAuth redirect
+  const [receivedRedirectUri, setReceivedRedirectUri] = useState<string | undefined>(undefined);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const url = window.location.href;
+      if (url.includes("oauth_state_id=") || url.includes("link_session_id=")) {
+        setReceivedRedirectUri(url);
+      }
+    }
+  }, []);
+
+  const onSuccess = useCallback(
+    async (public_token: string, metadata: any) => {
+      setPlaidState("connecting");
+      try {
+        const response = await fetch("/api/plaid/exchange-token", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            public_token,
+            institution: metadata.institution,
+          }),
+        });
+
+        if (response.ok) {
+          setPlaidState("connected");
+          updateBankDetails({
+            accountHolderName: state.businessSetup.legalName || "Business account",
+            bankName: metadata.institution?.name || "Plaid Connected Bank",
+            routingNumber: "Verified via Plaid",
+            accountNumber: "Verified via Plaid",
+            statementUploaded: true,
+            status: "approved",
+          });
+        } else {
+          setPlaidState("idle");
+          const errData = await response.json().catch(() => ({}));
+          const errMsg = errData.details || errData.error || "Failed to exchange public token";
+          console.error("Failed to exchange public token:", errMsg);
+          setPlaidError(`Plaid Token Exchange Error: ${errMsg}`);
+        }
+      } catch (error: any) {
+        setPlaidState("idle");
+        console.error("Error exchanging public token:", error);
+        setPlaidError(`Error exchanging token: ${error.message || error}`);
+      }
+    },
+    [state.businessSetup.legalName, updateBankDetails]
+  );
+
+  const { open, ready } = usePlaidLink({
+    token: linkToken,
+    onSuccess,
+    receivedRedirectUri,
+    onExit: (error, metadata) => {
+      if (error) {
+        console.error("Plaid Link onExit Error:", error);
+        setPlaidError(`Plaid Link Error: ${error.error_message} (${error.error_code})`);
+      } else {
+        console.log("Plaid Link exited. Metadata:", metadata);
+      }
+      if (plaidState !== "connected") {
+        setPlaidState("idle");
+      }
+    },
+    onEvent: (eventName, metadata) => {
+      console.log(`Plaid Link Event: ${eventName}`, metadata);
+      if (eventName === "ERROR" && metadata.error_code) {
+        console.error("Plaid Link error event:", metadata);
+        setPlaidError(`Plaid Link Error Event: ${metadata.error_message || metadata.error_code}`);
+      }
+    },
+  });
 
   useEffect(() => {
     if (reviewState !== "running") return;
@@ -137,7 +283,14 @@ export function InstantBankVerification() {
       aside={<InstantFlowSummary activeStep="bank" />}
     >
       <div className="space-y-6">
-        <section className="rounded-[8px] border border-[#565656] bg-black px-5 py-6 shadow-[0_18px_60px_rgba(0,0,0,0.28)] sm:px-8 sm:py-8 lg:px-10">
+        <section className="relative overflow-hidden rounded-[8px] border border-[#565656] bg-black px-5 py-6 shadow-[0_18px_60px_rgba(0,0,0,0.28)] sm:px-8 sm:py-8 lg:px-10">
+          {plaidState === "connecting" && (
+            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/85 backdrop-blur-sm transition-all duration-300">
+              <Loader2 className="h-9 w-9 animate-spin text-white mb-3" strokeWidth={1.7} />
+              <p className="text-[15px] font-bold text-white tracking-wide">Connecting secure bank portal...</p>
+              <p className="text-[11px] text-[#A4A4A4] mt-1.5">Plaid is establishing an encrypted channel to your bank</p>
+            </div>
+          )}
           <div className="rounded-[8px] border border-[#747474] bg-[#0A0A0A] px-5 py-[28px] sm:px-[30px]">
             <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
               <div className="flex items-start gap-[18px]">
@@ -157,13 +310,20 @@ export function InstantBankVerification() {
 
               <button
                 type="button"
-                onClick={() => setPlaidState("connecting")}
-                disabled={plaidState !== "idle"}
+                onClick={() => {
+                  setPlaidState("connecting");
+                  if (isMockPlaid) {
+                    triggerMockPlaidFlow();
+                  } else {
+                    open();
+                  }
+                }}
+                disabled={(!ready && !isMockPlaid) || plaidState !== "idle"}
                 className={cn(
                   "flex h-11 min-w-[160px] items-center justify-center gap-2 rounded-[7px] px-5 text-[15px] font-semibold transition-colors sm:text-[16px]",
                   plaidState === "connected"
                     ? "border border-[#5E5E5E] bg-black text-white"
-                    : "bg-white text-black hover:bg-[#EDEDED]",
+                    : "bg-white text-black hover:bg-[#EDEDED] disabled:opacity-50",
                   plaidState === "connecting" && "cursor-wait opacity-85"
                 )}
               >
@@ -186,6 +346,14 @@ export function InstantBankVerification() {
 
           {errors.bank ? (
             <p className="mt-4 text-sm font-medium text-white">{errors.bank}</p>
+          ) : null}
+
+          {plaidError ? (
+            <div className="mt-4 rounded-[6px] border border-red-500/20 bg-red-500/5 p-4 text-[13px] text-red-400 font-semibold leading-relaxed">
+              <p className="font-bold mb-1">Plaid Integration Error:</p>
+              <pre className="whitespace-pre-wrap font-mono text-[11px] select-text">{plaidError}</pre>
+              <p className="mt-2 text-[11px] text-red-400/70 font-normal">Please check your server console or verify configuration keys in .env.local</p>
+            </div>
           ) : null}
 
           <div className="mt-6 grid gap-3 sm:grid-cols-2">
