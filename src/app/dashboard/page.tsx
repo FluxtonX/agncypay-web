@@ -30,6 +30,7 @@ import { cn } from "../../lib/utils";
 import { mainboardInvoices, formatMainboardMoney } from "../../lib/mainboard";
 import { useApp } from "../../context/AppContext";
 import { ModelIncomeList, ModelPayoutsList, CsvDropzonePanel } from "../../components/dashboard/ModelAgencyDashboard";
+import { SmartIncomeTimeline } from "../../components/dashboard/SmartIncomeTimeline";
 
 const BOFA_BUSINESS_DEBIT_VISA_IMAGE =
   "https://business.bankofamerica.com/content/dam/consumer/business/deposits/checking-accounts/debit-cards/bofa_busdbtcm_v.png";
@@ -717,13 +718,36 @@ function MusicIncomeLogo({ item }: { item: (typeof musicIncomeItems)[number] }) 
 function CatalogValuationPanel() {
   return (
     <div className="space-y-3">
-      <Link
-        href="https://catalogcalculator.com/"
-        className="flex h-[50px] items-center justify-center rounded-[11px] bg-[#16cf55] px-4 text-center text-[24px] font-black text-[#08240f] transition-colors hover:bg-[#23df65]"
-      >
-        Catalog Valuation
-        <Play className="ml-2 h-6 w-6 fill-current" />
-      </Link>
+      {/* Premium Catalog Valuation Card */}
+      <div className="relative overflow-hidden rounded-[14px] border border-[#1e2e1e] bg-[#080e08] p-5">
+        {/* Decorative glow */}
+        <div className="pointer-events-none absolute -top-10 -right-10 h-40 w-40 rounded-full bg-[#13d463]/10 blur-2xl" />
+
+        <div className="relative flex items-start justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="flex h-6 w-6 items-center justify-center rounded-[6px] border border-[#1a3d20] bg-[#0a1f0c]">
+                <BarChart3 className="h-3.5 w-3.5 text-[#13d463]" />
+              </span>
+              <span className="text-[10px] font-black uppercase tracking-[0.14em] text-[#13d463]">PRO METRIC</span>
+            </div>
+            <h3 className="text-[16px] font-black text-white leading-snug">Catalog Valuation &amp; Insights</h3>
+            <p className="mt-1.5 text-[12px] leading-[1.6] text-[#5a5a5a]">
+              Estimate the market value of your music catalog and royalty streams using historical data and industry multiples.
+            </p>
+          </div>
+        </div>
+
+        <Link
+          href="https://catalogcalculator.com/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-4 inline-flex h-9 items-center gap-2 rounded-[8px] border border-[#1e4a28] bg-[#0a1f0c] px-3.5 text-[12px] font-black text-[#13d463] transition-colors hover:border-[#13d463] hover:bg-[#0e2912]"
+        >
+          Calculate Valuation
+          <ArrowUpRight className="h-3.5 w-3.5" />
+        </Link>
+      </div>
 
       <Panel className="p-4 sm:p-6">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-[1fr_1fr]">
@@ -752,31 +776,42 @@ function CatalogValuationPanel() {
 
         <div className="mt-4 rounded-[14px] border border-[#242424] bg-[#171717] px-5 py-6">
           <p className="text-[20px] text-[#a7a7a7]">Yearly Activity</p>
-          <div className="mt-5 grid h-[128px] grid-cols-12 items-end gap-3 overflow-visible">
-            {yearlyActivity.map((month) => (
-              <button
-                key={month.month}
-                type="button"
-                className="group relative flex h-full min-w-0 flex-col items-center justify-end gap-2 outline-none"
-                aria-label={`${month.month}: ${month.revenue} revenue, ${month.streams} streams, ${month.growth} growth`}
-              >
-                <span className="pointer-events-none absolute bottom-[calc(100%+10px)] left-1/2 z-10 w-[124px] -translate-x-1/2 translate-y-1 rounded-[7px] border border-[#2f2f2f] bg-[#0b0b0b] px-3 py-2 text-left opacity-0 shadow-2xl transition-all duration-200 group-hover:translate-y-0 group-hover:opacity-100 group-focus-visible:translate-y-0 group-focus-visible:opacity-100">
-                  <span className="block text-[11px] font-black text-white">{month.month}</span>
-                  <span className="mt-1 block text-[10px] font-semibold text-[#8f8f8f]">Revenue {month.revenue}</span>
-                  <span className="block text-[10px] font-semibold text-[#8f8f8f]">Streams {month.streams}</span>
-                  <span className={cn("mt-1 block text-[10px] font-black", month.growth.startsWith("-") ? "text-[#ff6b5f]" : "text-[#13d463]")}>
-                    {month.growth}
+          {/* Horizontal grid lines */}
+          <div className="relative mt-5">
+            <div className="pointer-events-none absolute inset-x-0 top-0 flex h-[128px] flex-col justify-between">
+              {[0, 1, 2, 3].map((i) => (
+                <div key={i} className="w-full border-t border-dashed border-[#252525]" />
+              ))}
+            </div>
+            <div className="grid h-[128px] grid-cols-12 items-end gap-3 overflow-visible relative">
+              {yearlyActivity.map((month) => (
+                <button
+                  key={month.month}
+                  type="button"
+                  className="group relative flex h-full min-w-0 flex-col items-center justify-end gap-2 outline-none"
+                  aria-label={`${month.month}: ${month.revenue} revenue, ${month.streams} streams, ${month.growth} growth`}
+                >
+                  <span className="pointer-events-none absolute bottom-[calc(100%+10px)] left-1/2 z-10 w-[124px] -translate-x-1/2 translate-y-1 rounded-[7px] border border-[#2f2f2f] bg-[#0b0b0b] px-3 py-2 text-left opacity-0 shadow-2xl transition-all duration-200 group-hover:translate-y-0 group-hover:opacity-100 group-focus-visible:translate-y-0 group-focus-visible:opacity-100">
+                    <span className="block text-[11px] font-black text-white">{month.month}</span>
+                    <span className="mt-1 block text-[10px] font-semibold text-[#8f8f8f]">Revenue {month.revenue}</span>
+                    <span className="block text-[10px] font-semibold text-[#8f8f8f]">Streams {month.streams}</span>
+                    <span className={cn("mt-1 block text-[10px] font-black", month.growth.startsWith("-") ? "text-[#ff6b5f]" : "text-[#13d463]")}>
+                      {month.growth}
+                    </span>
                   </span>
-                </span>
-                <div
-                  className="w-full max-w-[30px] rounded-t-[4px] bg-[#13d463] shadow-[0_0_0_rgba(19,212,99,0)] transition-all duration-300 ease-out group-hover:-translate-y-1 group-hover:bg-[#20f076] group-hover:shadow-[0_0_18px_rgba(19,212,99,0.45)] group-focus-visible:-translate-y-1 group-focus-visible:bg-[#20f076] group-focus-visible:shadow-[0_0_18px_rgba(19,212,99,0.45)]"
-                  style={{ height: `${month.height}%` }}
-                />
-                <span className="text-[14px] font-semibold text-[#676767] transition-colors duration-200 group-hover:text-white group-focus-visible:text-white">
-                  {month.label}
-                </span>
-              </button>
-            ))}
+                  {/* Gradient bar */}
+                  <div
+                    className="relative w-full max-w-[30px] overflow-hidden rounded-t-[4px] transition-all duration-300 ease-out group-hover:-translate-y-1 group-hover:shadow-[0_0_18px_rgba(19,212,99,0.4)] group-focus-visible:-translate-y-1 group-focus-visible:shadow-[0_0_18px_rgba(19,212,99,0.4)]"
+                    style={{ height: `${month.height}%` }}
+                  >
+                    <div className="absolute inset-0 rounded-t-[4px]" style={{ background: "linear-gradient(to bottom, #20f076, #13d46360)" }} />
+                  </div>
+                  <span className="text-[14px] font-semibold text-[#676767] transition-colors duration-200 group-hover:text-white group-focus-visible:text-white">
+                    {month.label}
+                  </span>
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </Panel>
@@ -1924,7 +1959,8 @@ export default function DashboardHomePage() {
           <div className="space-y-5">
             <FinanceAppPromoCard />
 
-            {/* 1. Recent Income Panel */}
+            <SmartIncomeTimeline />
+
             <Panel className="p-4 sm:p-5">
               <div className="flex items-center justify-between gap-4">
                 <div>
@@ -2343,6 +2379,7 @@ export default function DashboardHomePage() {
                 </div>
               </Panel>
             </div>
+
           </div>
 
           <div className="space-y-5">
@@ -2425,7 +2462,40 @@ export default function DashboardHomePage() {
             {/* 5. Upload File Section */}
             {/* <CsvDropzonePanel /> */}
 
-            {/* 6. Banks and Cards */}
+            {/* 6. Plaid Connect Bank */}
+            <Panel className="overflow-hidden p-4 sm:p-5">
+              <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0">
+                  <p className="text-[13px] font-black uppercase tracking-[0.12em] text-[#a9a9a9]">Plaid</p>
+                  <h2 className="mt-1 text-[22px] font-semibold text-white">Connect Bank</h2>
+                  <p className="mt-2 max-w-[280px] text-[13px] leading-5 text-[#8f8f8f]">
+                    Link your payout method to receive monthly royalty distributions automatically.
+                  </p>
+                </div>
+                <span className="inline-flex h-10 shrink-0 items-center rounded-[7px] border border-[#333] bg-white px-3">
+                  <img
+                    src="/plaid-logo.svg"
+                    alt="Plaid"
+                    className="h-6 w-[84px] object-contain"
+                    loading="lazy"
+                  />
+                </span>
+              </div>
+              <div className="mt-5 flex items-center justify-between gap-4">
+                <Link
+                  href="/dashboard/wallet"
+                  className="inline-flex h-9 items-center rounded-[7px] border border-white bg-white px-3 text-[12px] font-semibold text-black"
+                >
+                  Set Up Payouts
+                </Link>
+                <span className="text-[11px] text-[#7f7f7f]">Secure bank linking</span>
+              </div>
+            </Panel>
+
+            {/* 7. Catalog Valuation & Yearly Activity Graph */}
+            <CatalogValuationPanel />
+
+            {/* 8. Banks and Cards */}
             <Panel className="p-4 sm:p-5">
               <div className="flex items-center justify-between gap-4">
                 <div>

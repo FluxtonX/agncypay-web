@@ -1,158 +1,164 @@
 "use client";
 
-import React, { useState } from "react";
-import { useRouter } from "next/navigation";
-import { Download, ArrowLeft } from "lucide-react";
+import React, { useMemo, useState } from "react";
+import Link from "next/link";
+import { Download, TrendingUp, Search, ArrowLeft } from "lucide-react";
 import { cn } from "../../../lib/utils";
 import { useDynamicIncomes, modelIncomeItems, RemoteBrandImage } from "../../../components/dashboard/ModelAgencyDashboard";
 
-export default function IncomesPage() {
-  const router = useRouter();
-  const [dynamicIncomes, setDynamicIncomes] = React.useState<any[]>([]);
-  const [isLoadingIncomes, setIsLoadingIncomes] = React.useState(true);
-  const [hasUpload, setHasUpload] = React.useState(false);
+// ─── helpers ────────────────────────────────────────────────────────────────
 
-  React.useEffect(() => {
-    const fetchRealData = async () => {
-      // 1. Synchronously check and load from localStorage first (Stale-While-Revalidate)
-      let uploadId = "";
-      let cachedVendors = "";
-      try {
-        uploadId = localStorage.getItem("uploadedUploadId") || "";
-        cachedVendors = localStorage.getItem("uploadedVendors") || "";
-      } catch {}
-      const userHasUpload = !!(uploadId || cachedVendors);
-      setHasUpload(userHasUpload);
+const getFavicon = (domain: string) =>
+  `https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://${domain}&size=128`;
 
-      // Load cached data immediately so there is zero delay for the user
-      let hasRenderedCache = false;
-      if (cachedVendors) {
-        try {
-          const parsed = JSON.parse(cachedVendors);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            const mapped = parsed.map((v: any, index: number) => {
-              const vName = v.vendor || "Unknown Vendor";
-              const vRowCount = typeof v.rowCount === "number" ? v.rowCount : 0;
-              const vNetIncome = typeof v.totalNetIncome === "number" ? v.totalNetIncome : 0;
-              return {
-                slug: "uploaded-preview",
-                name: vName,
-                detail: `${vRowCount.toLocaleString()} transactions parsed`,
-                date: "Parsed from Excel",
-                amount: `$${vNetIncome.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-                rawAmount: vNetIncome,
-                src: `https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://${vName.toLowerCase().replace(/[^a-z0-9]/g, "")}.com&size=128`,
-                fallback: vName.substring(0, 2).toUpperCase(),
-                className: "bg-[#111]",
-                imageClassName: "scale-[1]",
-              };
-            });
-            mapped.sort((a: any, b: any) => b.rawAmount - a.rawAmount);
-            setDynamicIncomes(mapped);
-            setIsLoadingIncomes(false);
-            hasRenderedCache = true;
-          }
-        } catch (e) {
-          console.error("Error parsing cached vendors on incomes page load:", e);
-        }
-      }
+/** Try to derive a favicon URL from the platform/vendor name. */
+function resolveLogoSrc(name: string, existingSrc?: string): string {
+  if (existingSrc && existingSrc.startsWith("http")) return existingSrc;
+  const map: Record<string, string> = {
+    spotify: getFavicon("spotify.com"),
+    "apple music": getFavicon("apple.com"),
+    youtube: getFavicon("youtube.com"),
+    amazon: getFavicon("amazon.com"),
+    "amazon music": getFavicon("amazon.com"),
+    tidal: getFavicon("tidal.com"),
+    deezer: getFavicon("deezer.com"),
+    pandora: getFavicon("pandora.com"),
+    soundcloud: getFavicon("soundcloud.com"),
+    napster: getFavicon("napster.com"),
+    instagram: getFavicon("instagram.com"),
+    facebook: getFavicon("facebook.com"),
+    tiktok: getFavicon("tiktok.com"),
+    twitter: getFavicon("twitter.com"),
+    snapchat: getFavicon("snapchat.com"),
+    nike: getFavicon("nike.com"),
+    adidas: getFavicon("adidas.com"),
+    "louis vuitton": getFavicon("louisvuitton.com"),
+    "the north face": getFavicon("thenorthface.com"),
+    ascap: getFavicon("ascap.com"),
+    bmi: getFavicon("bmi.com"),
+    distrokid: getFavicon("distrokid.com"),
+    "tune core": getFavicon("tunecore.com"),
+    tunecore: getFavicon("tunecore.com"),
+    "cd baby": getFavicon("cdbaby.com"),
+    cdbaby: getFavicon("cdbaby.com"),
+    merch: getFavicon("shopify.com"),
+    shopify: getFavicon("shopify.com"),
+  };
+  const key = name.toLowerCase().trim();
+  for (const [k, v] of Object.entries(map)) {
+    if (key.includes(k)) return v;
+  }
+  // derive domain guess from first word
+  const firstWord = key.split(/\s|_|-/)[0];
+  return getFavicon(`${firstWord}.com`);
+}
 
-      // If there was no cached data to show, show the skeleton loader while we fetch
-      if (!hasRenderedCache) {
-        setIsLoadingIncomes(true);
-      }
+interface IncomeItem {
+  name: string;
+  detail?: string;
+  date?: string;
+  amount: string;
+  src?: string;
+  fallback?: string;
+  className?: string;
+  imageClassName?: string;
+  [key: string]: any;
+}
 
-      // 2. Fetch live data from API in background
-      if (uploadId) {
-        try {
-          const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "https://agencypay-website-backend.onrender.com";
-          const response = await fetch(`${apiBaseUrl}/api/excel/uploads/${uploadId}/summary`);
-          
-          if (response.status === 404) {
-            // Upload was not found on the backend (e.g. after container restart or expiration)
-            try {
-              localStorage.removeItem("uploadedUploadId");
-              localStorage.removeItem("uploadedFileName");
-              localStorage.removeItem("uploadedFileSize");
-              localStorage.removeItem("uploadedTotals");
-              localStorage.removeItem("uploadedOriginalName");
-              localStorage.removeItem("uploadedRowCount");
-              localStorage.removeItem("uploadedVendors");
-              localStorage.removeItem("uploadedIncomes");
-            } catch {}
-            setHasUpload(false);
-            setDynamicIncomes([]);
-            setIsLoadingIncomes(false);
-          } else {
-            const data = await response.json();
+interface PlatformGroup {
+  name: string;
+  totalAmount: number;
+  count: number;
+  src: string;
+  fallback: string;
+  className?: string;
+  imageClassName?: string;
+  transactions: IncomeItem[];
+}
 
-            if (response.ok && data?.success && data?.data?.vendors) {
-              const vendors = data.data.vendors || [];
-              localStorage.setItem("uploadedVendors", JSON.stringify(vendors));
-              
-              // Map the new incomes
-              const mapped = vendors.map((v: any, index: number) => {
-                const vName = v.vendor || "Unknown Vendor";
-                const vRowCount = typeof v.rowCount === "number" ? v.rowCount : 0;
-                const vNetIncome = typeof v.totalNetIncome === "number" ? v.totalNetIncome : 0;
-                return {
-                  slug: "uploaded-preview",
-                  name: vName,
-                  detail: `${vRowCount.toLocaleString()} transactions parsed`,
-                  date: "Parsed from Excel",
-                  amount: `$${vNetIncome.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-                  rawAmount: vNetIncome,
-                  src: `https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://${vName.toLowerCase().replace(/[^a-z0-9]/g, "")}.com&size=128`,
-                  fallback: vName.substring(0, 2).toUpperCase(),
-                  className: "bg-[#111]",
-                  imageClassName: "scale-[1]",
-                };
-              });
+/** Parse a currency string like "$3,040.00" or "3040.00" → number */
+function parseAmount(raw: string | number | undefined): number {
+  if (typeof raw === "number") return raw;
+  if (!raw) return 0;
+  return parseFloat(String(raw).replace(/[$,\s]/g, "")) || 0;
+}
 
-              // Sort descending by rawAmount
-              mapped.sort((a: any, b: any) => b.rawAmount - a.rawAmount);
-              setDynamicIncomes(mapped);
-              setIsLoadingIncomes(false);
-              return;
-            } else if (data?.success === false && data?.error?.code === "NOT_FOUND") {
-              try {
-                localStorage.removeItem("uploadedUploadId");
-                localStorage.removeItem("uploadedFileName");
-                localStorage.removeItem("uploadedFileSize");
-                localStorage.removeItem("uploadedTotals");
-                localStorage.removeItem("uploadedOriginalName");
-                localStorage.removeItem("uploadedRowCount");
-                localStorage.removeItem("uploadedVendors");
-                localStorage.removeItem("uploadedIncomes");
-              } catch {}
-              setHasUpload(false);
-              setDynamicIncomes([]);
-              setIsLoadingIncomes(false);
-            }
-          }
-        } catch (err) {
-          console.error("Failed to fetch API summary for incomes history page, falling back to cached state:", err);
-          setIsLoadingIncomes(false);
-        }
-      } else {
-        setIsLoadingIncomes(false);
-      }
-    };
+/** Normalize a platform name to a consistent key */
+function normalizeName(name: string): string {
+  return name.trim();
+}
 
-    fetchRealData();
-  }, []);
+/** Group flat income items by platform name, summing amounts. */
+function groupByPlatform(items: IncomeItem[]): PlatformGroup[] {
+  const map = new Map<string, PlatformGroup>();
 
-  const allIncomes = (hasUpload || dynamicIncomes.length > 0) ? dynamicIncomes : modelIncomeItems;
+  for (const item of items) {
+    const key = normalizeName(item.name);
+    const existing = map.get(key);
+    const amount = parseAmount(item.amount);
 
-  const totalAmount = allIncomes.reduce((acc, item) => {
-    const num = Number(item.amount.replace(/[^0-9.-]+/g, ""));
-    return acc + (isNaN(num) ? 0 : num);
-  }, 0);
+    if (existing) {
+      existing.totalAmount += amount;
+      existing.count += 1;
+      existing.transactions.push(item);
+    } else {
+      map.set(key, {
+        name: key,
+        totalAmount: amount,
+        count: 1,
+        src: resolveLogoSrc(key, item.src),
+        fallback: item.fallback || key.slice(0, 3).toUpperCase(),
+        className: item.className,
+        imageClassName: item.imageClassName,
+        transactions: [item],
+      });
+    }
+  }
 
-  const formattedTotal = new Intl.NumberFormat("en-US", {
+  // Sort by total amount descending
+  return Array.from(map.values()).sort((a, b) => b.totalAmount - a.totalAmount);
+}
+
+function fmtUSD(n: number): string {
+  return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",
-  }).format(totalAmount);
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(n);
+}
+
+// ─── Component ───────────────────────────────────────────────────────────────
+
+export default function IncomesPage() {
+  const dynamicIncomes = useDynamicIncomes();
+  const rawIncomes: IncomeItem[] = useMemo(() => {
+    return (dynamicIncomes.length > 0 ? dynamicIncomes : modelIncomeItems) as IncomeItem[];
+  }, [dynamicIncomes]);
+
+  const [search, setSearch] = useState("");
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+
+  const groups = useMemo(() => groupByPlatform(rawIncomes), [rawIncomes]);
+
+  const filtered = useMemo(() => {
+    if (!search.trim()) return groups;
+    const q = search.toLowerCase();
+    return groups.filter((g) => g.name.toLowerCase().includes(q));
+  }, [groups, search]);
+
+  const grandTotal = useMemo(
+    () => filtered.reduce((acc, g) => acc + g.totalAmount, 0),
+    [filtered]
+  );
+
+  const toggleExpand = (name: string) =>
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(name)) next.delete(name);
+      else next.add(name);
+      return next;
+    });
 
   return (
     <div className="mx-auto w-full max-w-[1048px] px-4 py-8 sm:px-6 lg:px-8">
@@ -166,67 +172,174 @@ export default function IncomesPage() {
       </button>
 
       <div>
-        <h1 className="text-[34px] font-semibold leading-none text-white">
-          Recent Incomes
-        </h1>
+        <h1 className="text-[34px] font-semibold leading-none text-white">Recent Incomes</h1>
         <p className="mt-[18px] text-[20px] leading-6 text-[#9b9b9b]">
-          Full history of your income and parsed vendor payouts.
+          Platform-by-platform breakdown, sorted highest to lowest.
         </p>
       </div>
 
       <section className="mt-[29px] rounded-[13px] border border-[#676767] bg-black px-[29px] py-[31px]">
+        {/* Header row */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="text-[29px] font-semibold leading-none text-white">
-              Income History
-            </h2>
+            <h2 className="text-[29px] font-semibold leading-none text-white">Income History</h2>
+            <p className="mt-1.5 text-[15px] text-[#6a6a6a]">
+              {filtered.length} platform{filtered.length !== 1 ? "s" : ""} · {rawIncomes.length} transaction{rawIncomes.length !== 1 ? "s" : ""}
+            </p>
           </div>
 
-          <button
-            type="button"
-            className="inline-flex h-[40px] items-center justify-center gap-[12px] rounded-[7px] border border-[#5a5a5a] bg-[#0c0c0c] px-[16px] text-[16px] font-semibold text-white transition-colors hover:border-[#777]"
-          >
-            <Download className="h-4 w-4" />
-            Export
-          </button>
+          <div className="flex items-center gap-3">
+            {/* Search */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#555]" />
+              <input
+                type="text"
+                placeholder="Search platform…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="h-[40px] w-[200px] rounded-[7px] border border-[#3a3a3a] bg-[#0c0c0c] pl-9 pr-3 text-[14px] font-semibold text-white placeholder:text-[#3a3a3a] focus:border-[#555] focus:outline-none transition-colors"
+              />
+            </div>
+            {/* Export */}
+            <button
+              type="button"
+              className="inline-flex h-[40px] items-center justify-center gap-[12px] rounded-[7px] border border-[#5a5a5a] bg-[#0c0c0c] px-[16px] text-[16px] font-semibold text-white transition-colors hover:border-[#777]"
+            >
+              <Download className="h-4 w-4" />
+              Export
+            </button>
+          </div>
         </div>
 
+        {/* Table */}
         <div className="mt-[32px] overflow-x-auto">
-          <table className="min-w-[900px] table-fixed text-left w-full">
+          <table className="min-w-[800px] table-fixed text-left w-full">
             <colgroup>
+              <col className="w-[44px]" />
               <col className="w-[280px]" />
-              <col className="w-[220px]" />
-              <col className="w-[180px]" />
-              <col className="w-[180px]" />
+              <col className="w-[120px]" />
+              <col className="w-[160px]" />
+              <col className="w-[160px]" />
             </colgroup>
             <thead>
-              <tr className="h-[48px] border-b border-[#555] text-[17px] font-semibold leading-none text-[#8d8d8d]">
-                <th className="pl-[10px] pr-4">Source / Vendor</th>
-                <th>Detail</th>
-                <th>Date</th>
-                <th className="text-right pr-4">Amount</th>
+              <tr className="h-[48px] border-b border-[#555] text-[15px] font-semibold leading-none text-[#8d8d8d]">
+                <th className="pl-[10px]">#</th>
+                <th className="pl-2 pr-4">Platform</th>
+                <th className="text-center">Transactions</th>
+                <th className="text-right pr-6">Share</th>
+                <th className="text-right pr-4">Total Income</th>
               </tr>
             </thead>
             <tbody>
-              {isLoadingIncomes ? (
-                // Skeleton rows while data is loading
-                Array.from({ length: 5 }).map((_, i) => (
-                  <tr key={`skeleton-${i}`} className="h-[64px] border-b border-[#303030] last:border-b-0">
-                    <td className="pl-[10px] pr-4">
-                      <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 shrink-0 rounded-[8px] bg-[#1a1a1a] animate-pulse" />
-                        <div className="h-4 w-32 rounded-md bg-[#1a1a1a] animate-pulse" />
-                      </div>
-                    </td>
-                    <td><div className="h-4 w-40 rounded-md bg-[#1a1a1a] animate-pulse" /></td>
-                    <td><div className="h-4 w-28 rounded-md bg-[#1a1a1a] animate-pulse" /></td>
-                    <td className="text-right pr-4"><div className="ml-auto h-4 w-24 rounded-md bg-[#1a1a1a] animate-pulse" /></td>
-                  </tr>
-                ))
-              ) : allIncomes.length === 0 ? (
+              {filtered.map((group, idx) => {
+                const pct = grandTotal > 0 ? (group.totalAmount / grandTotal) * 100 : 0;
+                const isOpen = expanded.has(group.name);
+
+                return (
+                  <React.Fragment key={group.name}>
+                    {/* Platform row */}
+                    <tr
+                      onClick={() => toggleExpand(group.name)}
+                      className={cn(
+                        "h-[64px] border-b border-[#303030] text-[17px] leading-none transition-colors cursor-pointer select-none",
+                        isOpen ? "bg-white/[0.03]" : "hover:bg-white/[0.02]"
+                      )}
+                    >
+                      {/* Rank */}
+                      <td className="pl-[10px]">
+                        <span className="text-[13px] font-bold text-[#555]">{idx + 1}</span>
+                      </td>
+
+                      {/* Platform name + logo */}
+                      <td className="pl-2 pr-4">
+                        <div className="flex items-center gap-3">
+                          <div
+                            className={cn(
+                              "flex h-10 w-10 shrink-0 items-center justify-center rounded-[8px] border border-[#303030] bg-[#060606] p-[2px]"
+                            )}
+                          >
+                            <div
+                              className={cn(
+                                "h-full w-full overflow-hidden rounded-[6px]",
+                                group.className
+                              )}
+                            >
+                              <RemoteBrandImage
+                                src={group.src}
+                                alt={group.name}
+                                fallback={group.fallback}
+                                className="h-full w-full"
+                                imageClassName={cn("object-contain", group.imageClassName)}
+                              />
+                            </div>
+                          </div>
+                          <div className="min-w-0">
+                            <span className="block font-semibold text-white truncate max-w-[200px]">
+                              {group.name}
+                            </span>
+                            <span className="block text-[12px] text-[#555] mt-0.5">
+                              {group.count} payment{group.count !== 1 ? "s" : ""}
+                            </span>
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Transaction count */}
+                      <td className="text-center">
+                        <span className="inline-flex h-6 min-w-[28px] items-center justify-center rounded-full border border-[#2a2a2a] bg-[#111] px-2 text-[12px] font-bold text-[#aaa]">
+                          {group.count}
+                        </span>
+                      </td>
+
+                      {/* Share bar */}
+                      <td className="pr-6">
+                        <div className="flex items-center justify-end gap-2">
+                          <div className="w-[80px] h-[6px] rounded-full bg-[#1a1a1a] overflow-hidden">
+                            <div
+                              className="h-full rounded-full bg-[#13d463]"
+                              style={{ width: `${Math.min(pct, 100)}%` }}
+                            />
+                          </div>
+                          <span className="text-[13px] font-semibold text-[#666] w-[36px] text-right">
+                            {pct.toFixed(1)}%
+                          </span>
+                        </div>
+                      </td>
+
+                      {/* Total */}
+                      <td className="text-right pr-4 font-bold text-[#13d463]">
+                        {fmtUSD(group.totalAmount)}
+                      </td>
+                    </tr>
+
+                    {/* Expanded sub-transactions */}
+                    {isOpen && group.transactions.map((tx, ti) => (
+                      <tr
+                        key={`${group.name}-tx-${ti}`}
+                        className="h-[52px] border-b border-[#222] bg-[#060606] text-[14px] leading-none"
+                      >
+                        <td />
+                        <td className="pl-6 pr-4">
+                          <span className="text-[#555] font-medium truncate block max-w-[220px]">
+                            {tx.detail || "—"}
+                          </span>
+                        </td>
+                        <td className="text-center text-[12px] text-[#555]">{tx.date || "—"}</td>
+                        <td />
+                        <td className="text-right pr-4 font-semibold text-[#aaa]">
+                          {typeof tx.amount === "string" ? tx.amount : fmtUSD(parseAmount(tx.amount))}
+                        </td>
+                      </tr>
+                    ))}
+                  </React.Fragment>
+                );
+              })}
+
+              {/* No results */}
+              {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="h-[120px] text-center text-[17px] text-[#8f8f8f]">
-                    No income data found. Upload an Excel file to get started.
+                  <td colSpan={5} className="h-[120px] text-center text-[17px] text-[#8f8f8f]">
+                    No platforms found.
                   </td>
                 </tr>
               ) : (
@@ -260,19 +373,34 @@ export default function IncomesPage() {
                 ))
               )}
             </tbody>
+
+            {/* Grand total footer */}
+            {filtered.length > 0 && (
+              <tfoot>
+                <tr className="h-[60px] border-t-2 border-[#555]">
+                  <td />
+                  <td className="pl-2">
+                    <div className="flex items-center gap-2">
+                      <TrendingUp className="h-4 w-4 text-[#13d463]" />
+                      <span className="text-[16px] font-black text-white">
+                        Total · {filtered.length} Platform{filtered.length !== 1 ? "s" : ""}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="text-center text-[15px] font-bold text-[#777]">
+                    {rawIncomes.length}
+                  </td>
+                  <td className="text-right pr-6">
+                    <span className="text-[13px] font-semibold text-[#555]">100%</span>
+                  </td>
+                  <td className="text-right pr-4">
+                    <span className="text-[20px] font-black text-[#13d463]">{fmtUSD(grandTotal)}</span>
+                  </td>
+                </tr>
+              </tfoot>
+            )}
           </table>
         </div>
-
-        {allIncomes.length > 0 && (
-          <div className="mt-6 flex justify-end">
-            <div className="flex w-full max-w-[320px] items-center justify-between rounded-[9px] border border-[#303030] bg-[#060606] px-5 py-4">
-              <span className="text-[17px] font-semibold text-[#8d8d8d]">Total Income</span>
-              <span className="text-[24px] font-black tracking-tight text-[#13d463]">
-                {formattedTotal}
-              </span>
-            </div>
-          </div>
-        )}
       </section>
     </div>
   );
