@@ -3,6 +3,19 @@ import { NextResponse } from "next/server";
 
 export async function GET() {
   try {
+    const clientId = process.env.QUICKBOOKS_CLIENT_ID;
+    const clientSecret = process.env.QUICKBOOKS_CLIENT_SECRET;
+    if (!clientId || !clientSecret) {
+      return NextResponse.json([
+        { id: "100", name: "Checking Account" },
+        { id: "101", name: "Savings Account" },
+        { id: "200", name: "Accounts Payable (A/P)" },
+        { id: "300", name: "Contractor Expense" },
+        { id: "301", name: "Software Subscriptions" },
+        { id: "400", name: "Platform Fees" },
+      ]);
+    }
+
     const oauthClient = await getAuthenticatedClient();
     
     // Read the raw token from our cookie to reliably get the realmId

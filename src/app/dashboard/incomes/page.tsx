@@ -162,18 +162,15 @@ export default function IncomesPage() {
 
   return (
     <div className="mx-auto w-full max-w-[1048px] px-4 py-8 sm:px-6 lg:px-8">
-      {/* Back button */}
-      <div className="mb-6">
-        <Link
-          href="/dashboard"
-          className="inline-flex items-center gap-2 text-[14px] font-semibold text-[#8f8f8f] hover:text-white transition-colors"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Dashboard
-        </Link>
-      </div>
+      {/* Back Button */}
+      <button
+        onClick={() => router.push("/dashboard")}
+        className="group mb-6 inline-flex items-center gap-2 text-[13px] font-medium text-[#8d8d8d] transition-colors hover:text-white"
+      >
+        <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" />
+        Back to Dashboard
+      </button>
 
-      {/* Page title */}
       <div>
         <h1 className="text-[34px] font-semibold leading-none text-white">Recent Incomes</h1>
         <p className="mt-[18px] text-[20px] leading-6 text-[#9b9b9b]">
@@ -345,6 +342,35 @@ export default function IncomesPage() {
                     No platforms found.
                   </td>
                 </tr>
+              ) : (
+                allIncomes.map((item, i) => (
+                  <tr
+                    key={`${item.name}-${i}`}
+                    onClick={() => {
+                      if (item.slug === "uploaded-preview") {
+                        window.location.href = "/dashboard/incomes/preview";
+                      }
+                    }}
+                    className={cn(
+                      "h-[64px] border-b border-[#303030] last:border-b-0 text-[17px] leading-none transition-colors hover:bg-white/[0.02]",
+                      item.slug === "uploaded-preview" && "cursor-pointer"
+                    )}
+                  >
+                    <td className="pl-[10px] pr-4">
+                      <div className="flex items-center gap-3">
+                        <div className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-[8px] border border-[#303030] bg-[#060606] p-[2px]")}>
+                          <div className={cn("h-full w-full overflow-hidden rounded-[6px]", item.className)}>
+                            <RemoteBrandImage src={item.src} alt={item.name} fallback={item.fallback} className="h-full w-full" imageClassName={item.imageClassName} />
+                          </div>
+                        </div>
+                        <span className="font-semibold text-white truncate max-w-[200px]">{item.name}</span>
+                      </div>
+                    </td>
+                    <td className="text-[#c8c8c8]">{item.detail}</td>
+                    <td className="text-[#b8b8b8]">{item.date}</td>
+                    <td className="text-right pr-4 font-semibold text-[#13d463]">{item.amount}</td>
+                  </tr>
+                ))
               )}
             </tbody>
 

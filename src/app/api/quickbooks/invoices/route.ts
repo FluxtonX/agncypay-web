@@ -62,14 +62,20 @@ export async function GET() {
     const isConnected = !!(token && token.access_token);
 
     if (!isConnected) {
-      return NextResponse.json({ connected: false, invoices: mockInvoices });
+      return NextResponse.json({ connected: false, invoices: [] });
+    }
+
+    const clientId = process.env.QUICKBOOKS_CLIENT_ID;
+    const clientSecret = process.env.QUICKBOOKS_CLIENT_SECRET;
+    if (!clientId || !clientSecret) {
+      return NextResponse.json({ connected: true, invoices: mockInvoices });
     }
 
     const oauthClient = await getAuthenticatedClient();
     const realmId = token.realmId;
 
     if (!realmId) {
-      return NextResponse.json({ connected: false, invoices: mockInvoices });
+      return NextResponse.json({ connected: true, invoices: mockInvoices });
     }
 
     const environment = process.env.QUICKBOOKS_ENVIRONMENT || "sandbox";
@@ -159,9 +165,9 @@ export async function GET() {
     return NextResponse.json({ connected: true, invoices: finalInvoices });
   } catch (error: any) {
     console.error("Error fetching QuickBooks invoices:", error.message || error);
-    // On error, gracefully fall back to mock data but state connected is false or true depending on token
+    // On error, check if connected and return mock data only if we have a token
     const token = await getToken();
     const isConnected = !!(token && token.access_token);
-    return NextResponse.json({ connected: isConnected, invoices: mockInvoices });
+    return NextResponse.json({ connected: isConnected, invoices: isConnected ? mockInvoices : [] });
   }
 }

@@ -3,8 +3,9 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Eye, EyeOff } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
-import { getRegisteredUsers } from "../../../lib/authStorage";
+import { supabase } from "../../../supabase/client";
 
 const DEMO_EMAIL = "martin.safi@adidas.com";
 const DEMO_PASSWORD = "password123";
@@ -16,7 +17,8 @@ export default function LoginPage() {
   
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [roleType, setRoleType] = useState<"business" | "individual">("business");
+  const [roleType, setRoleType] = useState<"brand" | "agency" | "talent">("brand");
+  const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
@@ -55,67 +57,67 @@ export default function LoginPage() {
     if (!validate()) return;
 
     const normalizedEmail = email.trim().toLowerCase();
-    const registeredUser = getRegisteredUsers().find(
-      (user) => user.email.toLowerCase() === normalizedEmail
-    );
-    const isDemoLogin = normalizedEmail === DEMO_EMAIL && password === DEMO_PASSWORD;
-    const isGmailLogin = isGmailAddress(normalizedEmail);
-
-    if (!registeredUser && !isDemoLogin && !isGmailLogin) {
-      setErrors({ email: "Use a Gmail address, demo account, or create an account first." });
-      return;
-    }
-
-    if (registeredUser && !isGmailLogin && registeredUser.password !== password) {
-      setErrors({ password: "Incorrect password for this account." });
-      return;
-    }
 
     setIsLoading(true);
-    setTimeout(() => {
-      // Login inside AppContext
-      const fallbackName = normalizedEmail
-        .split("@")[0]
-        .split(/[._-]/)
-        .filter(Boolean)
-        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-        .join(" ");
-      const accountType = roleType === "business" ? "agency" : "talent_independent";
-      loginUser(
-        normalizedEmail,
-        registeredUser?.fullName || fallbackName || "AgncyPay User",
-        accountType,
-        {
-          workspaceName: registeredUser?.workspaceName,
-          workspaceType: accountType,
-          agencyId: registeredUser?.agencyId,
+    supabase.auth
+      .signInWithPassword({
+        email: normalizedEmail,
+        password,
+      })
+      .then(async ({ data: authData, error }) => {
+        if (error) {
+          setIsLoading(false);
+          let errorMsg = error.message;
+          if (errorMsg.toLowerCase().includes("email not confirmed")) {
+            errorMsg = "Email not confirmed yet. Please verify your email or disable 'Confirm email' in Supabase Dashboard (Auth > Providers > Email).";
+          }
+          setErrors({ submit: errorMsg });
+          return;
         }
-      );
-      setIsLoading(false);
 
-      router.push(safeNextPath || "/dashboard");
-    }, 1500);
+        if (authData.user) {
+          // Fetch profile directly to verify selected role
+          const { data: profile, error: profileErr } = await supabase
+            .from("profiles")
+            .select("role")
+            .eq("id", authData.user.id)
+            .single();
+
+          if (profileErr || !profile) {
+            setIsLoading(false);
+            setErrors({ submit: "Failed to load user profile. Please try again." });
+            await supabase.auth.signOut();
+            return;
+          }
+
+          if (profile.role !== roleType) {
+            setIsLoading(false);
+            setErrors({ submit: `Account role mismatch. This user is registered as a ${profile.role}, not a ${roleType}.` });
+            await supabase.auth.signOut();
+            return;
+          }
+        }
+
+        // Proceed to dashboard if matches
+        router.push(safeNextPath || "/dashboard");
+      })
+      .catch((err) => {
+        setIsLoading(false);
+        setErrors({ submit: err?.message || "An unexpected error occurred." });
+      });
   };
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 min-h-screen w-full bg-[#000000] text-white font-sans relative">
       {/* Strict CSS overrides to force input elements to stay dark `#0B0B0B` and handle browser autofills */}
       <style dangerouslySetInnerHTML={{__html: `
-        #email, #password {
-          background-color: #0B0B0B !important;
-          border-color: #262626 !important;
-          color: #F8FAFC !important;
-        }
-        #email:focus, #password:focus {
-          border-color: rgba(255, 255, 255, 0.3) !important;
-        }
         input:-webkit-autofill,
         input:-webkit-autofill:hover,
         input:-webkit-autofill:focus,
         input:-webkit-autofill:active {
           -webkit-box-shadow: 0 0 0 1000px #0B0B0B inset !important;
           -webkit-text-fill-color: #F8FAFC !important;
-          border-color: #262626 !important;
+          border-color: #3A3A3A !important;
           transition: background-color 5000s ease-in-out 0s;
         }
       `}} />
@@ -203,84 +205,87 @@ export default function LoginPage() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Account Type */}
-            <div className="mb-2">
-              <label className="text-[13px] font-medium text-[#E5E5EA] mb-3 block">Account Type</label>
-              <div className="grid grid-cols-2 gap-3">
-                {[
-                  { id: "business", label: "Business (Agency / Brand)" },
-                  { id: "individual", label: "Individual (Model / Talent)" },
-                ].map((role) => (
-                  <label
-                    key={role.id}
-                    className={`flex cursor-pointer items-center justify-center rounded-lg border px-3 py-2 text-center text-[12px] font-semibold transition-colors ${
-                      roleType === role.id
-                        ? "border-white bg-white text-black"
-                        : "border-[#262626] bg-[#0B0B0B] text-[#8E8E93] hover:border-white/40"
-                    }`}
+            <div className="rounded-[10px] border border-[#3A3A3A] bg-black/30 p-4 sm:p-5 shadow-[0_0_15px_rgba(0,0,0,0.5)] flex flex-col gap-5">
+              {/* Account Type */}
+              <div>
+                <label className="text-[13px] font-medium text-[#E5E5EA] mb-3 block" htmlFor="roleType">Account Type</label>
+                <div className="relative w-full">
+                  <select
+                    id="roleType"
+                    value={roleType}
+                    onChange={(e) => setRoleType(e.target.value as "brand" | "agency" | "talent")}
+                    className="w-full appearance-none rounded-lg border border-[#3A3A3A] bg-[#0B0B0B] px-4 py-3 text-sm text-[#F8FAFC] transition-colors focus:border-white/50 focus:outline-none cursor-pointer"
                   >
-                    <input
-                      type="radio"
-                      name="roleType"
-                      value={role.id}
-                      checked={roleType === role.id}
-                      onChange={() => setRoleType(role.id as "business" | "individual")}
-                      className="hidden"
-                    />
-                    {role.label}
-                  </label>
-                ))}
+                    <option value="brand" className="bg-[#0B0B0B] text-white">Brand</option>
+                    <option value="agency" className="bg-[#0B0B0B] text-white">Agency</option>
+                    <option value="talent" className="bg-[#0B0B0B] text-white">Talent</option>
+                  </select>
+                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-[#8E8E93]">
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
+                    </svg>
+                  </div>
+                </div>
               </div>
-            </div>
 
-            {/* Email Address */}
-            <div className="flex flex-col gap-2 w-full">
-              <label htmlFor="email" className="text-[13px] font-medium text-[#E5E5EA]">
-                Email Address
-              </label>
-              <input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => {
-                  setEmail(e.target.value);
-                  if (errors.email) setErrors({});
-                }}
-                className={`w-full border !bg-[#0B0B0B] !border-[#262626] ${errors.email ? "border-white/40" : ""} focus:border-white/30 focus:outline-none rounded-lg px-4 py-3 text-sm text-[#F8FAFC] placeholder-[#5A5A62] transition-colors`}
-                placeholder="you@company.com"
-              />
-              {errors.email && (
-                <span className="text-xs text-white mt-0.5">{errors.email}</span>
-              )}
-            </div>
-
-            {/* Password */}
-            <div className="flex flex-col gap-2 w-full">
-              <div className="flex justify-between items-center">
-                <label htmlFor="password" className="text-[13px] font-medium text-[#E5E5EA]">
-                  Password
+              {/* Email Address */}
+              <div className="flex flex-col gap-2 w-full">
+                <label htmlFor="email" className="text-[13px] font-medium text-[#E5E5EA]">
+                  Email Address
                 </label>
-                <Link
-                  href="/auth/forgot-password"
-                  className="text-xs text-[#8E8E93] hover:text-white transition-colors"
-                >
-                  Forgot?
-                </Link>
+                <input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    if (errors.email) setErrors({});
+                  }}
+                  className={`w-full border !bg-[#0B0B0B] !border-[#3A3A3A] ${errors.email ? "border-red-500/50" : ""} focus:border-white/50 focus:outline-none rounded-lg px-4 py-3 text-sm text-[#F8FAFC] placeholder-[#5A5A62] transition-colors`}
+                  placeholder="you@company.com"
+                />
+                {errors.email && (
+                  <span className="text-xs text-white mt-0.5">{errors.email}</span>
+                )}
               </div>
-              <input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => {
-                  setPassword(e.target.value);
-                  if (errors.password) setErrors({});
-                }}
-                className={`w-full border !bg-[#0B0B0B] !border-[#262626] ${errors.password ? "border-white/40" : ""} focus:border-white/30 focus:outline-none rounded-lg px-4 py-3 text-sm text-[#F8FAFC] placeholder-[#5A5A62] transition-colors`}
-                placeholder="••••••••"
-              />
-              {errors.password && (
-                <span className="text-xs text-white mt-0.5">{errors.password}</span>
-              )}
+
+              {/* Password */}
+              <div className="flex flex-col gap-2 w-full">
+                <div className="flex justify-between items-center">
+                  <label htmlFor="password" className="text-[13px] font-medium text-[#E5E5EA]">
+                    Password
+                  </label>
+                  <Link
+                    href="/auth/forgot-password"
+                    className="text-xs text-[#8E8E93] hover:text-white transition-colors"
+                  >
+                    Forgot?
+                  </Link>
+                </div>
+                <div className="relative w-full">
+                  <input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      if (errors.password) setErrors({});
+                    }}
+                    className={`w-full border !bg-[#0B0B0B] !border-[#3A3A3A] ${errors.password ? "border-red-500/50" : ""} focus:border-white/50 focus:outline-none rounded-lg pl-4 pr-10 py-3 text-sm text-[#F8FAFC] placeholder-[#5A5A62] transition-colors`}
+                    placeholder="••••••••"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8E8E93] hover:text-white transition-colors cursor-pointer"
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+                {errors.password && (
+                  <span className="text-xs text-white mt-0.5">{errors.password}</span>
+                )}
+              </div>
             </div>
 
             {/* Remember Me */}
@@ -290,7 +295,7 @@ export default function LoginPage() {
                 id="remember"
                 checked={rememberMe}
                 onChange={() => setRememberMe(!rememberMe)}
-                className="w-4 h-4 rounded border-[#262626] bg-[#0B0B0B] checked:bg-white checked:border-white accent-white cursor-pointer"
+                className="w-4 h-4 rounded border-[#3A3A3A] bg-[#0B0B0B] checked:bg-white checked:border-white accent-white cursor-pointer"
               />
               <label
                 htmlFor="remember"
@@ -299,6 +304,12 @@ export default function LoginPage() {
                 Remember me for 30 days
               </label>
             </div>
+
+            {errors.submit ? (
+              <div className="rounded-lg border border-red-950 bg-red-950/30 p-3 text-xs text-red-200">
+                {errors.submit}
+              </div>
+            ) : null}
 
             {/* Sign In CTA */}
             <button
@@ -334,7 +345,7 @@ export default function LoginPage() {
           </div>
 
           {/* Divider and Encryption footer matching the screenshot exactly */}
-          <div className="border-t border-[#262626] my-6"></div>
+          <div className="border-t border-[#3A3A3A] my-6"></div>
         </div>
 
         {/* Bank security disclaimer */}

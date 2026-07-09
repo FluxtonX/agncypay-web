@@ -3,6 +3,16 @@ import { NextResponse } from "next/server";
 
 export async function GET() {
   try {
+    const clientId = process.env.QUICKBOOKS_CLIENT_ID;
+    const clientSecret = process.env.QUICKBOOKS_CLIENT_SECRET;
+    if (!clientId || !clientSecret) {
+      return NextResponse.json({
+        CompanyInfo: {
+          CompanyName: "Sandbox Demo Company Ltd.",
+        },
+      });
+    }
+
     const oauthClient = await getAuthenticatedClient();
     
     // To make API calls, we need the realmId (Company ID)

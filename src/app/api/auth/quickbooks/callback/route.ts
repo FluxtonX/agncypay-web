@@ -1,11 +1,23 @@
-import { getQuickBooksClient, saveToken } from "@/lib/quickbooks";
+import { getQuickBooksClient, getQuickBooksConfig, saveToken } from "@/lib/quickbooks";
 import { NextResponse } from "next/server";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const urlWithParams = request.url;
 
-  const oauthClient = getQuickBooksClient();
+  const config = getQuickBooksConfig(request.url);
+
+  if (!config.configured) {
+    return NextResponse.json(
+      {
+        error:
+          "QuickBooks OAuth is not configured. Set QUICKBOOKS_CLIENT_ID and QUICKBOOKS_CLIENT_SECRET. Optional: QUICKBOOKS_REDIRECT_URI.",
+      },
+      { status: 500 }
+    );
+  }
+
+  const oauthClient = getQuickBooksClient(undefined, request.url);
 
   try {
     // Exchange the auth code for access and refresh tokens
