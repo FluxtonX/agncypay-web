@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
-import { Download, TrendingUp, Search } from "lucide-react";
+import Link from "next/link";
+import { Download, TrendingUp, Search, ArrowLeft } from "lucide-react";
 import { cn } from "../../../lib/utils";
 import { useDynamicIncomes, modelIncomeItems, RemoteBrandImage } from "../../../components/dashboard/ModelAgencyDashboard";
 
@@ -82,7 +83,7 @@ function parseAmount(raw: string | number | undefined): number {
   return parseFloat(String(raw).replace(/[$,\s]/g, "")) || 0;
 }
 
-/** Normalize a platform name to a consistent key (strip DSP suffixes, etc.) */
+/** Normalize a platform name to a consistent key */
 function normalizeName(name: string): string {
   return name.trim();
 }
@@ -131,8 +132,9 @@ function fmtUSD(n: number): string {
 
 export default function IncomesPage() {
   const dynamicIncomes = useDynamicIncomes();
-  const rawIncomes: IncomeItem[] =
-    (dynamicIncomes.length > 0 ? dynamicIncomes : modelIncomeItems) as IncomeItem[];
+  const rawIncomes: IncomeItem[] = useMemo(() => {
+    return (dynamicIncomes.length > 0 ? dynamicIncomes : modelIncomeItems) as IncomeItem[];
+  }, [dynamicIncomes]);
 
   const [search, setSearch] = useState("");
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -158,18 +160,19 @@ export default function IncomesPage() {
       return next;
     });
 
-  const totalAmount = allIncomes.reduce((acc, item) => {
-    const num = Number(item.amount.replace(/[^0-9.-]+/g, ""));
-    return acc + (isNaN(num) ? 0 : num);
-  }, 0);
-
-  const formattedTotal = new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-  }).format(totalAmount);
-
   return (
     <div className="mx-auto w-full max-w-[1048px] px-4 py-8 sm:px-6 lg:px-8">
+      {/* Back button */}
+      <div className="mb-6">
+        <Link
+          href="/dashboard"
+          className="inline-flex items-center gap-2 text-[14px] font-semibold text-[#8f8f8f] hover:text-white transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Dashboard
+        </Link>
+      </div>
+
       {/* Page title */}
       <div>
         <h1 className="text-[34px] font-semibold leading-none text-white">Recent Incomes</h1>
@@ -372,17 +375,6 @@ export default function IncomesPage() {
             )}
           </table>
         </div>
-
-        {allIncomes.length > 0 && (
-          <div className="mt-6 flex justify-end">
-            <div className="flex w-full max-w-[320px] items-center justify-between rounded-[9px] border border-[#303030] bg-[#060606] px-5 py-4">
-              <span className="text-[17px] font-semibold text-[#8d8d8d]">Total Income</span>
-              <span className="text-[24px] font-black tracking-tight text-[#13d463]">
-                {formattedTotal}
-              </span>
-            </div>
-          </div>
-        )}
       </section>
     </div>
   );

@@ -1195,36 +1195,6 @@ export default function DashboardHomePage() {
               </Panel>
             </div>
 
-            <Panel className="overflow-hidden p-4 sm:p-5">
-              <div className="flex items-start justify-between gap-4">
-                <div className="min-w-0">
-                  <p className="text-[13px] font-black uppercase tracking-[0.12em] text-[#a9a9a9]">Plaid</p>
-                  <h2 className="mt-1 text-[22px] font-semibold text-white">Connect Bank</h2>
-                  <p className="mt-2 max-w-[280px] text-[13px] leading-5 text-[#8f8f8f]">
-                    Link your payout method to receive monthly royalty distributions automatically.
-                  </p>
-                </div>
-                <span className="inline-flex h-10 shrink-0 items-center rounded-[7px] border border-[#333] bg-white px-3">
-                  <img
-                    src="/plaid-logo.svg"
-                    alt="Plaid"
-                    className="h-6 w-[84px] object-contain"
-                    loading="lazy"
-                  />
-                </span>
-              </div>
-              <div className="mt-5 flex items-center justify-between gap-4">
-                <Link
-                  href="/dashboard/wallet"
-                  className="inline-flex h-9 items-center rounded-[7px] border border-white bg-white px-3 text-[12px] font-semibold text-black"
-                >
-                  Set Up Payouts
-                </Link>
-                <span className="text-[11px] text-[#7f7f7f]">Secure bank linking</span>
-              </div>
-            </Panel>
-
-            <CatalogValuationPanel />
           </div>
 
           <div className="space-y-5">
@@ -1292,7 +1262,40 @@ export default function DashboardHomePage() {
             {/* 5. Upload File Section */}
             <CsvDropzonePanel />
 
-            {/* 6. Banks and Cards */}
+            {/* 6. Plaid Connect Bank */}
+            <Panel className="overflow-hidden p-4 sm:p-5">
+              <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0">
+                  <p className="text-[13px] font-black uppercase tracking-[0.12em] text-[#a9a9a9]">Plaid</p>
+                  <h2 className="mt-1 text-[22px] font-semibold text-white">Connect Bank</h2>
+                  <p className="mt-2 max-w-[280px] text-[13px] leading-5 text-[#8f8f8f]">
+                    Link your payout method to receive monthly royalty distributions automatically.
+                  </p>
+                </div>
+                <span className="inline-flex h-10 shrink-0 items-center rounded-[7px] border border-[#333] bg-white px-3">
+                  <img
+                    src="/plaid-logo.svg"
+                    alt="Plaid"
+                    className="h-6 w-[84px] object-contain"
+                    loading="lazy"
+                  />
+                </span>
+              </div>
+              <div className="mt-5 flex items-center justify-between gap-4">
+                <Link
+                  href="/dashboard/wallet"
+                  className="inline-flex h-9 items-center rounded-[7px] border border-white bg-white px-3 text-[12px] font-semibold text-black"
+                >
+                  Set Up Payouts
+                </Link>
+                <span className="text-[11px] text-[#7f7f7f]">Secure bank linking</span>
+              </div>
+            </Panel>
+
+            {/* 7. Catalog Valuation & Yearly Activity Graph */}
+            <CatalogValuationPanel />
+
+            {/* 8. Banks and Cards */}
             <Panel className="p-4 sm:p-5">
               <div className="flex items-center justify-between gap-4">
                 <div>
