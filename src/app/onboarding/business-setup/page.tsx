@@ -30,7 +30,7 @@ const onboardingCopy: Record<WorkspaceType, {
     alertBody: "Review your brand entity details before starting the step-by-step compliance checklist.",
     legalNameLabel: "Legal Entity Name",
     brandNameLabel: "Trading / Brand Name",
-    startRoute: "/verification/business-info",
+    startRoute: "/verification/profile",
     checklist: [
       "KYB verification",
       "Connect bank account",
@@ -47,7 +47,7 @@ const onboardingCopy: Record<WorkspaceType, {
     alertBody: "Confirm agency registry details before configuring team access, talent, and split workflows.",
     legalNameLabel: "Legal Agency Name",
     brandNameLabel: "Agency Display Name",
-    startRoute: "/verification/business-info",
+    startRoute: "/verification/profile",
     checklist: [
       "KYB verification",
       "Connect payout bank",
@@ -65,7 +65,7 @@ const onboardingCopy: Record<WorkspaceType, {
     alertBody: "Confirm your profile details before identity verification and payout setup.",
     legalNameLabel: "Legal Name",
     brandNameLabel: "Public / Professional Name",
-    startRoute: "/verification/representative",
+    startRoute: "/verification/profile",
     checklist: [
       "Identity verification",
       "Payout/bank connection",
@@ -81,7 +81,7 @@ const onboardingCopy: Record<WorkspaceType, {
     alertBody: "Confirm your profile details before KYC, tax/payment info, and agency relationship confirmation.",
     legalNameLabel: "Legal Name",
     brandNameLabel: "Talent Profile Name",
-    startRoute: "/verification/representative",
+    startRoute: "/verification/profile",
     checklist: [
       "Identity verification",
       "Payout/bank connection",
@@ -97,7 +97,7 @@ const onboardingCopy: Record<WorkspaceType, {
     alertBody: "Confirm enterprise details before child agency hierarchy, treasury, and permissions setup.",
     legalNameLabel: "Legal Organization Name",
     brandNameLabel: "Operating Name",
-    startRoute: "/verification/business-info",
+    startRoute: "/verification/profile",
     checklist: [
       "Enterprise KYB",
       "Advanced permissions",

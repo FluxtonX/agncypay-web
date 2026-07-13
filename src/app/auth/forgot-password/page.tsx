@@ -6,27 +6,34 @@ import { Mail, ArrowLeft, Send } from "lucide-react";
 import { Input } from "../../../components/ui/Input";
 import { Button } from "../../../components/ui/Button";
 import { Card } from "../../../components/ui/Card";
+import { useAuth } from "../../../context/AuthContext";
 
 export default function ForgotPasswordPage() {
+  const { resetPassword } = useAuth();
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
-    // if (!email) {
-    //   setError("Email is required");
-    //   return;
-    // }
+    if (!email.trim()) {
+      setError("Email is required");
+      return;
+    }
 
     setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
+    const result = await resetPassword(email.trim().toLowerCase());
+    setIsLoading(false);
+
+    if (result.success) {
       setIsSubmitted(true);
-    }, 1200);
+    } else {
+      // Still show success UI to avoid email enumeration attacks
+      setIsSubmitted(true);
+    }
   };
 
   return (

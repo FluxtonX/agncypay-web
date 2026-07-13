@@ -3,20 +3,14 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useApp } from "../../../context/AppContext";
-import { getRegisteredUsers } from "../../../lib/authStorage";
-
-const DEMO_EMAIL = "martin.safi@adidas.com";
-const DEMO_PASSWORD = "password123";
-const isGmailAddress = (value: string) => value.trim().toLowerCase().endsWith("@gmail.com");
+import { useAuth } from "../../../context/AuthContext";
 
 export default function LoginPage() {
   const router = useRouter();
-  const { loginUser } = useApp();
+  const { signIn } = useAuth();
   
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [roleType, setRoleType] = useState<"business" | "individual">("business");
   const [rememberMe, setRememberMe] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
@@ -30,8 +24,8 @@ export default function LoginPage() {
   }, []);
 
   const handlePrefillAdidas = () => {
-    setEmail(DEMO_EMAIL);
-    setPassword(DEMO_PASSWORD);
+    setEmail("martin.safi@adidas.com");
+    setPassword("Password123!");
     setErrors({});
     setShowDemoHelper(false);
   };
@@ -43,58 +37,36 @@ export default function LoginPage() {
     } else if (!/\S+@\S+\.\S+/.test(email)) {
       newErrors.email = "Invalid email format";
     }
-    if (!password && !isGmailAddress(email)) {
+    if (!password) {
       newErrors.password = "Password is required";
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validate()) return;
 
-    const normalizedEmail = email.trim().toLowerCase();
-    const registeredUser = getRegisteredUsers().find(
-      (user) => user.email.toLowerCase() === normalizedEmail
-    );
-    const isDemoLogin = normalizedEmail === DEMO_EMAIL && password === DEMO_PASSWORD;
-    const isGmailLogin = isGmailAddress(normalizedEmail);
-
-    if (!registeredUser && !isDemoLogin && !isGmailLogin) {
-      setErrors({ email: "Use a Gmail address, demo account, or create an account first." });
-      return;
-    }
-
-    if (registeredUser && !isGmailLogin && registeredUser.password !== password) {
-      setErrors({ password: "Incorrect password for this account." });
-      return;
-    }
-
     setIsLoading(true);
-    setTimeout(() => {
-      // Login inside AppContext
-      const fallbackName = normalizedEmail
-        .split("@")[0]
-        .split(/[._-]/)
-        .filter(Boolean)
-        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-        .join(" ");
-      const accountType = roleType === "business" ? "agency" : "talent_independent";
-      loginUser(
-        normalizedEmail,
-        registeredUser?.fullName || fallbackName || "AgncyPay User",
-        accountType,
-        {
-          workspaceName: registeredUser?.workspaceName,
-          workspaceType: accountType,
-          agencyId: registeredUser?.agencyId,
-        }
-      );
-      setIsLoading(false);
 
+    const result = await signIn(email.trim().toLowerCase(), password);
+
+    if (result.success) {
+      // Set session cookie for middleware route protection
+      const maxAge = rememberMe ? 2592000 : 604800; // 30 days or 7 days
+      document.cookie = `agncypay_auth_session=active; path=/; max-age=${maxAge}; SameSite=Lax`;
+
+      // Note: We no longer need to manually call loginUser() here.
+      // The useEffect in AppContext.tsx automatically syncs the Firebase userProfile
+      // (which contains the correct account type) into the AppContext state.
+
+      setIsLoading(false);
       router.push(safeNextPath || "/dashboard");
-    }, 1500);
+    } else {
+      setErrors({ global: result.error || "Sign in failed. Please try again." });
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -134,10 +106,10 @@ export default function LoginPage() {
           <div className="absolute right-0 mt-2 w-72 bg-[#121212] border border-[#2D2D2D] rounded-lg p-4 shadow-2xl z-50 text-xs">
             <h4 className="font-semibold text-white mb-2">Demo Credentials</h4>
             <p className="text-[#8E8E93] mb-1">
-              Email: <span className="text-white font-mono">{DEMO_EMAIL}</span>
+              Email: <span className="text-white font-mono">martin.safi@adidas.com</span>
             </p>
             <p className="text-[#8E8E93] mb-3">
-              Password: <span className="text-white font-mono">{DEMO_PASSWORD}</span>
+              Password: <span className="text-white font-mono">Password123!</span>
             </p>
             <button
               type="button"
@@ -203,35 +175,18 @@ export default function LoginPage() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Account Type */}
-            <div className="mb-2">
-              <label className="text-[13px] font-medium text-[#E5E5EA] mb-3 block">Account Type</label>
-              <div className="grid grid-cols-2 gap-3">
-                {[
-                  { id: "business", label: "Business (Agency / Brand)" },
-                  { id: "individual", label: "Individual (Model / Talent)" },
-                ].map((role) => (
-                  <label
-                    key={role.id}
-                    className={`flex cursor-pointer items-center justify-center rounded-lg border px-3 py-2 text-center text-[12px] font-semibold transition-colors ${
-                      roleType === role.id
-                        ? "border-white bg-white text-black"
-                        : "border-[#262626] bg-[#0B0B0B] text-[#8E8E93] hover:border-white/40"
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="roleType"
-                      value={role.id}
-                      checked={roleType === role.id}
-                      onChange={() => setRoleType(role.id as "business" | "individual")}
-                      className="hidden"
-                    />
-                    {role.label}
-                  </label>
-                ))}
+            {errors.global && (
+              <div className="rounded-lg bg-red-500/10 p-4 border border-red-500/20 mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-5 w-5 text-red-400 flex items-center justify-center">
+                    <svg fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" className="w-5 h-5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                  </div>
+                  <p className="text-sm font-medium text-red-400">{errors.global}</p>
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Email Address */}
             <div className="flex flex-col gap-2 w-full">
@@ -244,7 +199,7 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => {
                   setEmail(e.target.value);
-                  if (errors.email) setErrors({});
+                  if (errors.email) setErrors((prev) => ({ ...prev, email: "" }));
                 }}
                 className={`w-full border !bg-[#0B0B0B] !border-[#262626] ${errors.email ? "border-white/40" : ""} focus:border-white/30 focus:outline-none rounded-lg px-4 py-3 text-sm text-[#F8FAFC] placeholder-[#5A5A62] transition-colors`}
                 placeholder="you@company.com"
@@ -273,7 +228,7 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => {
                   setPassword(e.target.value);
-                  if (errors.password) setErrors({});
+                  if (errors.password) setErrors((prev) => ({ ...prev, password: "" }));
                 }}
                 className={`w-full border !bg-[#0B0B0B] !border-[#262626] ${errors.password ? "border-white/40" : ""} focus:border-white/30 focus:outline-none rounded-lg px-4 py-3 text-sm text-[#F8FAFC] placeholder-[#5A5A62] transition-colors`}
                 placeholder="••••••••"

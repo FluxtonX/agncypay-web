@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { MailOpen, ShieldAlert, ArrowRight } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
+import { useAuth } from "../../../context/AuthContext";
 import { Input } from "../../../components/ui/Input";
 import { Button } from "../../../components/ui/Button";
 import { Card } from "../../../components/ui/Card";
@@ -13,6 +14,7 @@ import { normalizeWorkspaceType } from "../../../types/workspace";
 export default function VerifyEmailPage() {
   const router = useRouter();
   const { state, verifyEmail } = useApp();
+  const { sendVerificationEmail, firebaseUser } = useAuth();
   
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
@@ -28,11 +30,6 @@ export default function VerifyEmailPage() {
     e.preventDefault();
     setError("");
 
-    // if (code.length !== 6) {
-    //   setError("Please enter a valid 6-digit confirmation code.");
-    //   return;
-    // }
-
     setIsLoading(true);
     setTimeout(() => {
       // Simulate checking code
@@ -41,17 +38,16 @@ export default function VerifyEmailPage() {
       
       // Bypass validation check and always navigate in the simulator.
       router.push(verificationRoute);
-      
-      // if (verified) {
-      //   router.push(verificationRoute);
-      // } else {
-      //   setError("Invalid confirmation code. (Use code '123456' for simulation)");
-      // }
     }, 1500);
   };
 
-  const handleResend = () => {
-    alert("Simulation: A new 6-digit verification code has been dispatched.");
+  const handleResend = async () => {
+    const result = await sendVerificationEmail();
+    if (result.success) {
+      alert("Verification email sent! Check your inbox.");
+    } else {
+      alert(result.error || "Failed to send verification email. Please try again.");
+    }
   };
 
   return (

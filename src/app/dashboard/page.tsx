@@ -714,7 +714,7 @@ function DashboardFooter() {
 
 export default function DashboardHomePage() {
   const router = useRouter();
-  const { state } = useApp();
+  const { state, resetState } = useApp();
   const activeWorkspace = state.workspaces.find((w) => w.id === state.activeWorkspaceId);
   const workspaceType = activeWorkspace?.type || state.user?.accountType || "brand";
 
@@ -767,8 +767,29 @@ export default function DashboardHomePage() {
   return (
     <main className="min-h-screen bg-black text-white">
       <div className="mx-auto max-w-[1520px] px-4 py-4 sm:px-6 lg:px-8">
-        <div className="flex flex-nowrap items-center justify-start gap-4 pb-4">
+        <div className="flex flex-nowrap items-center justify-between gap-4 pb-4">
           <img src="/agncypaybrand.png" alt="AgncyPay" className="h-[52px] w-auto shrink-0 object-contain scale-[1.5] origin-left" />
+          
+          <div className="flex items-center gap-4">
+            {state.user?.isLoggedIn && (
+              <div className="flex flex-col items-end">
+                <span className="text-[13px] font-medium text-white">{state.user.fullName}</span>
+                <span className="text-[11px] font-semibold text-[#8E8E93] uppercase tracking-wider">
+                  {state.user.accountType === 'agency' ? 'Business' : 'Individual'}
+                </span>
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={() => {
+                resetState?.();
+                router.push("/auth/login");
+              }}
+              className="rounded-lg border border-[#333] bg-[#0b0b0b] px-3 py-1.5 text-[12px] font-semibold text-white transition-colors hover:border-[#555] hover:bg-white/[0.04]"
+            >
+              Log Out
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(360px,0.85fr)]">

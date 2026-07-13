@@ -1,6 +1,7 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import { useAuth } from "./AuthContext";
 import { BusinessProfile, BrandVerification } from "../types/business";
 import { VerificationDocument } from "../types/document";
 import { Invoice } from "../types/invoice";
@@ -33,27 +34,41 @@ interface AppState {
   workspaces: Workspace[];
   memberships: Membership[];
   activeWorkspaceId: string | null;
-  businessSetup: Partial<BusinessProfile> & {
-    industry?: string;
-    address?: string;
-    city?: string;
-    businessState?: string;
-    zipCode?: string;
-    companyDescription?: string;
-  };
-  representative: {
-    fullName: string;
-    jobTitle: string;
-    dob: string;
-    nationality: string;
+  businessSetup: {
     email: string;
     phone: string;
-    address: string;
-    idType: string;
-    idFrontUploaded: boolean;
-    idBackUploaded: boolean;
-    selfieUploaded: boolean;
-    status: "not_started" | "uploaded" | "processing" | "verified" | "rejected";
+    country: string;
+    addressLine1: string;
+    addressLine2?: string;
+    city: string;
+    stateOrProvince: string;
+    postalCode: string;
+    legalName: string;
+    brandName: string;
+    businessType: string;
+    taxId: string;
+    website: string;
+    industry: string;
+    firstName: string;
+    lastName: string;
+    dob: string;
+    ssnLast4: string;
+  };
+  representative: {
+    firstName: string;
+    lastName: string;
+    jobTitle: string;
+    dob: string;
+    email: string;
+    phone: string;
+    addressLine1: string;
+    addressLine2?: string;
+    city: string;
+    stateOrProvince: string;
+    postalCode: string;
+    country: string;
+    ssnLast4: string;
+    ownershipPercentage: number;
   };
   authorization: {
     isOwner: boolean | null;
@@ -113,29 +128,40 @@ const DEFAULT_STATE: AppState = {
   memberships: [],
   activeWorkspaceId: null,
   businessSetup: {
-    legalName: "Adidas AG",
-    brandName: "Adidas",
-    businessType: "Public Company",
-    country: "Germany",
-    website: "https://www.adidas.com",
-    email: "compliance@adidas-group.com",
-    phone: "+49 9132 84-0",
-    verificationStatus: "draft",
-    industry: "Sportswear / Apparel",
-  },
-  representative: {
-    fullName: "",
-    jobTitle: "",
-    dob: "",
-    nationality: "",
     email: "",
     phone: "",
-    address: "",
-    idType: "Passport",
-    idFrontUploaded: false,
-    idBackUploaded: false,
-    selfieUploaded: false,
-    status: "not_started",
+    country: "US",
+    addressLine1: "",
+    addressLine2: "",
+    city: "",
+    stateOrProvince: "",
+    postalCode: "",
+    legalName: "",
+    brandName: "",
+    businessType: "llc",
+    taxId: "",
+    website: "",
+    industry: "",
+    firstName: "",
+    lastName: "",
+    dob: "",
+    ssnLast4: "",
+  },
+  representative: {
+    firstName: "",
+    lastName: "",
+    jobTitle: "Owner",
+    dob: "",
+    email: "",
+    phone: "",
+    addressLine1: "",
+    addressLine2: "",
+    city: "",
+    stateOrProvince: "",
+    postalCode: "",
+    country: "US",
+    ssnLast4: "",
+    ownershipPercentage: 100,
   },
   authorization: {
     isOwner: null,
@@ -251,6 +277,7 @@ function normalizeStoredState(state: AppState): AppState {
 }
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
+  const { firebaseUser, userProfile, isAuthenticated, logout: firebaseLogout } = useAuth();
   const [state, setState] = useState<AppState>(DEFAULT_STATE);
   const [isLoaded, setIsLoaded] = useState(false);
 
@@ -276,6 +303,58 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       console.error("Failed to save local storage state:", e);
     }
   }, [state, isLoaded]);
+
+  // Sync Firebase auth user into AppContext state
+  useEffect(() => {
+    if (!isLoaded) return;
+
+    if (isAuthenticated && firebaseUser && userProfile && !state.user?.isLoggedIn) {
+      // Firebase user is signed in but AppContext doesn't reflect it yet
+      // This handles page refreshes where Firebase auth persists but AppContext resets
+      const workspaceType = userProfile.workspaceType ?? normalizeWorkspaceType(userProfile.accountType);
+      const workspaceName = userProfile.workspaceName ?? "AgncyPay Workspace";
+      const workspaceId = `${workspaceType}-${Date.now()}`;
+      const role = getDefaultWorkspaceRole(workspaceType);
+
+      setState((prev) => {
+        // Only auto-hydrate if no user is logged in yet
+        if (prev.user?.isLoggedIn) return prev;
+
+        const workspace: Workspace = {
+          id: workspaceId,
+          type: workspaceType,
+          name: workspaceName,
+          agncyId: createAgncyId("ORG"),
+          verificationTrack: getVerificationTrack(workspaceType),
+          verificationStatus: "draft",
+        };
+        const membership: Membership = {
+          id: `mem-${Date.now()}`,
+          userEmail: userProfile.email,
+          workspaceId,
+          role,
+          permissions: getDefaultPermissions(role),
+          status: "active",
+        };
+
+        return {
+          ...prev,
+          user: {
+            agncyId: createAgncyId("USR"),
+            fullName: userProfile.fullName,
+            email: userProfile.email,
+            accountType: userProfile.accountType,
+            isLoggedIn: true,
+            emailVerified: firebaseUser.emailVerified,
+            activeWorkspaceId: workspaceId,
+          },
+          workspaces: [...prev.workspaces, workspace],
+          memberships: [...prev.memberships, membership],
+          activeWorkspaceId: workspaceId,
+        };
+      });
+    }
+  }, [isLoaded, isAuthenticated, firebaseUser, userProfile, state.user?.isLoggedIn]);
 
   const loginUser = (
     email: string,
@@ -478,24 +557,57 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
-  const submitForVerification = () => {
+  const submitForVerification = async () => {
+    if (userProfile?.moovAccountId) {
+      try {
+        const updateRes = await fetch("/api/moov/account/update", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            moovAccountId: userProfile.moovAccountId,
+            businessSetup: state.businessSetup,
+            accountType: userProfile.accountType,
+            termsOfService: {
+              acceptedDate: new Date().toISOString(),
+              acceptedIp: "127.0.0.1",
+            },
+          }),
+        });
+
+        if (!updateRes.ok) {
+          const errorText = await updateRes.text();
+          console.error("Moov Update Failed:", errorText);
+          alert("Moov Update Failed: " + errorText);
+          return; // Stop on error
+        }
+
+        if (userProfile.accountType !== "talent_independent") {
+          const repRes = await fetch("/api/moov/representatives", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              moovAccountId: userProfile.moovAccountId,
+              representative: state.representative,
+            }),
+          });
+
+          if (!repRes.ok) {
+            const errorText = await repRes.text();
+            console.error("Moov Rep Failed:", errorText);
+            alert("Moov Representative Failed: " + errorText);
+            return; // Stop on error
+          }
+        }
+      } catch (e) {
+        console.error("Failed to sync with Moov", e);
+        alert("Network error: " + (e as Error).message);
+        return;
+      }
+    }
+
     setState((prev) => ({
       ...prev,
       verificationStatus: "approved",
-      representative: { ...prev.representative, status: "verified" },
-      bankDetails: { ...prev.bankDetails, status: "approved", statementUploaded: true },
-      documents: prev.documents.map((doc) => ({ ...doc, status: "approved" })),
-      brand: {
-        ...prev.brand,
-        officialEmail: prev.brand.officialEmail || prev.user?.email || "demo@gmail.com",
-        domainVerified: true,
-        domainCodeSent: true,
-        status: "approved",
-        trademarkCertUploaded: true,
-        logoUploaded: true,
-        brandProofUploaded: true,
-        authLetterUploaded: true,
-      },
     }));
   };
 
@@ -585,6 +697,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const resetState = () => {
     setState(DEFAULT_STATE);
+    // Clear session cookie
+    document.cookie = "agncypay_auth_session=; path=/; max-age=0";
+    // Sign out of Firebase
+    firebaseLogout().catch(console.error);
   };
 
   return (

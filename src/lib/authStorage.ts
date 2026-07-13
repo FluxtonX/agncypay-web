@@ -1,5 +1,12 @@
 import { AccountType, WorkspaceType, normalizeWorkspaceType } from "../types/workspace";
 
+/**
+ * @deprecated This module is superseded by Firebase Authentication.
+ * User registration and login are now handled via `src/context/AuthContext.tsx`
+ * and `src/lib/firebaseAuth.ts`. This file is kept for backward compatibility
+ * only and will be removed in a future cleanup.
+ */
+
 export type RegisteredUser = {
   email: string;
   password: string;
@@ -12,6 +19,11 @@ export type RegisteredUser = {
 };
 
 const REGISTERED_USERS_KEY = "agncypay_registered_users";
+
+/**
+ * @deprecated Use `useAuth()` from `AuthContext` instead.
+ * Retrieves users from localStorage — no longer the primary auth source.
+ */
 
 export function getRegisteredUsers(): RegisteredUser[] {
   if (typeof window === "undefined") return [];
@@ -46,6 +58,10 @@ export function getRegisteredUsers(): RegisteredUser[] {
   }
 }
 
+/**
+ * @deprecated Use `useAuth().signUp()` from `AuthContext` instead.
+ * Saves user to localStorage — no longer the primary auth registration method.
+ */
 export function saveRegisteredUser(user: RegisteredUser) {
   if (typeof window === "undefined") return;
 

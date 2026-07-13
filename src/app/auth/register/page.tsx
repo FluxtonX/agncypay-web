@@ -4,11 +4,8 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Check, ShieldCheck } from "lucide-react";
-import { saveRegisteredUser } from "../../../lib/authStorage";
+import { useAuth } from "../../../context/AuthContext";
 import { WorkspaceType } from "../../../types/workspace";
-
-const DEMO_EMAIL = "martin.safi@adidas.com";
-const DEMO_PASSWORD = "password123";
 
 function FormField({
   id,
@@ -47,6 +44,7 @@ function FormField({
 
 export default function RegisterPage() {
   const router = useRouter();
+  const { signUp } = useAuth();
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -61,9 +59,9 @@ export default function RegisterPage() {
 
   const handlePrefillDemo = () => {
     setFullName("Martin Safi");
-    setEmail(DEMO_EMAIL);
+    setEmail("martin.safi@adidas.com");
     setWorkspaceName("Adidas");
-    setPassword(DEMO_PASSWORD);
+    setPassword("Password123!");
     setAgree(true);
     setErrors({});
     setShowDemoHelper(false);
@@ -92,28 +90,31 @@ export default function RegisterPage() {
     return Object.keys(nextErrors).length === 0;
   };
 
-  const handleSubmit = (event: React.FormEvent) => {
+  const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!validate()) return;
 
-    const normalizedEmail = email.trim().toLowerCase();
-    const normalizedName = fullName.trim();
-    const normalizedWorkspaceName = workspaceName.trim();
-
     setIsLoading(true);
-    window.setTimeout(() => {
-      saveRegisteredUser({
-        email: normalizedEmail,
-        password,
-        fullName: normalizedName,
-        accountType: accountType,
-        workspaceType: accountType,
-        workspaceName: normalizedWorkspaceName,
-      });
 
+    const result = await signUp({
+      email: email.trim().toLowerCase(),
+      password,
+      fullName: fullName.trim(),
+      accountType,
+      workspaceType: accountType,
+      workspaceName: workspaceName.trim(),
+    });
+
+    if (result.success) {
+      // Set session cookie for middleware route protection
+      document.cookie = "agncypay_auth_session=active; path=/; max-age=604800; SameSite=Lax";
       setIsLoading(false);
-      router.push("/auth/login");
-    }, 900);
+      // After signup, redirect user directly to the new minimal verification flow
+      router.push("/verification/profile");
+    } else {
+      setErrors({ global: result.error || "Registration failed. Please try again." });
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -211,16 +212,29 @@ export default function RegisterPage() {
           </Link>
         </div>
 
-        <div className="mx-auto flex w-full max-w-[760px] flex-1 flex-col justify-center">
+        <div className="mx-auto flex w-full max-w-[500px] flex-1 flex-col justify-center">
           <div className="mb-7">
-            <h2 className="text-[31px] font-medium leading-tight text-white">Create Account</h2>
-            <p className="mt-2 text-sm leading-5 text-[#8E8E93]">
-              Sign up once and go straight into the AgncyPay payment experience.
+            <h2 className="text-[31px] font-medium leading-tight text-white tracking-tight">Create Account</h2>
+            <p className="mt-2 text-[15px] leading-5 text-[#8E8E93]">
+              Join AgncyPay and unify your payment experience.
             </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="rounded-[10px] border border-[#262626] bg-black/30 p-4 sm:p-5">
+            {errors.global && (
+              <div className="rounded-lg bg-red-500/10 p-4 border border-red-500/20">
+                <div className="flex items-center gap-3">
+                  <div className="h-5 w-5 text-red-400 flex items-center justify-center">
+                    <svg fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" className="w-5 h-5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                  </div>
+                  <p className="text-sm font-medium text-red-400">{errors.global}</p>
+                </div>
+              </div>
+            )}
+            
+            <div className="rounded-[12px] border border-[#262626] bg-[#0A0A0A] p-5 sm:p-6 shadow-2xl">
               <div className="mb-6">
                 <label className="text-[13px] font-medium text-[#E5E5EA] mb-3 block">Account Type</label>
                 <div className="grid grid-cols-2 gap-3">
@@ -267,16 +281,16 @@ export default function RegisterPage() {
                 </div>
               )}
 
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-5">
                 <FormField
                   id="fullName"
-                  label="Enter your Name"
+                  label="Full Name"
                   value={fullName}
                   onChange={(value) => {
                     setFullName(value);
-                    if (errors.fullName) setErrors({});
+                    if (errors.fullName) setErrors((prev) => ({ ...prev, fullName: "" }));
                   }}
-                  placeholder="Martin Safi"
+                  placeholder="e.g. Martin Safi"
                   error={errors.fullName}
                 />
                 <FormField
@@ -285,20 +299,20 @@ export default function RegisterPage() {
                   value={email}
                   onChange={(value) => {
                     setEmail(value);
-                    if (errors.email) setErrors({});
+                    if (errors.email) setErrors((prev) => ({ ...prev, email: "" }));
                   }}
                   placeholder="you@company.com"
                   error={errors.email}
                 />
                 <FormField
                   id="workspaceName"
-                  label="Company / Workspace Name"
+                  label={roleType === "business" ? "Company Name" : "Workspace Name"}
                   value={workspaceName}
                   onChange={(value) => {
                     setWorkspaceName(value);
-                    if (errors.workspaceName) setErrors({});
+                    if (errors.workspaceName) setErrors((prev) => ({ ...prev, workspaceName: "" }));
                   }}
-                  placeholder="Adidas"
+                  placeholder={roleType === "business" ? "e.g. Adidas" : "e.g. Personal Brand"}
                   error={errors.workspaceName}
                 />
                 <FormField
@@ -308,21 +322,21 @@ export default function RegisterPage() {
                   value={password}
                   onChange={(value) => {
                     setPassword(value);
-                    if (errors.password) setErrors({});
+                    if (errors.password) setErrors((prev) => ({ ...prev, password: "" }));
                   }}
-                  placeholder="Minimum 8 characters"
+                  placeholder="At least 8 characters"
                   error={errors.password}
                 />
               </div>
             </div>
 
-            <div className="flex items-start gap-2.5 pt-1">
+            <div className="flex items-start gap-3 pt-2">
               <input
                 type="checkbox"
                 id="agree"
                 checked={agree}
                 onChange={() => setAgree(!agree)}
-                className="mt-0.5 h-4 w-4 cursor-pointer rounded border-[#262626] bg-[#0B0B0B] accent-white"
+                className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border-[#262626] bg-[#0B0B0B] accent-white transition-all"
               />
               <label
                 htmlFor="agree"
@@ -337,15 +351,18 @@ export default function RegisterPage() {
             <button
               type="submit"
               disabled={isLoading}
-              className="flex h-[46px] w-full items-center justify-center gap-2 rounded-lg bg-white text-sm font-semibold text-black transition-colors hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-70"
+              className="flex h-[48px] w-full items-center justify-center gap-2 rounded-lg bg-white text-[15px] font-semibold text-black transition-all hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-70 shadow-[0_0_20px_rgba(255,255,255,0.1)] hover:shadow-[0_0_25px_rgba(255,255,255,0.2)]"
             >
-              {isLoading ? "Creating Account..." : "Create Account"}
+              {isLoading ? (
+                <span className="flex items-center gap-2">
+                  <svg className="animate-spin h-4 w-4 text-black" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  Creating Account...
+                </span>
+              ) : "Create Account"}
             </button>
-
-            <div className="flex items-center justify-center gap-2 rounded-[10px] border border-[#262626] bg-[#0B0B0B] px-4 py-3 text-[13px] text-[#8E8E93]">
-              <Check className="h-4 w-4 text-white" />
-              Sign in after signup to open your dashboard
-            </div>
           </form>
 
           <div className="mt-6 text-center text-sm text-[#8E8E93]">
