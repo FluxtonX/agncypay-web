@@ -93,7 +93,11 @@ export default function LoginPage() {
       );
       setIsLoading(false);
 
-      router.push(safeNextPath || "/dashboard");
+      if (roleType === "business") {
+        router.push(safeNextPath || "/branddashboard");
+      } else {
+        router.push(safeNextPath || "/dashboard");
+      }
     }, 1500);
   };
 
