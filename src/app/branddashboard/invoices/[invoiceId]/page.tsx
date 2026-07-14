@@ -29,7 +29,8 @@ import {
   Percent,
   TrendingUp,
   AlertTriangle,
-  FileText
+  FileText,
+  Users
 } from "lucide-react";
 import { useApp } from "../../../../context/AppContext";
 
@@ -66,7 +67,7 @@ interface InvoiceMock {
     total: number;
     splits: SplitItem[];
   };
-  status: "awaiting_approval" | "processing" | "settled" | "rejected";
+  status: "awaiting_approval" | "processing" | "settled" | "rejected" | "talent_disbursed";
   defaultTerm: "Net-30" | "Net-60" | "Net-90";
 }
 
@@ -161,16 +162,40 @@ interface PageProps {
 export default function InvoiceDetailPage({ params }: PageProps) {
   const router = useRouter();
   const { invoiceId } = React.use(params);
-  const { resetState } = useApp();
+  const { state, resetState } = useApp();
+  const workspaceType = state.user ? state.user.accountType : "brand";
 
-  const [invoices, setInvoices] = useState<InvoiceMock[]>(INITIAL_INVOICES);
+  const [invoices, setInvoices] = useState<InvoiceMock[]>([]);
   const [selectedTerm, setSelectedTerm] = useState<"Net-30" | "Net-60" | "Net-90">("Net-30");
   const [instantPayoutEnabled, setInstantPayoutEnabled] = useState<boolean>(true);
 
   // Simulation processing state
   const [processingStage, setProcessingStage] = useState<"idle" | "verifying" | "routing" | "success">("idle");
 
-  const activeInvoice = invoices.find(inv => inv.id === invoiceId) || invoices[0];
+  const activeInvoice = invoices.find(inv => inv.id === invoiceId) || invoices[0] || INITIAL_INVOICES[0];
+
+  React.useEffect(() => {
+    const localQueue = localStorage.getItem("brand_queue_invoices");
+    if (localQueue) {
+      setInvoices(JSON.parse(localQueue));
+    } else {
+      setInvoices(INITIAL_INVOICES);
+      localStorage.setItem("brand_queue_invoices", JSON.stringify(INITIAL_INVOICES));
+    }
+
+    const syncStates = () => {
+      const localQueue = localStorage.getItem("brand_queue_invoices");
+      if (localQueue) setInvoices(JSON.parse(localQueue));
+    };
+
+    window.addEventListener("storage", syncStates);
+    window.addEventListener("syncBrandDashboard", syncStates);
+
+    return () => {
+      window.removeEventListener("storage", syncStates);
+      window.removeEventListener("syncBrandDashboard", syncStates);
+    };
+  }, []);
 
   React.useEffect(() => {
     if (activeInvoice) {
@@ -190,12 +215,37 @@ export default function InvoiceDetailPage({ params }: PageProps) {
         setProcessingStage("success");
         
         setTimeout(() => {
-          setInvoices(prev => 
-            prev.map(inv => 
-              inv.id === activeInvoice.id ? { ...inv, status: "settled" } : inv
-            )
-          );
+          setInvoices(prev => {
+            const next = prev.map(inv => 
+              inv.id === activeInvoice.id ? { ...inv, status: "settled" as const } : inv
+            );
+            localStorage.setItem("brand_queue_invoices", JSON.stringify(next));
+            return next;
+          });
+
+          // Add to paid stats
+          const amt = activeInvoice.amount;
+          const savedVolume = localStorage.getItem("brand_stats_paid_volume");
+          const v = savedVolume ? parseFloat(savedVolume) : 424500.00;
+          localStorage.setItem("brand_stats_paid_volume", (v + amt).toString());
+
+          const savedSavings = localStorage.getItem("brand_stats_autosplit_savings");
+          const s = savedSavings ? parseFloat(savedSavings) : 4250.00;
+          localStorage.setItem("brand_stats_autosplit_savings", (s + amt * 0.015).toString());
+
+          // Add notification
+          const localNotifs = localStorage.getItem("agency_notifications");
+          const notifs = localNotifs ? JSON.parse(localNotifs) : [];
+          const newNotif = {
+            id: `notif-${Date.now()}`,
+            message: `Brand approved & paid main invoice for ${activeInvoice.campaignName} ($${activeInvoice.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })})`,
+            timestamp: "Just now",
+            unread: true,
+          };
+          localStorage.setItem("agency_notifications", JSON.stringify([newNotif, ...notifs]));
+
           setProcessingStage("idle");
+          window.dispatchEvent(new Event("syncBrandDashboard"));
         }, 1200);
       }, 1500);
     }, 1200);
@@ -211,24 +261,31 @@ export default function InvoiceDetailPage({ params }: PageProps) {
       <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-white/[0.01] rounded-full blur-[100px] pointer-events-none" />
 
       {/* Header */}
-      <header className="border-b border-white/[0.08] bg-black/90 sticky top-0 z-50 shadow-sm backdrop-blur">
+      <header className="border-b border-white/20 bg-black/90 sticky top-0 z-50 shadow-sm backdrop-blur">
         <div className="max-w-[1520px] mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-6">
-            <Link href="/branddashboard" className="flex items-center">
-              <img
-                src="/agncypaybrand.png"
-                alt="AgncyPay"
-                className="h-10 w-auto object-contain scale-[1.3] origin-left"
-              />
-            </Link>
+            <div className="relative flex items-center mr-12">
+              <Link href="/branddashboard" className="flex items-center">
+                <img
+                  src="/agncypaybrand.png"
+                  alt="AgncyPay"
+                  className="h-10 w-auto object-contain scale-[1.3] origin-left"
+                />
+              </Link>
+              {(workspaceType === "brand" || workspaceType === "agency") && (
+                <span className="absolute -top-1.5 -right-4 translate-x-full rounded-full bg-white/[0.08] border border-white/[0.15] px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-[#A3A3A3]">
+                  {workspaceType === "brand" ? "Brand" : "Agency"}
+                </span>
+              )}
+            </div>
             <span className="h-4 w-[1px] bg-white/20 hidden md:block" />
-            <div className="hidden md:flex items-center gap-2 px-3 py-1 rounded-full bg-white/[0.03] border border-white/[0.08] text-[11px] font-bold uppercase tracking-wider text-[#A3A3A3]">
+            <div className="hidden md:flex items-center gap-2 px-3 py-1 rounded-full bg-white/[0.03] border border-white/20 text-[11px] font-bold uppercase tracking-wider text-[#A3A3A3]">
               <Building2 className="h-3 w-3 text-white" />
               Corporate Portal
             </div>
           </div>
 
-          <nav className="hidden lg:flex items-center gap-1 bg-white/[0.03] p-1 rounded-full border border-white/[0.08]">
+          <nav className="hidden lg:flex items-center gap-1 bg-white/[0.03] p-1 rounded-full border border-white/20">
             <button 
               onClick={() => router.push("/branddashboard")}
               className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#8f8f8f] hover:text-white transition-all cursor-pointer"
@@ -239,30 +296,36 @@ export default function InvoiceDetailPage({ params }: PageProps) {
               onClick={() => router.push("/branddashboard/invoices")}
               className="px-4 py-1.5 rounded-full text-xs font-semibold bg-white text-black shadow-sm transition-all cursor-pointer"
             >
-              Invoice Queue
+              {workspaceType === "brand" ? "Invoice Queue" : "Sent Invoices"}
             </button>
             <button className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#8f8f8f] hover:text-white transition-all">
-              Settlement Nodes
+              {workspaceType === "brand" ? "Settlement Nodes" : "Payout Split Nodes"}
             </button>
             <button className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#8f8f8f] hover:text-white transition-all">
-              Analytics
+              {workspaceType === "brand" ? "Analytics" : "Agency Earnings"}
             </button>
           </nav>
 
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => router.push("/dashboard")}
-              className="text-xs font-semibold text-[#8f8f8f] hover:text-white transition-colors flex items-center gap-1"
-            >
-              <ArrowLeft className="h-3.5 w-3.5" />
-              Talent View
-            </button>
-            <div className="h-4 w-[1px] bg-white/20" />
+            {workspaceType === "agency" && (
+              <>
+                <button
+                  onClick={() => router.push("/dashboard")}
+                  className="text-xs font-semibold text-[#8f8f8f] hover:text-white transition-colors flex items-center gap-1"
+                >
+                  <ArrowLeft className="h-3.5 w-3.5" />
+                  Talent View
+                </button>
+                <div className="h-4 w-[1px] bg-white/20" />
+              </>
+            )}
             <div className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-full bg-white/[0.05] border border-white/[0.1] flex items-center justify-center font-bold text-xs text-white">
-                AD
+              <div className="h-8 w-8 rounded-full bg-white/[0.05] border border-white/20 flex items-center justify-center font-bold text-xs text-white">
+                {state.user?.fullName ? state.user.fullName.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2) : "AD"}
               </div>
-              <span className="text-xs font-bold text-[#E5E5EA] hidden sm:inline">Adidas Corporate</span>
+              <span className="text-xs font-bold text-[#E5E5EA] hidden sm:inline">
+                {state.workspaces.find(w => w.id === state.activeWorkspaceId)?.name || state.user?.fullName || "Adidas Corporate"}
+              </span>
             </div>
             <button
               onClick={handleLogout}
@@ -294,8 +357,8 @@ export default function InvoiceDetailPage({ params }: PageProps) {
           </div>
 
           {/* Right Selector Pills (Mirroring "My Home" and "Find a Home") */}
-          <div className="flex items-center gap-1.5 bg-white/[0.03] p-1 rounded-full border border-white/[0.08]">
-            <button className="px-4 py-1.5 rounded-full text-xs font-bold bg-[#111111] border border-white/[0.08] text-white flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 bg-white/[0.03] p-1 rounded-full border border-white/20">
+            <button className="px-4 py-1.5 rounded-full text-xs font-bold bg-[#111111] border border-white/20 text-white flex items-center gap-1.5">
               <Home className="h-3.5 w-3.5 text-[#4B6BFB]" />
               Campaign Hub
             </button>
@@ -316,9 +379,9 @@ export default function InvoiceDetailPage({ params }: PageProps) {
           <div className="lg:col-span-8 space-y-6">
             
             {/* Balance Due Card (Mirroring Bilt Card) */}
-            <div className="bg-[#050505] rounded-2xl border border-white/[0.08] p-6 md:p-8 flex flex-col justify-between shadow-xl relative overflow-hidden">
+            <div className="bg-[#050505] rounded-2xl border border-white/20 p-6 md:p-8 flex flex-col justify-between shadow-xl relative overflow-hidden">
               <div className="absolute top-0 right-0 p-4 flex gap-2">
-                <button className="p-1.5 rounded-lg bg-white/[0.03] hover:bg-white/[0.08] border border-white/[0.08]">
+                <button className="p-1.5 rounded-lg bg-white/[0.03] hover:bg-white/[0.08] border border-white/20">
                   <RefreshCw className="h-3.5 w-3.5 text-[#8f8f8f]" />
                 </button>
               </div>
@@ -363,7 +426,7 @@ export default function InvoiceDetailPage({ params }: PageProps) {
                     )}
 
                     {processingStage !== "idle" && (
-                      <div className="w-full h-12 px-6 rounded-xl border border-white/[0.08] bg-[#0A0A0A] text-[10px] font-bold text-[#8f8f8f] flex items-center justify-center gap-3 shadow-inner">
+                      <div className="w-full h-12 px-6 rounded-xl border border-white/20 bg-[#0A0A0A] text-[10px] font-bold text-[#8f8f8f] flex items-center justify-center gap-3 shadow-inner">
                         <RefreshCw className="h-4 w-4 animate-spin text-[#4B6BFB]" />
                         {processingStage === "verifying" && "Verifying corporate treasury..."}
                         {processingStage === "routing" && "Auto-routing splits..."}
@@ -375,7 +438,7 @@ export default function InvoiceDetailPage({ params }: PageProps) {
               </div>
 
               {/* Bilt-Style Sub-details Rows (Translated to corporate finance details) */}
-              <div className="mt-8 pt-6 border-t border-white/[0.08] space-y-4 text-xs">
+              <div className="mt-8 pt-6 border-t border-white/20 space-y-4 text-xs">
                 
                 {/* Row 1: Autopay / Auto-split Settlement */}
                 <div className="flex justify-between items-center py-1">
@@ -414,11 +477,11 @@ export default function InvoiceDetailPage({ params }: PageProps) {
             </div>
 
             {/* Auto-Split details section (Below balance card) */}
-            <div className="bg-[#050505] rounded-2xl border border-white/[0.08] p-6 shadow-xl space-y-6">
+            <div className="bg-[#050505] rounded-2xl border border-white/20 p-6 shadow-xl space-y-6">
               
               {/* Direct Vendor Payment */}
               <div>
-                <div className="flex justify-between items-center border-b border-white/[0.08] pb-2">
+                <div className="flex justify-between items-center border-b border-white/20 pb-2">
                   <div className="flex items-center gap-2">
                     <h4 className="text-xs font-black text-[#8f8f8f] uppercase tracking-wider">Direct Vendor Payment</h4>
                     <span className="text-[10px] text-neutral-500 font-semibold">(Direct flat rate billing)</span>
@@ -427,13 +490,13 @@ export default function InvoiceDetailPage({ params }: PageProps) {
                 </div>
 
                 <div className="mt-3 max-w-sm">
-                  <div className="p-4 bg-black border border-white/[0.08] rounded-xl relative overflow-hidden">
+                  <div className="p-4 bg-black border border-white/20 rounded-xl relative overflow-hidden">
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-center gap-3 min-w-0">
                         <img
                           src={activeInvoice.vendorFee.avatar}
                           alt={activeInvoice.vendorFee.name}
-                          className="h-10 w-10 rounded-lg object-cover border border-white/[0.1] bg-[#111] shrink-0"
+                          className="h-10 w-10 rounded-lg object-cover border border-white/20 bg-[#111] shrink-0"
                         />
                         <div className="min-w-0">
                           <p className="text-xs font-bold text-white truncate">{activeInvoice.vendorFee.name}</p>
@@ -456,61 +519,63 @@ export default function InvoiceDetailPage({ params }: PageProps) {
               </div>
 
               {/* Agency & Talent splits */}
-              <div>
-                <div className="flex justify-between items-center border-b border-white/[0.08] pb-2">
-                  <div className="flex items-center gap-2">
-                    <h4 className="text-xs font-black text-[#8f8f8f] uppercase tracking-wider">Agency & Talent Split</h4>
-                    <span className="text-[10px] text-neutral-500 font-semibold">
-                      (Remaining Pool: ${activeInvoice.splitPool.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
-                    </span>
-                  </div>
-                  <span className="text-[10px] text-neutral-500 font-bold">2 Nodes</span>
-                </div>
-
-                <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {activeInvoice.splitPool.splits.map((split) => (
-                    <div
-                      key={split.name}
-                      className="p-4 bg-black border border-white/[0.08] rounded-xl relative overflow-hidden group"
-                    >
-                      <div 
-                        className="absolute bottom-0 left-0 h-1 bg-gradient-to-r from-[#4B6BFB] to-purple-600 transition-all duration-500"
-                        style={{ width: activeInvoice.status === "settled" ? `${split.percentage}%` : "0%" }}
-                      />
-
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex items-center gap-3 min-w-0">
-                          <img
-                            src={split.avatar}
-                            alt={split.name}
-                            className="h-10 w-10 rounded-lg object-cover border border-white/[0.1] bg-[#111] shrink-0"
-                          />
-                          <div className="min-w-0">
-                            <p className="text-xs font-bold text-white truncate">{split.name}</p>
-                            <p className="text-[10px] text-neutral-500 font-mono">{split.walletId}</p>
-                          </div>
-                        </div>
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded shrink-0 uppercase tracking-wider ${
-                          split.role === "Talent" 
-                            ? "bg-purple-950/60 text-purple-300 border border-purple-800/30" 
-                            : "bg-blue-950/60 text-blue-300 border border-blue-800/30"
-                        }`}>
-                          {split.role}
-                        </span>
-                      </div>
-
-                      <div className="mt-4 flex justify-between items-baseline">
-                        <span className="text-xs font-semibold text-neutral-400">
-                          {split.percentage}% Share
-                        </span>
-                        <span className="text-base font-black text-white">
-                          ${split.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </span>
-                      </div>
+              {workspaceType === "agency" && (
+                <div>
+                  <div className="flex justify-between items-center border-b border-white/20 pb-2">
+                    <div className="flex items-center gap-2">
+                      <h4 className="text-xs font-black text-[#8f8f8f] uppercase tracking-wider">Agency & Talent Split</h4>
+                      <span className="text-[10px] text-neutral-500 font-semibold">
+                        (Remaining Pool: ${activeInvoice.splitPool.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
+                      </span>
                     </div>
-                  ))}
+                    <span className="text-[10px] text-neutral-500 font-bold">2 Nodes</span>
+                  </div>
+
+                  <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {activeInvoice.splitPool.splits.map((split) => (
+                      <div
+                        key={split.name}
+                        className="p-4 bg-black border border-white/20 rounded-xl relative overflow-hidden group"
+                      >
+                        <div 
+                          className="absolute bottom-0 left-0 h-1 bg-gradient-to-r from-[#4B6BFB] to-purple-600 transition-all duration-500"
+                          style={{ width: activeInvoice.status === "settled" ? `${split.percentage}%` : "0%" }}
+                        />
+
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <img
+                              src={split.avatar}
+                              alt={split.name}
+                              className="h-10 w-10 rounded-lg object-cover border border-white/20 bg-[#111] shrink-0"
+                            />
+                            <div className="min-w-0">
+                              <p className="text-xs font-bold text-white truncate">{split.name}</p>
+                              <p className="text-[10px] text-neutral-500 font-mono">{split.walletId}</p>
+                            </div>
+                          </div>
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded shrink-0 uppercase tracking-wider ${
+                            split.role === "Talent" 
+                              ? "bg-purple-950/60 text-purple-300 border border-purple-800/30" 
+                              : "bg-blue-950/60 text-blue-300 border border-blue-800/30"
+                          }`}>
+                            {split.role}
+                          </span>
+                        </div>
+
+                        <div className="mt-4 flex justify-between items-baseline">
+                          <span className="text-xs font-semibold text-neutral-400">
+                            {split.percentage}% Share
+                          </span>
+                          <span className="text-base font-black text-white">
+                            ${split.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
             </div>
           </div>
@@ -519,12 +584,12 @@ export default function InvoiceDetailPage({ params }: PageProps) {
           <div className="lg:col-span-4 space-y-6">
             
             {/* Neighborhood / Node Map Card */}
-            <div className="bg-[#050505] rounded-2xl border border-white/[0.08] p-5 shadow-xl">
-              <h3 className="text-xs font-black uppercase tracking-wider text-[#8f8f8f] pb-3 border-b border-white/[0.08]">
+            <div className="bg-[#050505] rounded-2xl border border-white/20 p-5 shadow-xl">
+              <h3 className="text-xs font-black uppercase tracking-wider text-[#8f8f8f] pb-3 border-b border-white/20">
                 Settlement Node Network Map
               </h3>
 
-              <div className="mt-4 h-48 rounded-xl border border-white/[0.08] bg-black relative overflow-hidden flex flex-col justify-end p-4 shadow-inner">
+              <div className="mt-4 h-48 rounded-xl border border-white/20 bg-black relative overflow-hidden flex flex-col justify-end p-4 shadow-inner">
                 {/* Dot grid */}
                 <div className="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.05)_1px,transparent_1px)] [background-size:16px_16px] opacity-70" />
 
@@ -556,7 +621,7 @@ export default function InvoiceDetailPage({ params }: PageProps) {
                   <span className="text-[8px] font-bold text-[#8f8f8f] mt-1">Agency</span>
                 </div>
 
-                <div className="relative z-10 bg-[#0A0A0A] border border-white/[0.08] rounded-lg p-2.5 shadow-sm text-[11px] text-center">
+                <div className="relative z-10 bg-[#0A0A0A] border border-white/20 rounded-lg p-2.5 shadow-sm text-[11px] text-center">
                   <span className="font-bold text-white flex items-center justify-center gap-1.5">
                     <MapPin className="h-3.5 w-3.5 text-[#4B6BFB]" />
                     Explore Settlement Routes
@@ -566,7 +631,7 @@ export default function InvoiceDetailPage({ params }: PageProps) {
             </div>
 
             {/* Campaign/Apartment detail card (Mirroring Bilt Apartment #4B card) */}
-            <div className="bg-[#050505] rounded-2xl border border-white/[0.08] p-6 shadow-xl flex flex-col items-center text-center">
+            <div className="bg-[#050505] rounded-2xl border border-white/20 p-6 shadow-xl flex flex-col items-center text-center">
               <span className="text-xs font-bold text-[#8f8f8f] uppercase tracking-wider">Campaign Cost Center</span>
               <span className="text-3xl font-extrabold text-white mt-1.5 tracking-tight">{activeInvoice.costCenter}</span>
 
@@ -575,7 +640,7 @@ export default function InvoiceDetailPage({ params }: PageProps) {
                 {activeInvoice.initials.map((init, idx) => (
                   <div 
                     key={idx}
-                    className="h-9 w-9 rounded-full bg-white/[0.05] border border-white/[0.08] flex items-center justify-center text-xs font-black text-white shadow-sm"
+                    className="h-9 w-9 rounded-full bg-white/[0.05] border border-white/20 flex items-center justify-center text-xs font-black text-white shadow-sm"
                     title={`Payee Node Initials: ${init}`}
                   >
                     {init}
@@ -591,25 +656,47 @@ export default function InvoiceDetailPage({ params }: PageProps) {
 
               {/* Three Stacked Buttons (Mirroring maintenance request, book amenity, lease details) */}
               <div className="w-full mt-6 space-y-2.5">
-                
-                {/* Button 1: Dispute Invoice (Maintenance Request) */}
-                <button className="w-full py-2.5 rounded-xl bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.08] hover:border-white/20 text-xs font-bold text-neutral-200 transition-all flex items-center justify-center gap-2">
-                  <AlertTriangle className="h-3.5 w-3.5 text-[#8f8f8f]" />
-                  Dispute Invoice
-                </button>
+                {workspaceType === "brand" ? (
+                  <>
+                    {/* Button 1: Dispute Invoice */}
+                    <button className="w-full py-2.5 rounded-xl bg-white/[0.03] hover:bg-white/[0.06] border border-white/20 hover:border-white/20 text-xs font-bold text-neutral-200 transition-all flex items-center justify-center gap-2">
+                      <AlertTriangle className="h-3.5 w-3.5 text-[#8f8f8f]" />
+                      Dispute Invoice
+                    </button>
 
-                {/* Button 2: Schedule Audit (Book amenity) */}
-                <button className="w-full py-2.5 rounded-xl bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.08] hover:border-white/20 text-xs font-bold text-neutral-200 transition-all flex items-center justify-center gap-2">
-                  <Clock className="h-3.5 w-3.5 text-[#8f8f8f]" />
-                  Schedule Compliance Audit
-                </button>
+                    {/* Button 2: Schedule Audit */}
+                    <button className="w-full py-2.5 rounded-xl bg-white/[0.03] hover:bg-white/[0.06] border border-white/20 hover:border-white/20 text-xs font-bold text-neutral-200 transition-all flex items-center justify-center gap-2">
+                      <Clock className="h-3.5 w-3.5 text-[#8f8f8f]" />
+                      Schedule Compliance Audit
+                    </button>
 
-                {/* Button 3: View Contract (Lease details) */}
-                <button className="w-full py-2.5 rounded-xl bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.08] hover:border-white/20 text-xs font-bold text-neutral-200 transition-all flex items-center justify-center gap-2">
-                  <FileText className="h-3.5 w-3.5 text-[#8f8f8f]" />
-                  View Campaign Contract
-                </button>
+                    {/* Button 3: View Contract */}
+                    <button className="w-full py-2.5 rounded-xl bg-white/[0.03] hover:bg-white/[0.06] border border-white/20 hover:border-white/20 text-xs font-bold text-neutral-200 transition-all flex items-center justify-center gap-2">
+                      <FileText className="h-3.5 w-3.5 text-[#8f8f8f]" />
+                      View Campaign Contract
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    {/* Button 1: Export Payout Ledger */}
+                    <button className="w-full py-2.5 rounded-xl bg-white/[0.03] hover:bg-white/[0.06] border border-white/20 hover:border-white/20 text-xs font-bold text-neutral-200 transition-all flex items-center justify-center gap-2">
+                      <FileText className="h-3.5 w-3.5 text-[#8f8f8f]" />
+                      Export Payout Ledger
+                    </button>
 
+                    {/* Button 2: Message Client Account */}
+                    <button className="w-full py-2.5 rounded-xl bg-white/[0.03] hover:bg-white/[0.06] border border-white/20 hover:border-white/20 text-xs font-bold text-neutral-200 transition-all flex items-center justify-center gap-2">
+                      <Users className="h-3.5 w-3.5 text-[#8f8f8f]" />
+                      Message Client Account
+                    </button>
+
+                    {/* Button 3: Dispute Resolution Center */}
+                    <button className="w-full py-2.5 rounded-xl bg-white/[0.03] hover:bg-white/[0.06] border border-white/20 hover:border-white/20 text-xs font-bold text-neutral-200 transition-all flex items-center justify-center gap-2">
+                      <AlertTriangle className="h-3.5 w-3.5 text-[#8f8f8f]" />
+                      Dispute Resolution Center
+                    </button>
+                  </>
+                )}
               </div>
             </div>
 

@@ -177,13 +177,20 @@ export function DashboardSidebar() {
   return (
     <aside className="hidden h-screen w-[312px] shrink-0 overflow-y-auto border-r border-[#171717] bg-black lg:flex lg:flex-col">
       <div className="flex h-[78px] shrink-0 items-center border-b border-[#111] px-[26px]">
-        <Link href="/dashboard" aria-label="AgncyPay dashboard" className="flex items-center">
-          <img
-            src="/agncypaybrand.png"
-            alt="AgncyPay"
-            className="h-[36px] w-auto object-contain object-left sm:h-[42px]"
-          />
-        </Link>
+        <div className="relative flex items-center">
+          <Link href="/dashboard" aria-label="AgncyPay dashboard" className="flex items-center">
+            <img
+              src="/agncypaybrand.png"
+              alt="AgncyPay"
+              className="h-[36px] w-auto object-contain object-left sm:h-[42px]"
+            />
+          </Link>
+          {(workspaceType === "brand" || workspaceType === "agency") && (
+            <span className="absolute -top-1.5 -right-2 translate-x-full rounded-full bg-white/[0.08] border border-white/[0.15] px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-[#A3A3A3]">
+              {workspaceType === "brand" ? "Brand" : "Agency"}
+            </span>
+          )}
+        </div>
       </div>
 
       <nav className="shrink-0 px-[15px] pt-[30px]">

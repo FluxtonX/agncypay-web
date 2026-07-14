@@ -16,7 +16,7 @@ export default function LoginPage() {
   
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [roleType, setRoleType] = useState<"business" | "individual">("business");
+  const [roleType, setRoleType] = useState<"brand" | "agency" | "individual">("brand");
   const [rememberMe, setRememberMe] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
@@ -80,7 +80,12 @@ export default function LoginPage() {
         .filter(Boolean)
         .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
         .join(" ");
-      const accountType = roleType === "business" ? "agency" : "talent_independent";
+      const accountType =
+        roleType === "brand"
+          ? "brand"
+          : roleType === "agency"
+          ? "agency"
+          : "talent_independent";
       loginUser(
         normalizedEmail,
         registeredUser?.fullName || fallbackName || "AgncyPay User",
@@ -93,7 +98,7 @@ export default function LoginPage() {
       );
       setIsLoading(false);
 
-      if (roleType === "business") {
+      if (roleType === "brand" || roleType === "agency") {
         router.push(safeNextPath || "/branddashboard");
       } else {
         router.push(safeNextPath || "/dashboard");
@@ -210,14 +215,15 @@ export default function LoginPage() {
             {/* Account Type */}
             <div className="mb-2">
               <label className="text-[13px] font-medium text-[#E5E5EA] mb-3 block">Account Type</label>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-3 gap-2">
                 {[
-                  { id: "business", label: "Business (Agency / Brand)" },
+                  { id: "brand", label: "Brand" },
+                  { id: "agency", label: "Agency" },
                   { id: "individual", label: "Individual (Model / Talent)" },
                 ].map((role) => (
                   <label
                     key={role.id}
-                    className={`flex cursor-pointer items-center justify-center rounded-lg border px-3 py-2 text-center text-[12px] font-semibold transition-colors ${
+                    className={`flex cursor-pointer items-center justify-center rounded-lg border px-1.5 py-2 text-center text-[10px] sm:text-[11px] font-semibold transition-colors ${
                       roleType === role.id
                         ? "border-white bg-white text-black"
                         : "border-[#262626] bg-[#0B0B0B] text-[#8E8E93] hover:border-white/40"
@@ -228,7 +234,7 @@ export default function LoginPage() {
                       name="roleType"
                       value={role.id}
                       checked={roleType === role.id}
-                      onChange={() => setRoleType(role.id as "business" | "individual")}
+                      onChange={() => setRoleType(role.id as "brand" | "agency" | "individual")}
                       className="hidden"
                     />
                     {role.label}

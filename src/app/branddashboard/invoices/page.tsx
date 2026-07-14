@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -44,7 +44,7 @@ interface InvoiceMock {
     total: number;
     splits: SplitItem[];
   };
-  status: "awaiting_approval" | "processing" | "settled" | "rejected";
+  status: "awaiting_approval" | "processing" | "settled" | "rejected" | "talent_disbursed";
   defaultTerm: "Net-30" | "Net-60" | "Net-90";
 }
 
@@ -135,10 +135,34 @@ const INITIAL_INVOICES: InvoiceMock[] = [
 export default function InvoicesQueuePage() {
   const router = useRouter();
   const { state, resetState } = useApp();
+  const workspaceType = state.user ? state.user.accountType : "brand";
 
-  const [invoices] = useState<InvoiceMock[]>(INITIAL_INVOICES);
+  const [invoices, setInvoices] = useState<InvoiceMock[]>([]);
   const [activeFilter, setActiveFilter] = useState<"all" | "awaiting_approval" | "settled">("awaiting_approval");
   const [searchQuery, setSearchQuery] = useState("");
+
+  useEffect(() => {
+    const localQueue = localStorage.getItem("brand_queue_invoices");
+    if (localQueue) {
+      setInvoices(JSON.parse(localQueue));
+    } else {
+      setInvoices(INITIAL_INVOICES);
+      localStorage.setItem("brand_queue_invoices", JSON.stringify(INITIAL_INVOICES));
+    }
+
+    const syncStates = () => {
+      const localQueue = localStorage.getItem("brand_queue_invoices");
+      if (localQueue) setInvoices(JSON.parse(localQueue));
+    };
+
+    window.addEventListener("storage", syncStates);
+    window.addEventListener("syncBrandDashboard", syncStates);
+
+    return () => {
+      window.removeEventListener("storage", syncStates);
+      window.removeEventListener("syncBrandDashboard", syncStates);
+    };
+  }, []);
 
   const handleLogout = () => {
     resetState();
@@ -158,24 +182,31 @@ export default function InvoicesQueuePage() {
       <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-white/[0.01] rounded-full blur-[100px] pointer-events-none" />
 
       {/* Header */}
-      <header className="border-b border-white/[0.08] bg-black/90 sticky top-0 z-50 shadow-sm backdrop-blur">
+      <header className="border-b border-white/20 bg-black/90 sticky top-0 z-50 shadow-sm backdrop-blur">
         <div className="max-w-[1520px] mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-6">
-            <Link href="/branddashboard" className="flex items-center">
-              <img
-                src="/agncypaybrand.png"
-                alt="AgncyPay"
-                className="h-10 w-auto object-contain scale-[1.3] origin-left"
-              />
-            </Link>
+            <div className="relative flex items-center mr-12">
+              <Link href="/branddashboard" className="flex items-center">
+                <img
+                  src="/agncypaybrand.png"
+                  alt="AgncyPay"
+                  className="h-10 w-auto object-contain scale-[1.3] origin-left"
+                />
+              </Link>
+              {(workspaceType === "brand" || workspaceType === "agency") && (
+                <span className="absolute -top-1.5 -right-4 translate-x-full rounded-full bg-white/[0.08] border border-white/[0.15] px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-[#A3A3A3]">
+                  {workspaceType === "brand" ? "Brand" : "Agency"}
+                </span>
+              )}
+            </div>
             <span className="h-4 w-[1px] bg-white/20 hidden md:block" />
-            <div className="hidden md:flex items-center gap-2 px-3 py-1 rounded-full bg-white/[0.03] border border-white/[0.08] text-[11px] font-bold uppercase tracking-wider text-[#A3A3A3]">
+            <div className="hidden md:flex items-center gap-2 px-3 py-1 rounded-full bg-white/[0.03] border border-white/20 text-[11px] font-bold uppercase tracking-wider text-[#A3A3A3]">
               <Building2 className="h-3 w-3 text-white" />
               Corporate Portal
             </div>
           </div>
 
-          <nav className="hidden lg:flex items-center gap-1 bg-white/[0.03] p-1 rounded-full border border-white/[0.08]">
+          <nav className="hidden lg:flex items-center gap-1 bg-white/[0.03] p-1 rounded-full border border-white/20">
             <button 
               onClick={() => router.push("/branddashboard")}
               className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#8f8f8f] hover:text-white transition-all cursor-pointer"
@@ -186,30 +217,36 @@ export default function InvoicesQueuePage() {
               onClick={() => router.push("/branddashboard/invoices")}
               className="px-4 py-1.5 rounded-full text-xs font-semibold bg-white text-black shadow-sm transition-all cursor-pointer"
             >
-              Invoice Queue
+              {workspaceType === "brand" ? "Invoice Queue" : "Sent Invoices"}
             </button>
             <button className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#8f8f8f] hover:text-white transition-all">
-              Settlement Nodes
+              {workspaceType === "brand" ? "Settlement Nodes" : "Payout Split Nodes"}
             </button>
             <button className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#8f8f8f] hover:text-white transition-all">
-              Analytics
+              {workspaceType === "brand" ? "Analytics" : "Agency Earnings"}
             </button>
           </nav>
 
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => router.push("/dashboard")}
-              className="text-xs font-semibold text-[#8f8f8f] hover:text-white transition-colors flex items-center gap-1"
-            >
-              <ArrowLeft className="h-3.5 w-3.5" />
-              Talent View
-            </button>
-            <div className="h-4 w-[1px] bg-white/20" />
+            {workspaceType === "agency" && (
+              <>
+                <button
+                  onClick={() => router.push("/dashboard")}
+                  className="text-xs font-semibold text-[#8f8f8f] hover:text-white transition-colors flex items-center gap-1"
+                >
+                  <ArrowLeft className="h-3.5 w-3.5" />
+                  Talent View
+                </button>
+                <div className="h-4 w-[1px] bg-white/20" />
+              </>
+            )}
             <div className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-full bg-white/[0.05] border border-white/[0.1] flex items-center justify-center font-bold text-xs text-white">
-                AD
+              <div className="h-8 w-8 rounded-full bg-white/[0.05] border border-white/20 flex items-center justify-center font-bold text-xs text-white">
+                {state.user?.fullName ? state.user.fullName.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2) : "AD"}
               </div>
-              <span className="text-xs font-bold text-[#E5E5EA] hidden sm:inline">Adidas Corporate</span>
+              <span className="text-xs font-bold text-[#E5E5EA] hidden sm:inline">
+                {state.workspaces.find(w => w.id === state.activeWorkspaceId)?.name || state.user?.fullName || "Adidas Corporate"}
+              </span>
             </div>
             <button
               onClick={handleLogout}
@@ -228,7 +265,7 @@ export default function InvoicesQueuePage() {
         <div className="flex items-center gap-2">
           <Link 
             href="/branddashboard"
-            className="p-2 rounded-lg border border-white/[0.08] hover:border-white/20 hover:bg-white/[0.02] text-xs font-bold text-[#8f8f8f] hover:text-white transition-all flex items-center gap-1.5 shrink-0"
+            className="p-2 rounded-lg border border-white/20 hover:border-white/20 hover:bg-white/[0.02] text-xs font-bold text-[#8f8f8f] hover:text-white transition-all flex items-center gap-1.5 shrink-0"
           >
             <ArrowLeft className="h-4 w-4" />
             Back to Dashboard
@@ -245,7 +282,7 @@ export default function InvoicesQueuePage() {
         </div>
 
         {/* Search & Tabs Controls */}
-        <div className="flex flex-col md:flex-row gap-4 justify-between items-stretch md:items-center bg-[#050505] p-3 rounded-xl border border-white/[0.08]">
+        <div className="flex flex-col md:flex-row gap-4 justify-between items-stretch md:items-center bg-[#050505] p-3 rounded-xl border border-white/20">
           <div className="flex flex-wrap gap-2">
             {[
               { id: "all", label: "All Invoices" },
@@ -278,17 +315,17 @@ export default function InvoicesQueuePage() {
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               placeholder="Search campaign, invoice ID..."
-              className="w-full h-9 bg-black border border-white/[0.08] focus:border-white/20 rounded-lg pl-9 pr-4 text-xs outline-none placeholder:text-neutral-600 transition-colors"
+              className="w-full h-9 bg-black border border-white/20 focus:border-white/20 rounded-lg pl-9 pr-4 text-xs outline-none placeholder:text-neutral-600 transition-colors"
             />
           </div>
         </div>
 
         {/* Invoices List Grid */}
-        <div className="bg-[#050505] rounded-2xl border border-white/[0.08] overflow-hidden shadow-xl">
+        <div className="bg-[#050505] rounded-2xl border border-white/20 overflow-hidden shadow-xl">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
-                <tr className="border-b border-white/[0.08] bg-white/[0.01] text-[#8f8f8f] font-bold">
+                <tr className="border-b border-white/20 bg-white/[0.01] text-[#8f8f8f] font-bold">
                   <th className="p-4">Invoice ID</th>
                   <th className="p-4">Campaign / Project Name</th>
                   <th className="p-4">Billing Office Location</th>
@@ -348,7 +385,7 @@ export default function InvoicesQueuePage() {
       </div>
 
       {/* Footer */}
-      <footer className="border-t border-white/[0.08] bg-black py-8 text-xs text-neutral-400 mt-12">
+      <footer className="border-t border-white/20 bg-black py-8 text-xs text-neutral-400 mt-12">
         <div className="max-w-[1520px] mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="flex items-center gap-3">
             <img src="/agncypaybrand.png" alt="AgncyPay" className="h-8 w-auto filter contrast-125" />

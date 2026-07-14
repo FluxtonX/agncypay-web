@@ -475,6 +475,8 @@ function MusicIncomeLogo({ item }: { item: (typeof musicIncomeItems)[number] }) 
 }
 
 function CatalogValuationPanel() {
+  const [liveTotalIncome] = useState(3657001);
+
   return (
     <div className="space-y-3">
       <Link
@@ -493,7 +495,7 @@ function CatalogValuationPanel() {
               <br />
               2026:
             </p>
-            <p className="mt-3 text-[36px] font-black leading-none text-[#13d463]">$3,657,001</p>
+            <p className="mt-3 text-[36px] font-black leading-none text-[#13d463]">${liveTotalIncome.toLocaleString()}</p>
           </div>
 
           <div className="flex min-h-[170px] flex-col justify-between rounded-[14px] border border-[#242424] bg-[#171717] p-5">
@@ -724,6 +726,8 @@ export default function DashboardHomePage() {
   const [isWalletContactsOpen, setIsWalletContactsOpen] = useState(false);
   const [walletContactQuery, setWalletContactQuery] = useState("");
   const [dynamicIncomes, setDynamicIncomes] = useState<any[]>([]);
+  const [liveAvailable] = useState(24500.00);
+  const [liveSpent] = useState(1200.00);
 
   useEffect(() => {
     const loadIncomes = () => {
@@ -768,7 +772,14 @@ export default function DashboardHomePage() {
     <main className="min-h-screen bg-black text-white">
       <div className="mx-auto max-w-[1520px] px-4 py-4 sm:px-6 lg:px-8">
         <div className="flex flex-nowrap items-center justify-start gap-4 pb-4">
-          <img src="/agncypaybrand.png" alt="AgncyPay" className="h-[52px] w-auto shrink-0 object-contain scale-[1.5] origin-left" />
+          <div className="relative flex items-center">
+            <img src="/agncypaybrand.png" alt="AgncyPay" className="h-[52px] w-auto shrink-0 object-contain scale-[1.5] origin-left" />
+            {(workspaceType === "brand" || workspaceType === "agency") && (
+              <span className="absolute -top-1 -right-6 translate-x-full rounded-full bg-white/[0.08] border border-white/[0.15] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#A3A3A3]">
+                {workspaceType === "brand" ? "Brand" : "Agency"}
+              </span>
+            )}
+          </div>
         </div>
 
         <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(360px,0.85fr)]">
@@ -921,8 +932,8 @@ export default function DashboardHomePage() {
                 </div>
                 <div className="mt-5 grid grid-cols-3 gap-2">
                   {[
-                    ["Available", "$24,500"],
-                    ["Pending", "$3,200"],
+                    ["Available", `$${liveAvailable.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`],
+                    ["Pending", "$3,200.00"],
                     ["Cards", "4"],
                   ].map(([label, value]) => (
                     <div key={label} className="rounded-[8px] border border-[#2f2f2f] bg-black px-3 py-3">
@@ -947,8 +958,8 @@ export default function DashboardHomePage() {
               <Panel className="flex flex-col overflow-hidden p-4 sm:p-5 gap-4">
                 <div className="grid grid-cols-3 gap-2">
                   {[
-                    ["Limit", "$10k"],
-                    ["Spent", "$1.2k"],
+                    ["Limit", "$10,000.00"],
+                    ["Spent", `$${liveSpent.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`],
                     ["Review", "3"],
                   ].map(([label, value]) => (
                     <div key={label} className="rounded-[8px] border border-[#2f2f2f] bg-black px-3 py-3">

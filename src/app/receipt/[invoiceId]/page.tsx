@@ -42,9 +42,10 @@ export default function ReceiptPage() {
   const rawInvoiceId = Array.isArray(params.invoiceId) ? params.invoiceId[0] : params.invoiceId;
   const invoice = findMainboardInvoice(rawInvoiceId || "");
   const transactionId = searchParams.get("tx") || "TX-AP-000000";
-  const mode = searchParams.get("mode") === "logged_in" ? "Logged-in checkout" : "Guest checkout";
+  const isLoggedInMode = searchParams.get("mode") === "logged_in";
+  const mode = isLoggedInMode ? "Logged-in checkout" : "Guest checkout";
   const returnTo = searchParams.get("returnTo") === "dashboard" ? "dashboard" : "mainboard";
-  const returnHref = returnTo === "dashboard" ? "/dashboard" : "/mainboard";
+  const returnHref = returnTo === "dashboard" ? (isLoggedInMode ? "/branddashboard" : "/dashboard") : "/mainboard";
   const returnLabel = returnTo === "dashboard" ? "Dashboard" : "Mainboard";
 
   if (!invoice) {

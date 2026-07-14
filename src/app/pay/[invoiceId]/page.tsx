@@ -21,6 +21,7 @@ import {
   type MainboardInvoice,
 } from "../../../lib/mainboard";
 import { AgncyPayLogo } from "../../../components/payment/AgncyPayLogo";
+import { useApp } from "../../../context/AppContext";
 
 type CheckoutStage = "payment" | "processing" | "success";
 type CardRail = "agncypay" | "visa" | "mastercard" | "discover" | "amex" | "plaid";
@@ -199,9 +200,10 @@ export default function PayRequestPage() {
   const invoice = findMainboardInvoice(rawInvoiceId || "") || mainboardInvoices[0];
   const isLoggedInMode = searchParams.get("mode") === "logged_in";
   const returnTo = searchParams.get("returnTo") === "dashboard" ? "dashboard" : "mainboard";
-  const returnHref = returnTo === "dashboard" ? "/dashboard" : "/mainboard";
+  const returnHref = returnTo === "dashboard" ? "/branddashboard" : "/mainboard";
   const returnLabel = returnTo === "dashboard" ? "Dashboard" : "Mainboard";
   const total = invoice.amount + invoice.fee;
+  const { state } = useApp();
 
   const [stage, setStage] = useState<CheckoutStage>("payment");
   const [activeRail, setActiveRail] = useState<CardRail>("agncypay");
@@ -218,9 +220,75 @@ export default function PayRequestPage() {
 
   useEffect(() => {
     if (stage !== "processing") return;
-    const timeout = window.setTimeout(() => setStage("success"), 1200);
+    const timeout = window.setTimeout(() => {
+      setStage("success");
+      
+      const invoiceId = rawInvoiceId;
+
+      // Update widget invoices
+      const localInvoices = localStorage.getItem("brand_widget_invoices");
+      if (localInvoices) {
+        const parsed = JSON.parse(localInvoices);
+        let updated = false;
+        const next = parsed.map((inv: any) => {
+          if ((invoiceId === "MB-6984" && inv.id === "W-INV-001") ||
+              (invoiceId === "MB-7044" && inv.id === "W-INV-002") ||
+              inv.id === invoiceId) {
+            updated = true;
+            return { ...inv, status: "paid" };
+          }
+          return inv;
+        });
+        if (updated) {
+          localStorage.setItem("brand_widget_invoices", JSON.stringify(next));
+
+          const paidInvoice = parsed.find((inv: any) => 
+            (invoiceId === "MB-6984" && inv.id === "W-INV-001") ||
+            (invoiceId === "MB-7044" && inv.id === "W-INV-002")
+          );
+          if (paidInvoice) {
+            const amt = paidInvoice.amount;
+            const savedVolume = localStorage.getItem("brand_stats_paid_volume");
+            const v = savedVolume ? parseFloat(savedVolume) : 424500.00;
+            localStorage.setItem("brand_stats_paid_volume", (v + amt).toString());
+
+            const savedSavings = localStorage.getItem("brand_stats_autosplit_savings");
+            const s = savedSavings ? parseFloat(savedSavings) : 4250.00;
+            localStorage.setItem("brand_stats_autosplit_savings", (s + amt * 0.015).toString());
+
+            const localNotifs = localStorage.getItem("agency_notifications");
+            const notifs = localNotifs ? JSON.parse(localNotifs) : [];
+            const newNotif = {
+              id: `notif-${Date.now()}`,
+              message: `Brand paid invoice to ${paidInvoice.agency} ($${paidInvoice.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}) for ${paidInvoice.campaign}`,
+              timestamp: "Just now",
+              unread: true,
+            };
+            localStorage.setItem("agency_notifications", JSON.stringify([newNotif, ...notifs]));
+          }
+        }
+      }
+
+      // Update main queue invoices
+      const localQueue = localStorage.getItem("brand_queue_invoices");
+      if (localQueue) {
+        const parsed = JSON.parse(localQueue);
+        const next = parsed.map((inv: any) => {
+          if (inv.id === invoiceId || 
+              (invoiceId === "MB-6984" && inv.id === "AP-INV-9024") || 
+              (invoiceId === "MB-7044" && inv.id === "AP-INV-8911")) {
+            return { ...inv, status: "settled" };
+          }
+          return inv;
+        });
+        localStorage.setItem("brand_queue_invoices", JSON.stringify(next));
+      }
+
+      // Dispatch sync event
+      window.dispatchEvent(new Event("syncBrandDashboard"));
+    }, 1200);
     return () => window.clearTimeout(timeout);
-  }, [stage]);
+  }, [stage, rawInvoiceId]);
 
   const submitPayment = () => {
     setTransactionId(`TX-AP-${Math.floor(100000 + Math.random() * 900000)}`);
@@ -276,96 +344,140 @@ export default function PayRequestPage() {
             <span className="pb-2 text-[13px] font-semibold text-[#d7d7d7]">Due Date</span>
           </div>
 
-          <div className="mt-16 flex flex-wrap gap-2">
-            {cardRails.map((rail) => (
-              <button
-                key={rail}
-                type="button"
-                aria-pressed={activeRail === rail}
-                onClick={() => setActiveRail(rail)}
-                className={cardRailClasses(rail, activeRail === rail)}
-              >
-                <CardRailLogo rail={rail} />
-              </button>
-            ))}
-          </div>
-
-          <div className="mt-5">
-            <h2 className="text-[16px] font-semibold text-white">Your information</h2>
-            <div className="mt-5 space-y-4">
-              <label className="block">
-                <span className="text-[14px] font-semibold text-white">Email</span>
-                <input
-                  value={invoice.payerEmail}
-                  readOnly
-                  className="mt-2 h-12 w-full border border-[#1c1c1c] bg-[#1a1a1a] px-4 text-[14px] font-semibold text-[#d7d7d7] outline-none"
-                />
-              </label>
-
-              <div>
-                <span className="text-[14px] font-semibold text-white">Phone Number</span>
-                <div className="mt-2 grid grid-cols-[174px_1fr] gap-1">
-                  <div className="flex h-12 items-center gap-3 border border-[#1c1c1c] bg-[#1a1a1a] px-4 text-[16px] font-semibold text-white">
-                    <span>US</span>
-                    <span>+1</span>
-                  </div>
-                  <input
-                    value={invoice.mobile.replace("+1 ", "")}
-                    readOnly
-                    className="h-12 border border-[#1c1c1c] bg-[#1a1a1a] px-4 text-[14px] font-semibold text-[#d7d7d7] outline-none"
-                  />
+          {isLoggedInMode ? (
+            <div className="mt-8 space-y-6">
+              <div className="p-6 bg-white/[0.02] border border-white/20 rounded-xl space-y-4">
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-neutral-400">Payer corporate workspace</span>
+                  <span className="text-white font-bold">
+                    {state?.workspaces?.find(w => w.id === state.activeWorkspaceId)?.name || state?.user?.fullName || "Adidas Corporate"}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-neutral-400">Recipient agency</span>
+                  <span className="text-white font-bold">{invoice.recipient}</span>
+                </div>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-neutral-400">AgncyPay client identifier</span>
+                  <span className="text-[#a855f7] font-mono font-bold">{state?.user?.agncyId || "USR-ADIDAS-9021"}</span>
+                </div>
+                <div className="flex justify-between items-center text-sm border-t border-white/10 pt-4">
+                  <span className="text-neutral-400">Direct settlement routing</span>
+                  <span className="text-[#10b95f] font-semibold flex items-center gap-1">
+                    <ShieldCheck className="h-4 w-4" />
+                    Treasury ACH Instant
+                  </span>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 gap-6 md:grid-cols-[1fr_174px_130px]">
-                <label className="block">
-                  <span className="text-[14px] font-semibold text-white">Card Number</span>
-                  <input
-                    value={cardNumber}
-                    onChange={(event) => setCardNumber(event.target.value)}
-                    className="mt-2 h-12 w-full border border-[#1c1c1c] bg-[#1a1a1a] px-4 text-[14px] font-semibold text-[#d7d7d7] outline-none focus:border-[#555]"
-                  />
-                </label>
-                <label className="block">
-                  <span className="text-[14px] font-semibold text-white">Exp date</span>
-                  <input
-                    value={expiry}
-                    onChange={(event) => setExpiry(event.target.value)}
-                    className="mt-2 h-12 w-full border border-[#1c1c1c] bg-[#1a1a1a] px-4 text-[14px] font-semibold text-[#d7d7d7] outline-none focus:border-[#555]"
-                  />
-                </label>
-                <label className="block">
-                  <span className="text-[14px] font-semibold text-white">CVV code</span>
-                  <input
-                    value={cvc}
-                    onChange={(event) => setCvc(event.target.value)}
-                    className="mt-2 h-12 w-full border border-[#1c1c1c] bg-[#1a1a1a] px-4 text-[14px] font-semibold text-[#d7d7d7] outline-none focus:border-[#555]"
-                  />
-                </label>
-              </div>
-
-              <label className="block">
-                <span className="text-[14px] font-semibold text-white">Name on card</span>
-                <input
-                  value={nameOnCard}
-                  onChange={(event) => setNameOnCard(event.target.value)}
-                  className="mt-2 h-12 w-full border border-[#1c1c1c] bg-[#1a1a1a] px-4 text-[14px] font-semibold text-[#d7d7d7] outline-none focus:border-[#555]"
-                />
-              </label>
-
-              <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:items-center">
+              <div className="flex flex-col gap-3 pt-2">
                 <button
                   type="button"
                   onClick={submitPayment}
-                  className="inline-flex h-12 flex-1 items-center justify-center gap-2 overflow-hidden rounded-[7px] border border-[#333] bg-black px-5 text-[14px] font-bold text-white hover:border-[#666] hover:bg-[#111]"
+                  className="w-full h-12 rounded-xl bg-white hover:bg-neutral-200 text-black text-sm font-black transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-md"
                 >
-                  <AgncyPayLogo className="h-[18px] w-[50px]" imageClassName="h-full w-full" />
-                  <span>Now</span>
+                  <Lock className="h-4 w-4" />
+                  Confirm & Pay {formatMainboardMoney(total)}
                 </button>
-                <span className="text-[12px] font-semibold text-[#8f8f8f]">{paymentLabel}</span>
+                <span className="text-[12px] font-semibold text-center text-[#8f8f8f]">
+                  Direct settlement via secure AgncyPay network clearance
+                </span>
               </div>
             </div>
-          </div>
+          ) : (
+            <>
+              <div className="mt-16 flex flex-wrap gap-2">
+                {cardRails.map((rail) => (
+                  <button
+                    key={rail}
+                    type="button"
+                    aria-pressed={activeRail === rail}
+                    onClick={() => setActiveRail(rail)}
+                    className={cardRailClasses(rail, activeRail === rail)}
+                  >
+                    <CardRailLogo rail={rail} />
+                  </button>
+                ))}
+              </div>
+
+              <div className="mt-5">
+                <h2 className="text-[16px] font-semibold text-white">Your information</h2>
+                <div className="mt-5 space-y-4">
+                  <label className="block">
+                    <span className="text-[14px] font-semibold text-white">Email</span>
+                    <input
+                      value={invoice.payerEmail}
+                      readOnly
+                      className="mt-2 h-12 w-full border border-[#1c1c1c] bg-[#1a1a1a] px-4 text-[14px] font-semibold text-[#d7d7d7] outline-none"
+                    />
+                  </label>
+
+                  <div>
+                    <span className="text-[14px] font-semibold text-white">Phone Number</span>
+                    <div className="mt-2 grid grid-cols-[174px_1fr] gap-1">
+                      <div className="flex h-12 items-center gap-3 border border-[#1c1c1c] bg-[#1a1a1a] px-4 text-[16px] font-semibold text-white">
+                        <span>US</span>
+                        <span>+1</span>
+                      </div>
+                      <input
+                        value={invoice.mobile.replace("+1 ", "")}
+                        readOnly
+                        className="h-12 border border-[#1c1c1c] bg-[#1a1a1a] px-4 text-[14px] font-semibold text-[#d7d7d7] outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-6 md:grid-cols-[1fr_174px_130px]">
+                    <label className="block">
+                      <span className="text-[14px] font-semibold text-white">Card Number</span>
+                      <input
+                        value={cardNumber}
+                        onChange={(event) => setCardNumber(event.target.value)}
+                        className="mt-2 h-12 w-full border border-[#1c1c1c] bg-[#1a1a1a] px-4 text-[14px] font-semibold text-[#d7d7d7] outline-none focus:border-[#555]"
+                      />
+                    </label>
+                    <label className="block">
+                      <span className="text-[14px] font-semibold text-white">Exp date</span>
+                      <input
+                        value={expiry}
+                        onChange={(event) => setExpiry(event.target.value)}
+                        className="mt-2 h-12 w-full border border-[#1c1c1c] bg-[#1a1a1a] px-4 text-[14px] font-semibold text-[#d7d7d7] outline-none focus:border-[#555]"
+                      />
+                    </label>
+                    <label className="block">
+                      <span className="text-[14px] font-semibold text-white">CVV code</span>
+                      <input
+                        value={cvc}
+                        onChange={(event) => setCvc(event.target.value)}
+                        className="mt-2 h-12 w-full border border-[#1c1c1c] bg-[#1a1a1a] px-4 text-[14px] font-semibold text-[#d7d7d7] outline-none focus:border-[#555]"
+                      />
+                    </label>
+                  </div>
+
+                  <label className="block">
+                    <span className="text-[14px] font-semibold text-white">Name on card</span>
+                    <input
+                      value={nameOnCard}
+                      onChange={(event) => setNameOnCard(event.target.value)}
+                      className="mt-2 h-12 w-full border border-[#1c1c1c] bg-[#1a1a1a] px-4 text-[14px] font-semibold text-[#d7d7d7] outline-none focus:border-[#555]"
+                    />
+                  </label>
+
+                  <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:items-center">
+                    <button
+                      type="button"
+                      onClick={submitPayment}
+                      className="inline-flex h-12 flex-1 items-center justify-center gap-2 overflow-hidden rounded-[7px] border border-[#333] bg-black px-5 text-[14px] font-bold text-white hover:border-[#666] hover:bg-[#111]"
+                    >
+                      <AgncyPayLogo className="h-[18px] w-[50px]" imageClassName="h-full w-full" />
+                      <span>Now</span>
+                    </button>
+                    <span className="text-[12px] font-semibold text-[#8f8f8f]">{paymentLabel}</span>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
         </section>
 
         <SummaryCard invoice={invoice} total={total} returnTo={returnTo} onCopy={copyLink} onDownload={downloadPdf} />

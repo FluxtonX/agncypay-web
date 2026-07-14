@@ -52,8 +52,13 @@ export default function RegisterPage() {
   const [email, setEmail] = useState("");
   const [workspaceName, setWorkspaceName] = useState("");
   const [password, setPassword] = useState("");
-  const [roleType, setRoleType] = useState<"business" | "individual">("business");
-  const accountType: WorkspaceType = roleType === "business" ? "agency" : "talent_independent";
+  const [roleType, setRoleType] = useState<"brand" | "agency" | "individual">("brand");
+  const accountType: WorkspaceType =
+    roleType === "brand"
+      ? "brand"
+      : roleType === "agency"
+      ? "agency"
+      : "talent_independent";
   const [agree, setAgree] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
@@ -223,14 +228,15 @@ export default function RegisterPage() {
             <div className="rounded-[10px] border border-[#262626] bg-black/30 p-4 sm:p-5">
               <div className="mb-6">
                 <label className="text-[13px] font-medium text-[#E5E5EA] mb-3 block">Account Type</label>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-3 gap-2">
                   {[
-                    { id: "business", label: "Business (Agency / Brand)" },
+                    { id: "brand", label: "Brand" },
+                    { id: "agency", label: "Agency" },
                     { id: "individual", label: "Individual (Model / Talent)" },
                   ].map((role) => (
                     <label
                       key={role.id}
-                      className={`flex cursor-pointer items-center justify-center rounded-lg border px-3 py-2 text-center text-[12px] font-semibold transition-colors ${
+                      className={`flex cursor-pointer items-center justify-center rounded-lg border px-1.5 py-2 text-center text-[10px] sm:text-[11px] font-semibold transition-colors ${
                         roleType === role.id
                           ? "border-white bg-white text-black"
                           : "border-[#262626] bg-[#0B0B0B] text-[#8E8E93] hover:border-white/40"
@@ -241,7 +247,7 @@ export default function RegisterPage() {
                         name="roleType"
                         value={role.id}
                         checked={roleType === role.id}
-                        onChange={() => setRoleType(role.id as "business" | "individual")}
+                        onChange={() => setRoleType(role.id as "brand" | "agency" | "individual")}
                         className="hidden"
                       />
                       {role.label}
@@ -250,7 +256,7 @@ export default function RegisterPage() {
                 </div>
               </div>
 
-              {roleType === "business" && (
+              {(roleType === "brand" || roleType === "agency") && (
                 <div className="mb-6">
                   <label className="text-[13px] font-medium text-[#E5E5EA] mb-3 block">Connect Accounting (Optional)</label>
                   <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
