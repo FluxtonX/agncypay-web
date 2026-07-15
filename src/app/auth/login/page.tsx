@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Eye, EyeOff } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { loginWithFirebase } from "../../../lib/firebaseAuth";
 
@@ -16,6 +17,7 @@ export default function LoginPage() {
   
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [roleType, setRoleType] = useState<"brand" | "agency" | "individual">("brand");
   const [rememberMe, setRememberMe] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -279,17 +281,26 @@ export default function LoginPage() {
                   Forgot?
                 </Link>
               </div>
-              <input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => {
-                  setPassword(e.target.value);
-                  if (errors.password) setErrors({});
-                }}
-                className={`w-full border !bg-[#0B0B0B] !border-[#262626] ${errors.password ? "!border-[#ff453a]/50 focus:!border-[#ff453a]" : ""} focus:border-white/30 focus:outline-none rounded-lg px-4 py-3 text-sm text-[#F8FAFC] placeholder-[#5A5A62] transition-colors`}
-                placeholder="••••••••"
-              />
+              <div className="relative w-full">
+                <input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    if (errors.password) setErrors({});
+                  }}
+                  className={`w-full border !bg-[#0B0B0B] !border-[#262626] pr-12 ${errors.password ? "!border-[#ff453a]/50 focus:!border-[#ff453a]" : ""} focus:border-white/30 focus:outline-none rounded-lg px-4 py-3 text-sm text-[#F8FAFC] placeholder-[#5A5A62] transition-colors`}
+                  placeholder="••••••••"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-white transition-colors"
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
               {errors.password && (
                 <span className="text-xs text-[#ff453a] mt-0.5">{errors.password}</span>
               )}

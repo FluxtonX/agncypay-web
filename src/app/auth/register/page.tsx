@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Check, ShieldCheck } from "lucide-react";
+import { Check, ShieldCheck, Eye, EyeOff } from "lucide-react";
 import { registerWithFirebase } from "../../../lib/firebaseAuth";
 import { WorkspaceType } from "../../../types/workspace";
 
@@ -27,19 +27,34 @@ function FormField({
   error?: string;
   type?: string;
 }) {
+  const [showPassword, setShowPassword] = useState(false);
+  const isPasswordType = type === "password";
+  const inputType = isPasswordType ? (showPassword ? "text" : "password") : type;
+
   return (
     <label className="flex w-full flex-col gap-2" htmlFor={id}>
       <span className="text-[13px] font-medium text-[#E5E5EA]">{label}</span>
-      <input
-        id={id}
-        type={type}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className={`w-full rounded-lg border bg-[#0B0B0B] px-4 py-3 text-sm text-[#F8FAFC] placeholder-[#5A5A62] transition-colors focus:outline-none ${
-          error ? "border-[#ff453a]/50 focus:border-[#ff453a]" : "border-[#262626] focus:border-white/30"
-        }`}
-        placeholder={placeholder}
-      />
+      <div className="relative w-full">
+        <input
+          id={id}
+          type={inputType}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          className={`w-full rounded-lg border bg-[#0B0B0B] pl-4 pr-12 py-3 text-sm text-[#F8FAFC] placeholder-[#5A5A62] transition-colors focus:outline-none ${
+            error ? "border-[#ff453a]/50 focus:border-[#ff453a]" : "border-[#262626] focus:border-white/30"
+          }`}
+          placeholder={placeholder}
+        />
+        {isPasswordType && (
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-white transition-colors"
+          >
+            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+          </button>
+        )}
+      </div>
       {error ? <span className="text-xs text-[#ff453a] mt-0.5">{error}</span> : null}
     </label>
   );
