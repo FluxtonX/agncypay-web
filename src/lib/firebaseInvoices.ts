@@ -8,15 +8,20 @@ import {
   query, 
   orderBy, 
   serverTimestamp,
-  getDoc
+  getDoc,
+  where
 } from "firebase/firestore";
 import { db } from "./firebase";
+import { FirestoreUser } from "./firebaseAuth";
 
 export interface FirestoreInvoice {
   id: string;
   campaign: string;
   agency: string;
+  agencyEmail: string;
   talent: string;
+  talentEmail: string;
+  brandName: string;
   amount: number;
   due: string;
   status: "pending" | "paid";
@@ -44,28 +49,34 @@ export async function seedDefaultInvoices() {
           id: "W-INV-001",
           campaign: "Summer campaign",
           agency: "Elite model agency",
+          agencyEmail: "agency@elite.com",
           talent: "sarah",
+          talentEmail: "sarah@talent.com",
+          brandName: "Adidas Corporate",
           amount: 14999.98,
           due: "Jul 13, 2026",
           status: "pending",
           talentPayoutStatus: "pending",
           createdDate: "Jul 05, 2026",
           payerId: "MB-6984",
-          payerEmail: "billing@elite.agency",
+          payerEmail: "martin.safi@adidas.com",
           payerAddress: ["Elite Models Inc.", "10 Hudson Yards, 24th Fl", "New York, NY 10001"]
         },
         {
           id: "W-INV-002",
           campaign: "Summer campaign",
           agency: "CCA",
+          agencyEmail: "agency@elite.com",
           talent: "Dj kivi",
+          talentEmail: "djkivi@talent.com",
+          brandName: "Adidas Corporate",
           amount: 4499.98,
           due: "Jul 12, 2026",
           status: "pending",
           talentPayoutStatus: "pending",
           createdDate: "Jul 04, 2026",
           payerId: "MB-7044",
-          payerEmail: "finance@cca-artists.com",
+          payerEmail: "martin.safi@adidas.com",
           payerAddress: ["Creative Artists Assoc.", "2000 Avenue of the Stars", "Los Angeles, CA 90067"]
         }
       ];
@@ -121,7 +132,17 @@ export async function resetDemoFirestore() {
 }
 
 // Create a new invoice document
-export async function createFirestoreInvoice(data: Omit<FirestoreInvoice, "id" | "status" | "talentPayoutStatus" | "createdDate" | "payerId" | "payerEmail" | "payerAddress">) {
+export async function createFirestoreInvoice(data: {
+  campaign: string;
+  agency: string;
+  agencyEmail: string;
+  talent: string;
+  talentEmail: string;
+  brandName: string;
+  brandEmail: string;
+  amount: number;
+  due: string;
+}) {
   try {
     // Format timestamp dates
     const dateObj = new Date();
@@ -140,14 +161,17 @@ export async function createFirestoreInvoice(data: Omit<FirestoreInvoice, "id" |
       id: customId,
       campaign: data.campaign,
       agency: data.agency,
+      agencyEmail: data.agencyEmail,
       talent: data.talent,
+      talentEmail: data.talentEmail,
+      brandName: data.brandName,
       amount: Number(data.amount),
       due: data.due,
       status: "pending",
       talentPayoutStatus: "pending",
       createdDate: formattedDate,
       payerId: `MB-${Math.floor(6000 + Math.random() * 3000)}`,
-      payerEmail: "billing@client.corp",
+      payerEmail: data.brandEmail,
       payerAddress: ["Corporate Headquarters", "100 Broadway St", "New York, NY 10005"]
     };
 
@@ -218,5 +242,37 @@ export async function fetchSingleInvoice(id: string): Promise<FirestoreInvoice |
   } catch (error) {
     console.error(`Error fetching single invoice ${id}:`, error);
     return null;
+  }
+}
+
+// Fetch all registered brands from Firestore users collection
+export async function getRegisteredBrands(): Promise<FirestoreUser[]> {
+  try {
+    const q = query(collection(db, "users"), where("accountType", "==", "brand"));
+    const querySnapshot = await getDocs(q);
+    const brands: FirestoreUser[] = [];
+    querySnapshot.forEach((doc) => {
+      brands.push(doc.data() as FirestoreUser);
+    });
+    return brands;
+  } catch (error) {
+    console.error("Error getting registered brands from Firestore:", error);
+    return [];
+  }
+}
+
+// Fetch all registered talents from Firestore users collection
+export async function getRegisteredTalents(): Promise<FirestoreUser[]> {
+  try {
+    const q = query(collection(db, "users"), where("accountType", "in", ["individual", "talent_independent", "talent", "talent_agency"]));
+    const querySnapshot = await getDocs(q);
+    const talents: FirestoreUser[] = [];
+    querySnapshot.forEach((doc) => {
+      talents.push(doc.data() as FirestoreUser);
+    });
+    return talents;
+  } catch (error) {
+    console.error("Error getting registered talents from Firestore:", error);
+    return [];
   }
 }

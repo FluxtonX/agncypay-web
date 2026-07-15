@@ -19,6 +19,9 @@ import {
   getVerificationTrack,
   normalizeWorkspaceType,
 } from "../types/workspace";
+import { auth, db } from "../lib/firebase";
+import { onAuthStateChanged } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
 
 interface AppState {
   user: {
@@ -266,10 +269,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
     setIsLoaded(true);
 
-    // Dynamic import to prevent SSR/early loading issues
-    const { onAuthStateChanged } = require("firebase/auth");
-    const { auth, db } = require("../lib/firebase");
-    const { doc, getDoc } = require("firebase/firestore");
+    // Set up Firebase Auth listener
+
 
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: any) => {
       if (firebaseUser) {

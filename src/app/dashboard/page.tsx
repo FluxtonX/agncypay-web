@@ -26,6 +26,7 @@ import {
 import { cn } from "../../lib/utils";
 import { mainboardInvoices, formatMainboardMoney } from "../../lib/mainboard";
 import { useApp } from "../../context/AppContext";
+import { subscribeInvoices } from "../../lib/firebaseInvoices";
 import { ModelIncomeList, ModelPayoutsList, CsvDropzonePanel } from "../../components/dashboard/ModelAgencyDashboard";
 
 const BOFA_BUSINESS_DEBIT_VISA_IMAGE =
@@ -809,6 +810,29 @@ export default function DashboardHomePage() {
   const [isWalletContactsOpen, setIsWalletContactsOpen] = useState(false);
   const [walletContactQuery, setWalletContactQuery] = useState("");
   const [dynamicIncomes, setDynamicIncomes] = useState<any[]>([]);
+
+  const [widgetInvoices, setWidgetInvoices] = useState<any[]>([]);
+  const [sessionWithdrawAmount, setSessionWithdrawAmount] = useState(0);
+  const [sessionNet0Advanced, setSessionNet0Advanced] = useState(0);
+
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+    const unsubscribe = subscribeInvoices((invoicesList) => {
+      setWidgetInvoices(invoicesList);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    const userEmail = state.user?.email || "guest";
+    const savedWithdraw = localStorage.getItem(`talent_withdraw_adjust_${userEmail}`);
+    if (savedWithdraw) setSessionWithdrawAmount(parseFloat(savedWithdraw));
+
+    const savedNet0 = localStorage.getItem(`talent_net0_advanced_${userEmail}`);
+    if (savedNet0) setSessionNet0Advanced(parseFloat(savedNet0));
+  }, [state.user]);
+
   const [liveAvailable] = useState(24500.00);
   const [liveSpent] = useState(1200.00);
 
@@ -817,19 +841,26 @@ export default function DashboardHomePage() {
 
   useEffect(() => {
     const userEmail = state.user?.email || "guest";
+    const myInvoices = widgetInvoices.filter(i => i.talentEmail === userEmail);
+
+    const dynamicCrystallised = myInvoices
+      .filter(i => i.status === "paid" && i.talentPayoutStatus === "pending")
+      .reduce((sum, i) => sum + i.amount * 0.85, 0);
+
+    const dynamicLiquidity = myInvoices
+      .filter(i => i.talentPayoutStatus === "disbursed")
+      .reduce((sum, i) => sum + i.amount * 0.85, 0);
+
     const isDemoUser = userEmail === "martin.safi@adidas.com";
-
-    const liqKey = `talent_liquidity_balance_${userEmail}`;
-    const cryKey = `talent_crystallised_balance_${userEmail}`;
-
-    const savedLiq = localStorage.getItem(liqKey);
     const defaultLiq = isDemoUser ? 12540.00 : 4500.00;
-    setLiquidityBalance(savedLiq !== null ? parseFloat(savedLiq) : defaultLiq);
-
-    const savedCry = localStorage.getItem(cryKey);
     const defaultCry = isDemoUser ? 38275.80 : 12500.50;
-    setCrystallisedBalance(savedCry !== null ? parseFloat(savedCry) : defaultCry);
-  }, [state.user]);
+
+    const finalCry = Math.max(0, (defaultCry + dynamicCrystallised) - sessionNet0Advanced);
+    const finalLiq = Math.max(0, (defaultLiq + dynamicLiquidity) + (sessionNet0Advanced * 0.985) - sessionWithdrawAmount);
+
+    setLiquidityBalance(finalLiq);
+    setCrystallisedBalance(finalCry);
+  }, [widgetInvoices, sessionWithdrawAmount, sessionNet0Advanced, state.user]);
 
   const [isNet0Open, setIsNet0Open] = useState(false);
   const [isWithdrawOpen, setIsWithdrawOpen] = useState(false);
@@ -841,8 +872,6 @@ export default function DashboardHomePage() {
 
   const handleProcessNet0 = () => {
     const userEmail = state.user?.email || "guest";
-    const liqKey = `talent_liquidity_balance_${userEmail}`;
-    const cryKey = `talent_crystallised_balance_${userEmail}`;
     const net0Key = `brand_stats_net0_funded_${userEmail}`;
     const incomesKey = `uploadedIncomes_${userEmail}`;
 
@@ -854,18 +883,14 @@ export default function DashboardHomePage() {
         setTimeout(() => {
           setNet0Stage("success");
           
-          const advAmt = 38275.80;
+          const advAmt = crystallisedBalance;
           const fee = advAmt * 0.015;
           const netCredit = advAmt - fee;
 
-          setLiquidityBalance((prev) => {
-            const next = prev + netCredit;
-            localStorage.setItem(liqKey, next.toString());
+          setSessionNet0Advanced((prev) => {
+            const next = prev + advAmt;
+            localStorage.setItem(`talent_net0_advanced_${userEmail}`, next.toString());
             return next;
-          });
-          setCrystallisedBalance(() => {
-            localStorage.setItem(cryKey, "0");
-            return 0;
           });
 
           // Sync with Brand/Agency Net-0 Funded stats card
@@ -916,7 +941,6 @@ export default function DashboardHomePage() {
     }
 
     const userEmail = state.user?.email || "guest";
-    const liqKey = `talent_liquidity_balance_${userEmail}`;
     const incomesKey = `uploadedIncomes_${userEmail}`;
 
     setWithdrawError("");
@@ -924,9 +948,9 @@ export default function DashboardHomePage() {
 
     setTimeout(() => {
       setWithdrawStage("success");
-      setLiquidityBalance((prev) => {
-        const next = prev - amt;
-        localStorage.setItem(liqKey, next.toString());
+      setSessionWithdrawAmount((prev) => {
+        const next = prev + amt;
+        localStorage.setItem(`talent_withdraw_adjust_${userEmail}`, next.toString());
         return next;
       });
 
@@ -1001,6 +1025,8 @@ export default function DashboardHomePage() {
     setAutosplitContactIds(walletContacts.map((contact) => contact.id));
     setIsAutosplitNoticeOpen(true);
   };
+
+  if (!mounted) return null;
 
   return (
     <main className="min-h-screen bg-black text-white">

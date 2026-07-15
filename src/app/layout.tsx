@@ -16,6 +16,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "AgncyPay | Secure Brand Invoice Payments & KYB Verification",
   description: "A verified brand payment platform for invoice management, business verification, and fast payment reconciliation. Secure Adidas invoices with AgncyPay.",
+  icons: {
+    icon: "/Alogo.jpg",
+  }
 };
 
 export default function RootLayout({

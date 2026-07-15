@@ -233,7 +233,7 @@ export default function PayRequestPage() {
         id: dbInvoice.id,
         amount: dbInvoice.amount,
         fee: dbInvoice.amount * 0.015, // 1.5% fee
-        payer: dbInvoice.payerId === "MB-6984" ? "Adidas AG" : "CCA Client Workspace",
+        payer: dbInvoice.brandName || (dbInvoice.payerId === "MB-6984" ? "Adidas AG" : "CCA Client Workspace"),
         payerEmail: dbInvoice.payerEmail,
         payerAddress: dbInvoice.payerAddress,
         recipient: dbInvoice.agency,

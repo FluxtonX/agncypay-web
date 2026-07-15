@@ -33,7 +33,8 @@ import {
   Check
 } from "lucide-react";
 import { useApp } from "../../context/AppContext";
-import { subscribeInvoices, updateInvoiceStatus, resetDemoFirestore, createFirestoreInvoice } from "../../lib/firebaseInvoices";
+import { subscribeInvoices, updateInvoiceStatus, resetDemoFirestore, createFirestoreInvoice, getRegisteredBrands, getRegisteredTalents } from "../../lib/firebaseInvoices";
+import { FirestoreUser } from "../../lib/firebaseAuth";
 
 // Refactored Data Models
 interface SplitItem {
@@ -167,6 +168,25 @@ export default function BrandDashboardPage() {
   const [payingInvoiceId, setPayingInvoiceId] = useState<string | null>(null);
   const [payoutingInvoiceId, setPayoutingInvoiceId] = useState<string | null>(null);
 
+  const [mounted, setMounted] = useState(false);
+  const [registeredBrands, setRegisteredBrands] = useState<FirestoreUser[]>([]);
+  const [registeredTalents, setRegisteredTalents] = useState<FirestoreUser[]>([]);
+  const [selectedBrandEmail, setSelectedBrandEmail] = useState("");
+  const [selectedTalentEmail, setSelectedTalentEmail] = useState("");
+
+  useEffect(() => {
+    setMounted(true);
+    async function loadData() {
+      const brands = await getRegisteredBrands();
+      const talents = await getRegisteredTalents();
+      setRegisteredBrands(brands);
+      setRegisteredTalents(talents);
+      if (brands.length > 0) setSelectedBrandEmail(brands[0].email);
+    }
+    loadData();
+  }, []);
+
+
   // New invoice state hooks
   const [isNewInvoiceOpen, setIsNewInvoiceOpen] = useState(false);
   const [newCampaign, setNewCampaign] = useState("");
@@ -187,12 +207,16 @@ export default function BrandDashboardPage() {
       const mappedList = invoicesList.map((inv) => ({
         id: inv.id,
         agency: inv.agency,
+        agencyEmail: inv.agencyEmail || "",
         campaign: inv.campaign,
         talent: inv.talent,
+        talentEmail: inv.talentEmail || "",
+        brandName: inv.brandName || "",
         dueDate: inv.due,
         amount: inv.amount,
         status: inv.status,
-        talentPayoutStatus: inv.talentPayoutStatus
+        talentPayoutStatus: inv.talentPayoutStatus,
+        payerEmail: inv.payerEmail || ""
       }));
       setWidgetInvoices(mappedList);
     });
@@ -275,12 +299,19 @@ export default function BrandDashboardPage() {
 
   const handleCreateInvoice = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newCampaign || !newTalent || !newAmount || !newDue) return;
+    if (!newCampaign || !selectedBrandEmail || !newAmount || !newDue) return;
 
     setIsCreatingInvoice(true);
     try {
-      const activeAgencyName = state.workspaces.find(w => w.id === state.activeWorkspaceId)?.name || "Elite model agency";
-      
+      const activeAgencyName = state.workspaces.find(w => w.id === state.activeWorkspaceId)?.name || state.user?.fullName || "Elite model agency";
+      const agencyEmail = state.user?.email || "agency@elite.com";
+
+      const brandUser = registeredBrands.find(b => b.email === selectedBrandEmail);
+      const brandName = brandUser ? brandUser.workspaceName : "Adidas Corporate";
+
+      const talentUser = registeredTalents.find(t => t.email === selectedTalentEmail);
+      const talentName = talentUser ? talentUser.fullName : "sarah";
+
       // Format YYYY-MM-DD date picker string to "MMM DD, YYYY" for visual uniformity
       let formattedDue = newDue;
       if (newDue.includes("-")) {
@@ -298,7 +329,11 @@ export default function BrandDashboardPage() {
       await createFirestoreInvoice({
         campaign: newCampaign,
         agency: activeAgencyName,
-        talent: newTalent,
+        agencyEmail: agencyEmail,
+        talent: talentName,
+        talentEmail: selectedTalentEmail,
+        brandName: brandName,
+        brandEmail: selectedBrandEmail,
         amount: parseFloat(newAmount),
         due: formattedDue
       });
@@ -306,7 +341,6 @@ export default function BrandDashboardPage() {
       // Close and Reset Form
       setIsNewInvoiceOpen(false);
       setNewCampaign("");
-      setNewTalent("");
       setNewAmount("");
       setNewDue("");
     } catch (error) {
@@ -404,13 +438,23 @@ export default function BrandDashboardPage() {
 
   // Invoices state
   const [invoices, setInvoices] = useState<InvoiceMock[]>([]);
-  const [selectedInvoiceId, setSelectedInvoiceId] = useState<string>("AP-INV-9024");
+  const [selectedInvoiceId, setSelectedInvoiceId] = useState<string>("W-INV-001");
   const [selectedTerm, setSelectedTerm] = useState<"Net-30" | "Net-60" | "Net-90">("Net-30");
   const [instantPayoutEnabled, setInstantPayoutEnabled] = useState<boolean>(true);
   const [transactions, setTransactions] = useState(RECENT_TRANSACTIONS);
 
+  // Filter widgetInvoices by role-scoped email
+  const userFilteredWidgetInvoices = widgetInvoices.filter((inv) => {
+    const userEmail = state.user?.email || "";
+    if (workspaceType === "brand") {
+      return inv.payerEmail === userEmail;
+    } else {
+      return inv.agencyEmail === userEmail;
+    }
+  });
+
   // Map functional widget invoices into the full UI shape
-  const liveFunctionalInvoices: InvoiceMock[] = widgetInvoices.map(inv => {
+  const liveFunctionalInvoices: InvoiceMock[] = userFilteredWidgetInvoices.map(inv => {
     // Determine the status equivalent for the UI logic
     let uiStatus: "awaiting_approval" | "settled" | "talent_disbursed" = "awaiting_approval";
     if (inv.status === "paid") {
@@ -420,7 +464,7 @@ export default function BrandDashboardPage() {
     return {
       id: inv.id,
       campaignName: inv.campaign,
-      brandName: "Brand Name",
+      brandName: inv.brandName || "Adidas Corporate",
       createdDate: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
       dueDate: inv.dueDate,
       amount: inv.amount,
@@ -444,7 +488,7 @@ export default function BrandDashboardPage() {
   });
 
   // Combine static fallback and live functional data
-  const allInvoices = [...invoices, ...liveFunctionalInvoices];
+  const allInvoices = liveFunctionalInvoices;
 
   // queueInvoices: role-based filtered list used in the Right Column queue panel
   // We ONLY show live functional invoices in the queue (or all if you want, but functional is preferred)
@@ -580,6 +624,8 @@ export default function BrandDashboardPage() {
     router.push("/auth/login");
   };
 
+  if (!mounted) return null;
+
   return (
     <main className="min-h-screen bg-[#000000] text-white flex flex-col font-sans antialiased selection:bg-white selection:text-black relative">
       {/* Background radial gradient decoration */}
@@ -713,26 +759,36 @@ export default function BrandDashboardPage() {
           {/* Analytics Cards Grid */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {(() => {
-              // Pre-compute awaiting amounts per role to avoid IIFE in array literal
+              const isDemo = state.user?.email === "martin.safi@adidas.com";
+
+              const paidInvoices = liveFunctionalInvoices.filter(i => 
+                workspaceType === "brand" 
+                  ? (i.status === "settled" || i.status === "talent_disbursed")
+                  : i.status === "talent_disbursed"
+              );
+              const dynamicPaidVolume = paidInvoices.reduce((acc, curr) => acc + curr.amount, 0);
+
+              const displayPaidVolume = isDemo ? (424500.00 + dynamicPaidVolume) : dynamicPaidVolume;
+              const disbursedVolume = liveFunctionalInvoices.filter(i => i.status === "talent_disbursed").reduce((acc, curr) => acc + curr.amount, 0);
+              const displayNet0Funded = isDemo ? (186000.00 + disbursedVolume * 0.85) : (disbursedVolume * 0.85);
+              const displayAutosplitSavings = isDemo ? (4250.00 + dynamicPaidVolume * 0.015) : (dynamicPaidVolume * 0.015);
+
               const awaitingItems = workspaceType === "brand"
-                ? [
-                    ...invoices.filter(i => i.status === "awaiting_approval"),
-                    ...widgetInvoices.filter(i => i.status === "pending")
-                  ]
-                : widgetInvoices.filter(i => i.status === "paid" && i.talentPayoutStatus !== "disbursed");
+                ? liveFunctionalInvoices.filter(i => i.status === "awaiting_approval")
+                : liveFunctionalInvoices.filter(i => i.status === "settled");
               const awaitingTotal = awaitingItems.reduce((acc, curr) => acc + curr.amount, 0);
               const awaitingCount = awaitingItems.length;
 
               const stats = [
-                { label: "Total Paid Volume", value: `$${livePaidVolume.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, trend: "+12.4%", icon: TrendingUp },
+                { label: "Total Paid Volume", value: `$${displayPaidVolume.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, trend: "+12.4%", icon: TrendingUp },
                 {
                   label: "Awaiting Approval",
                   value: `$${awaitingTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
                   count: `${awaitingCount} invoice${awaitingCount !== 1 ? "s" : ""}`,
                   icon: Clock
                 },
-                { label: "Instant Net-0 Funded", value: `$${liveNet0Funded.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, detail: "AgncyPay liquidity", icon: Coins },
-                { label: "Autosplit Fee Savings", value: `$${liveAutosplitSavings.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, detail: "Single payment rail", icon: ShieldCheck }
+                { label: "Instant Net-0 Funded", value: `$${displayNet0Funded.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, detail: "AgncyPay liquidity", icon: Coins },
+                { label: "Autosplit Fee Savings", value: `$${displayAutosplitSavings.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, detail: "Single payment rail", icon: ShieldCheck }
               ];
 
               return stats.map((stat, idx) => {
@@ -967,8 +1023,19 @@ export default function BrandDashboardPage() {
             </div>
           )}
 
+          {/* Empty State for Agency */}
+          {workspaceType === "agency" && !activeInvoice && (
+            <div className="bg-[#050505] rounded-2xl border border-white/20 p-8 text-center shadow-sm mt-6">
+              <CheckCircle2 className="h-8 w-8 text-[#10b95f] mx-auto mb-3 animate-pulse" />
+              <h3 className="text-sm font-bold text-white">No Invoices Found</h3>
+              <p className="text-xs text-neutral-400 mt-1.5 max-w-xs mx-auto leading-relaxed">
+                You haven't created any invoices yet. Click the "+ New Invoice" button to issue your first split campaign invoice.
+              </p>
+            </div>
+          )}
+
           {/* Balance Hero Card & Split View */}
-          {workspaceType === "agency" && (
+          {workspaceType === "agency" && activeInvoice && (
             <div className="bg-[#050505] rounded-2xl border border-white/20 shadow-sm overflow-hidden mt-6">
               
               {/* Header portion */}
@@ -1243,7 +1310,7 @@ export default function BrandDashboardPage() {
           )}
 
           {/* Payment Status Timeline */}
-          {workspaceType === "agency" && (
+          {workspaceType === "agency" && activeInvoice && (
             <div className="bg-[#050505] rounded-2xl border border-white/20 p-5 shadow-sm">
               <h4 className="text-xs font-bold text-[#8f8f8f] uppercase tracking-wider mb-4">
                 Real-Time Settlement Logs
@@ -1566,19 +1633,45 @@ export default function BrandDashboardPage() {
                   />
                 </div>
 
+                <div>
+                  <label className="block text-[11px] font-bold text-neutral-400 uppercase tracking-wider">
+                    Select Brand Client
+                  </label>
+                  <select
+                    required
+                    value={selectedBrandEmail}
+                    onChange={(e) => setSelectedBrandEmail(e.target.value)}
+                    className="mt-2 h-11 w-full border border-white/20 bg-black rounded-lg px-4 text-xs font-semibold text-white outline-none focus:border-white transition-all cursor-pointer"
+                  >
+                    {registeredBrands.length === 0 ? (
+                      <option value="" disabled>No registered brands found</option>
+                    ) : (
+                      registeredBrands.map((b) => (
+                        <option key={b.uid} value={b.email} className="bg-[#0A0A0A] text-white">
+                          {b.workspaceName} ({b.email})
+                        </option>
+                      ))
+                    )}
+                  </select>
+                </div>
+
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-[11px] font-bold text-neutral-400 uppercase tracking-wider">
-                      Talent Name
+                      Select Talent
                     </label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. Sarah"
-                      value={newTalent}
-                      onChange={(e) => setNewTalent(e.target.value)}
-                      className="mt-2 h-11 w-full border border-white/20 bg-black rounded-lg px-4 text-xs font-semibold text-white outline-none focus:border-white transition-all"
-                    />
+                    <select
+                      value={selectedTalentEmail}
+                      onChange={(e) => setSelectedTalentEmail(e.target.value)}
+                      className="mt-2 h-11 w-full border border-white/20 bg-black rounded-lg px-4 text-xs font-semibold text-white outline-none focus:border-white transition-all cursor-pointer"
+                    >
+                      <option value="">Select Talent (Optional)</option>
+                      {registeredTalents.map((t) => (
+                        <option key={t.uid} value={t.email} className="bg-[#0A0A0A] text-white">
+                          {t.fullName}
+                        </option>
+                      ))}
+                    </select>
                   </div>
 
                   <div>
