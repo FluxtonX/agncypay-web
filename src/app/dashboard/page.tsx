@@ -823,11 +823,11 @@ export default function DashboardHomePage() {
     const cryKey = `talent_crystallised_balance_${userEmail}`;
 
     const savedLiq = localStorage.getItem(liqKey);
-    const defaultLiq = isDemoUser ? 12540.00 : 0.00;
+    const defaultLiq = isDemoUser ? 12540.00 : 4500.00;
     setLiquidityBalance(savedLiq !== null ? parseFloat(savedLiq) : defaultLiq);
 
     const savedCry = localStorage.getItem(cryKey);
-    const defaultCry = isDemoUser ? 38275.80 : 0.00;
+    const defaultCry = isDemoUser ? 38275.80 : 12500.50;
     setCrystallisedBalance(savedCry !== null ? parseFloat(savedCry) : defaultCry);
   }, [state.user]);
 

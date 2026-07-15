@@ -652,20 +652,7 @@ export default function BrandDashboardPage() {
                 {state.workspaces.find(w => w.id === state.activeWorkspaceId)?.name || state.user?.fullName || "Adidas Corporate"}
               </span>
             </div>
-            <button
-              onClick={async () => {
-                localStorage.clear();
-                await resetDemoFirestore();
-                window.dispatchEvent(new Event("storage"));
-                window.dispatchEvent(new Event("syncBrandDashboard"));
-                router.push("/branddashboard");
-              }}
-              className="px-3 py-1.5 text-neutral-400 hover:text-white hover:bg-white/5 border border-white/25 hover:border-white/40 rounded-lg cursor-pointer flex items-center gap-1.5 text-[11px] font-bold transition-all"
-              title="Reset Demo Data"
-            >
-              <RefreshCw className="h-3.5 w-3.5" />
-              Reset Demo
-            </button>
+
             <button
               onClick={handleLogout}
               className="p-2 text-neutral-400 hover:text-white transition-colors"
