@@ -774,11 +774,6 @@ export default function DashboardHomePage() {
         <div className="flex flex-nowrap items-center justify-start gap-4 pb-4">
           <div className="relative flex items-center">
             <img src="/agncypaybrand.png" alt="AgncyPay" className="h-[52px] w-auto shrink-0 object-contain scale-[1.5] origin-left" />
-            {(workspaceType === "brand" || workspaceType === "agency") && (
-              <span className="absolute -top-1 -right-6 translate-x-full rounded-full bg-white/[0.08] border border-white/[0.15] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#A3A3A3]">
-                {workspaceType === "brand" ? "Brand" : "Agency"}
-              </span>
-            )}
           </div>
         </div>
 

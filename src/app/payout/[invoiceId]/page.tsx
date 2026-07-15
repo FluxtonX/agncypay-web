@@ -15,11 +15,13 @@ import {
   User,
   Users,
   RefreshCw,
-  Calendar
+  Calendar,
+  AlertCircle
 } from "lucide-react";
 import { formatMainboardMoney } from "../../../lib/mainboard";
 import { AgncyPayLogo } from "../../../components/payment/AgncyPayLogo";
 import { useApp } from "../../../context/AppContext";
+import { fetchSingleInvoice, updateInvoiceStatus } from "../../../lib/firebaseInvoices";
 
 type PayoutStage = "confirmation" | "processing" | "success";
 
@@ -32,6 +34,7 @@ interface normalizedPayoutInvoice {
   talentAmount: number;
   agencyAmount: number;
   isWidget: boolean;
+  status: string;
 }
 
 export default function PayoutDisbursementPage() {
@@ -49,13 +52,9 @@ export default function PayoutDisbursementPage() {
   useEffect(() => {
     if (!rawInvoiceId) return;
 
-    // Load and normalize invoice from localStorage
-    const loadInvoice = () => {
-      // 1. Try finding in widget invoices
-      const widgets = localStorage.getItem("brand_widget_invoices");
-      if (widgets) {
-        const parsed = JSON.parse(widgets);
-        const w = parsed.find((item: any) => item.id === rawInvoiceId);
+    const loadInvoice = async () => {
+      try {
+        const w = await fetchSingleInvoice(rawInvoiceId);
         if (w) {
           setInvoice({
             id: w.id,
@@ -66,44 +65,25 @@ export default function PayoutDisbursementPage() {
             talentAmount: w.amount * 0.85,
             agencyAmount: w.amount * 0.15,
             isWidget: true,
+            status: w.status,
           });
-          return;
-        }
-      }
-
-      // 2. Try finding in queue invoices
-      const queue = localStorage.getItem("brand_queue_invoices");
-      if (queue) {
-        const parsed = JSON.parse(queue);
-        const q = parsed.find((item: any) => item.id === rawInvoiceId);
-        if (q) {
-          const talent = q.splitPool.splits.find((s: any) => s.role === "Talent");
-          const agency = q.splitPool.splits.find((s: any) => s.role === "Agency");
+        } else {
+          // Fallback
           setInvoice({
-            id: q.id,
-            campaignName: q.campaignName,
-            recipient: agency?.name || q.brandName,
-            talentName: talent?.name || "Talent",
-            amount: q.amount,
-            talentAmount: talent?.amount || q.amount * 0.80,
-            agencyAmount: agency?.amount || q.amount * 0.20,
-            isWidget: false,
+            id: rawInvoiceId,
+            campaignName: "Creative Campaign Split",
+            recipient: "Elite model agency",
+            talentName: "sarah",
+            amount: 14999.98,
+            talentAmount: 12749.98,
+            agencyAmount: 2250.00,
+            isWidget: true,
+            status: "pending",
           });
-          return;
         }
+      } catch (error) {
+        console.error("Error loading payout invoice from Firestore:", error);
       }
-
-      // Fallback
-      setInvoice({
-        id: rawInvoiceId,
-        campaignName: "Creative Campaign Split",
-        recipient: "Elite model agency",
-        talentName: "sarah",
-        amount: 14999.98,
-        talentAmount: 12749.98,
-        agencyAmount: 2250.00,
-        isWidget: true,
-      });
     };
 
     loadInvoice();
@@ -111,40 +91,42 @@ export default function PayoutDisbursementPage() {
 
   useEffect(() => {
     if (stage !== "processing") return;
-    const timeout = setTimeout(() => {
+    const timeout = setTimeout(async () => {
       setStage("success");
 
       if (!invoice) return;
 
-      // Update statuses in localStorage
-      if (invoice.isWidget) {
-        const widgets = localStorage.getItem("brand_widget_invoices");
-        if (widgets) {
-          const next = JSON.parse(widgets).map((w: any) => 
-            w.id === invoice.id ? { ...w, talentPayoutStatus: "disbursed" } : w
-          );
-          localStorage.setItem("brand_widget_invoices", JSON.stringify(next));
-        }
-      } else {
+      try {
+        // Update database to disbursed
+        await updateInvoiceStatus(invoice.id, "paid", "disbursed");
+
+        // Update statuses in localStorage for main queue compatibility
         const queue = localStorage.getItem("brand_queue_invoices");
         if (queue) {
-          const next = JSON.parse(queue).map((q: any) => 
-            q.id === invoice.id ? { ...q, status: "talent_disbursed" } : q
-          );
+          const next = JSON.parse(queue).map((q: any) => {
+            if (q.id === invoice.id || 
+                (invoice.id === "W-INV-001" && q.id === "AP-INV-9024") || 
+                (invoice.id === "W-INV-002" && q.id === "AP-INV-8911")) {
+              return { ...q, status: "talent_disbursed" };
+            }
+            return q;
+          });
           localStorage.setItem("brand_queue_invoices", JSON.stringify(next));
         }
-      }
 
-      // Add payout success notification
-      const localNotifs = localStorage.getItem("agency_notifications");
-      const notifs = localNotifs ? JSON.parse(localNotifs) : [];
-      const newNotif = {
-        id: `notif-${Date.now()}`,
-        message: `${invoice.recipient} paid talent ${invoice.talentName} ($${invoice.talentAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}) after deducting 15% agency fee ($${invoice.agencyAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })})`,
-        timestamp: "Just now",
-        unread: true,
-      };
-      localStorage.setItem("agency_notifications", JSON.stringify([newNotif, ...notifs]));
+        // Add payout success notification
+        const localNotifs = localStorage.getItem("agency_notifications");
+        const notifs = localNotifs ? JSON.parse(localNotifs) : [];
+        const newNotif = {
+          id: `notif-${Date.now()}`,
+          message: `${invoice.recipient} paid talent ${invoice.talentName} ($${invoice.talentAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}) after deducting 15% agency fee ($${invoice.agencyAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })})`,
+          timestamp: "Just now",
+          unread: true,
+        };
+        localStorage.setItem("agency_notifications", JSON.stringify([newNotif, ...notifs]));
+      } catch (error) {
+        console.error("Error updating payout status in Firestore:", error);
+      }
 
       // Sync event
       window.dispatchEvent(new Event("syncBrandDashboard"));
@@ -279,14 +261,28 @@ export default function PayoutDisbursementPage() {
             </div>
           </div>
 
+          {/* Locked Notice Alert if client Brand hasn't paid yet */}
+          {invoice.status && invoice.status !== "paid" && invoice.status !== "disbursed" && invoice.status !== "talent_disbursed" && (
+            <div className="p-4 bg-amber-950/20 border border-[#ff8a00]/30 text-amber-300 rounded-xl text-xs leading-relaxed flex items-start gap-2.5">
+              <AlertCircle className="h-4.5 w-4.5 text-[#ff8a00] shrink-0 mt-0.5" />
+              <div>
+                <span className="font-bold block text-white mb-0.5">Payout Release Locked</span>
+                This talent payout split cannot be disbursed because the client Brand has not completed the payment settlement for this campaign invoice. Payout is locked until Brand status is "Paid".
+              </div>
+            </div>
+          )}
+
           {/* Confirm Button */}
           <div className="pt-4 border-t border-white/20 flex flex-col gap-3">
             <button
               onClick={handleConfirmPayout}
-              className="w-full h-12 rounded-xl bg-white hover:bg-neutral-200 text-black text-sm font-black transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-md"
+              disabled={invoice.status !== "paid" && invoice.status !== "disbursed" && invoice.status !== "talent_disbursed"}
+              className="w-full h-12 rounded-xl bg-white hover:bg-neutral-200 text-black text-sm font-black transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Sparkles className="h-4.5 w-4.5 text-black" />
-              Confirm & Release Payout ({formatMainboardMoney(invoice.talentAmount)})
+              {invoice.status !== "paid" && invoice.status !== "disbursed" && invoice.status !== "talent_disbursed" 
+                ? "Locked: Awaiting Brand Payment" 
+                : `Confirm & Release Payout (${formatMainboardMoney(invoice.talentAmount)})`}
             </button>
             <p className="text-[10px] text-center text-neutral-400 leading-tight">
               Releasing dispatches splits to wallet addresses instantly. Irreversible under network clearance rules.

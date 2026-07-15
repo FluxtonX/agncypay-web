@@ -22,6 +22,7 @@ import {
 } from "../../../lib/mainboard";
 import { AgncyPayLogo } from "../../../components/payment/AgncyPayLogo";
 import { useApp } from "../../../context/AppContext";
+import { fetchSingleInvoice, updateInvoiceStatus, type FirestoreInvoice } from "../../../lib/firebaseInvoices";
 
 type CheckoutStage = "payment" | "processing" | "success";
 type CardRail = "agncypay" | "visa" | "mastercard" | "discover" | "amex" | "plaid";
@@ -197,21 +198,66 @@ export default function PayRequestPage() {
   const params = useParams<{ invoiceId: string }>();
   const searchParams = useSearchParams();
   const rawInvoiceId = Array.isArray(params.invoiceId) ? params.invoiceId[0] : params.invoiceId;
-  const invoice = findMainboardInvoice(rawInvoiceId || "") || mainboardInvoices[0];
-  const isLoggedInMode = searchParams.get("mode") === "logged_in";
-  const returnTo = searchParams.get("returnTo") === "dashboard" ? "dashboard" : "mainboard";
-  const returnHref = returnTo === "dashboard" ? "/branddashboard" : "/mainboard";
-  const returnLabel = returnTo === "dashboard" ? "Dashboard" : "Mainboard";
-  const total = invoice.amount + invoice.fee;
   const { state } = useApp();
 
+  const [dbInvoice, setDbInvoice] = useState<FirestoreInvoice | null>(null);
+  const [loadingDb, setLoadingDb] = useState(true);
   const [stage, setStage] = useState<CheckoutStage>("payment");
   const [activeRail, setActiveRail] = useState<CardRail>("agncypay");
   const [cardNumber, setCardNumber] = useState("1234 5678 9000 0000");
   const [expiry, setExpiry] = useState("MM/YY");
   const [cvc, setCvc] = useState("123");
-  const [nameOnCard, setNameOnCard] = useState(invoice.payer);
   const [transactionId, setTransactionId] = useState("");
+
+  useEffect(() => {
+    async function loadInvoice() {
+      try {
+        const inv = await fetchSingleInvoice(rawInvoiceId || "");
+        if (inv) {
+          setDbInvoice(inv);
+        }
+      } catch (e) {
+        console.error("Error loading invoice from Firestore:", e);
+      } finally {
+        setLoadingDb(false);
+      }
+    }
+    loadInvoice();
+  }, [rawInvoiceId]);
+
+  const invoice = useMemo(() => {
+    const defaultMock = findMainboardInvoice(rawInvoiceId || "") || mainboardInvoices[0];
+    if (dbInvoice) {
+      return {
+        ...defaultMock,
+        id: dbInvoice.id,
+        amount: dbInvoice.amount,
+        fee: dbInvoice.amount * 0.015, // 1.5% fee
+        payer: dbInvoice.payerId === "MB-6984" ? "Adidas AG" : "CCA Client Workspace",
+        payerEmail: dbInvoice.payerEmail,
+        payerAddress: dbInvoice.payerAddress,
+        recipient: dbInvoice.agency,
+        invoiceNumber: dbInvoice.id,
+        due: dbInvoice.due,
+        campaignName: dbInvoice.campaign,
+      };
+    }
+    return defaultMock;
+  }, [dbInvoice, rawInvoiceId]);
+
+  const [nameOnCard, setNameOnCard] = useState(invoice.payer);
+
+  useEffect(() => {
+    if (dbInvoice) {
+      setNameOnCard(invoice.payer);
+    }
+  }, [invoice]);
+
+  const isLoggedInMode = searchParams.get("mode") === "logged_in";
+  const returnTo = searchParams.get("returnTo") === "dashboard" ? "dashboard" : "mainboard";
+  const returnHref = returnTo === "dashboard" ? "/branddashboard" : "/mainboard";
+  const returnLabel = returnTo === "dashboard" ? "Dashboard" : "Mainboard";
+  const total = invoice.amount + invoice.fee;
 
   const paymentLabel = useMemo(
     () => (isLoggedInMode ? "Signed-in AgncyPay payment" : "Pay without AgncyPay account"),
@@ -220,53 +266,42 @@ export default function PayRequestPage() {
 
   useEffect(() => {
     if (stage !== "processing") return;
-    const timeout = window.setTimeout(() => {
+    const timeout = window.setTimeout(async () => {
       setStage("success");
       
       const invoiceId = rawInvoiceId;
+      let mappedId = invoiceId;
+      if (invoiceId === "MB-6984") mappedId = "W-INV-001";
+      if (invoiceId === "MB-7044") mappedId = "W-INV-002";
 
-      // Update widget invoices
-      const localInvoices = localStorage.getItem("brand_widget_invoices");
-      if (localInvoices) {
-        const parsed = JSON.parse(localInvoices);
-        let updated = false;
-        const next = parsed.map((inv: any) => {
-          if ((invoiceId === "MB-6984" && inv.id === "W-INV-001") ||
-              (invoiceId === "MB-7044" && inv.id === "W-INV-002") ||
-              inv.id === invoiceId) {
-            updated = true;
-            return { ...inv, status: "paid" };
-          }
-          return inv;
-        });
-        if (updated) {
-          localStorage.setItem("brand_widget_invoices", JSON.stringify(next));
+      try {
+        // Update database to paid
+        await updateInvoiceStatus(mappedId, "paid", "pending");
 
-          const paidInvoice = parsed.find((inv: any) => 
-            (invoiceId === "MB-6984" && inv.id === "W-INV-001") ||
-            (invoiceId === "MB-7044" && inv.id === "W-INV-002")
-          );
-          if (paidInvoice) {
-            const amt = paidInvoice.amount;
-            const savedVolume = localStorage.getItem("brand_stats_paid_volume");
-            const v = savedVolume ? parseFloat(savedVolume) : 424500.00;
-            localStorage.setItem("brand_stats_paid_volume", (v + amt).toString());
+        // Sync with dashboard stats and local notification feeds
+        const inv = await fetchSingleInvoice(mappedId);
+        if (inv) {
+          const amt = inv.amount;
+          const savedVolume = localStorage.getItem("brand_stats_paid_volume");
+          const v = savedVolume ? parseFloat(savedVolume) : 424500.00;
+          localStorage.setItem("brand_stats_paid_volume", (v + amt).toString());
 
-            const savedSavings = localStorage.getItem("brand_stats_autosplit_savings");
-            const s = savedSavings ? parseFloat(savedSavings) : 4250.00;
-            localStorage.setItem("brand_stats_autosplit_savings", (s + amt * 0.015).toString());
+          const savedSavings = localStorage.getItem("brand_stats_autosplit_savings");
+          const s = savedSavings ? parseFloat(savedSavings) : 4250.00;
+          localStorage.setItem("brand_stats_autosplit_savings", (s + amt * 0.015).toString());
 
-            const localNotifs = localStorage.getItem("agency_notifications");
-            const notifs = localNotifs ? JSON.parse(localNotifs) : [];
-            const newNotif = {
-              id: `notif-${Date.now()}`,
-              message: `Brand paid invoice to ${paidInvoice.agency} ($${paidInvoice.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}) for ${paidInvoice.campaign}`,
-              timestamp: "Just now",
-              unread: true,
-            };
-            localStorage.setItem("agency_notifications", JSON.stringify([newNotif, ...notifs]));
-          }
+          const localNotifs = localStorage.getItem("agency_notifications");
+          const notifs = localNotifs ? JSON.parse(localNotifs) : [];
+          const newNotif = {
+            id: `notif-${Date.now()}`,
+            message: `Brand paid invoice to ${inv.agency} ($${inv.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}) for ${inv.campaign}`,
+            timestamp: "Just now",
+            unread: true,
+          };
+          localStorage.setItem("agency_notifications", JSON.stringify([newNotif, ...notifs]));
         }
+      } catch (error) {
+        console.error("Error finalizing checkout payment in Firestore:", error);
       }
 
       // Update main queue invoices
@@ -275,8 +310,8 @@ export default function PayRequestPage() {
         const parsed = JSON.parse(localQueue);
         const next = parsed.map((inv: any) => {
           if (inv.id === invoiceId || 
-              (invoiceId === "MB-6984" && inv.id === "AP-INV-9024") || 
-              (invoiceId === "MB-7044" && inv.id === "AP-INV-8911")) {
+              ((invoiceId === "MB-6984" || invoiceId === "W-INV-001") && inv.id === "AP-INV-9024") || 
+              ((invoiceId === "MB-7044" || invoiceId === "W-INV-002") && inv.id === "AP-INV-8911")) {
             return { ...inv, status: "settled" };
           }
           return inv;
@@ -321,6 +356,14 @@ export default function PayRequestPage() {
     await navigator.clipboard.writeText(`${window.location.origin}/pay/${invoice.id}?mode=guest&returnTo=${returnTo}`);
   };
 
+  if (loadingDb) {
+    return (
+      <div className="min-h-screen bg-black text-white flex items-center justify-center font-sans">
+        <div className="animate-spin h-6 w-6 border-2 border-white border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-black text-white">
       <header className="sticky top-0 z-30 border-b border-[#111] bg-black/95 backdrop-blur">
@@ -359,7 +402,7 @@ export default function PayRequestPage() {
                 </div>
                 <div className="flex justify-between items-center text-sm">
                   <span className="text-neutral-400">AgncyPay client identifier</span>
-                  <span className="text-[#a855f7] font-mono font-bold">{state?.user?.agncyId || "USR-ADIDAS-9021"}</span>
+                  <span className="text-white font-mono font-bold">{state?.user?.agncyId || "USR-ADIDAS-9021"}</span>
                 </div>
                 <div className="flex justify-between items-center text-sm border-t border-white/10 pt-4">
                   <span className="text-neutral-400">Direct settlement routing</span>

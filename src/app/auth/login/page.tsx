@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useApp } from "../../../context/AppContext";
-import { getRegisteredUsers } from "../../../lib/authStorage";
+import { loginWithFirebase } from "../../../lib/firebaseAuth";
 
 const DEMO_EMAIL = "martin.safi@adidas.com";
 const DEMO_PASSWORD = "password123";
@@ -50,60 +50,62 @@ export default function LoginPage() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validate()) return;
 
     const normalizedEmail = email.trim().toLowerCase();
-    const registeredUser = getRegisteredUsers().find(
-      (user) => user.email.toLowerCase() === normalizedEmail
-    );
-    const isDemoLogin = normalizedEmail === DEMO_EMAIL && password === DEMO_PASSWORD;
-    const isGmailLogin = isGmailAddress(normalizedEmail);
-
-    if (!registeredUser && !isDemoLogin && !isGmailLogin) {
-      setErrors({ email: "Use a Gmail address, demo account, or create an account first." });
-      return;
-    }
-
-    if (registeredUser && !isGmailLogin && registeredUser.password !== password) {
-      setErrors({ password: "Incorrect password for this account." });
-      return;
-    }
 
     setIsLoading(true);
-    setTimeout(() => {
-      // Login inside AppContext
-      const fallbackName = normalizedEmail
-        .split("@")[0]
-        .split(/[._-]/)
-        .filter(Boolean)
-        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-        .join(" ");
-      const accountType =
-        roleType === "brand"
-          ? "brand"
-          : roleType === "agency"
-          ? "agency"
-          : "talent_independent";
-      loginUser(
-        normalizedEmail,
-        registeredUser?.fullName || fallbackName || "AgncyPay User",
-        accountType,
-        {
-          workspaceName: registeredUser?.workspaceName,
-          workspaceType: accountType,
-          agencyId: registeredUser?.agencyId,
-        }
-      );
-      setIsLoading(false);
+    try {
+      const userProfile = await loginWithFirebase(normalizedEmail, password);
+      
+      if (userProfile) {
+        // Role Mismatch Guard
+        const selectedRole = roleType === "individual" ? "talent_independent" : roleType;
+        const profileRole = userProfile.accountType === "individual" ? "talent_independent" : userProfile.accountType;
 
-      if (roleType === "brand" || roleType === "agency") {
-        router.push(safeNextPath || "/branddashboard");
-      } else {
-        router.push(safeNextPath || "/dashboard");
+        if (profileRole !== selectedRole) {
+          const displayRole = userProfile.accountType === "brand" 
+            ? "Brand" 
+            : userProfile.accountType === "agency" 
+            ? "Agency" 
+            : "Talent";
+          setErrors({ 
+            email: `Account type mismatch. Please select the correct login role: ${displayRole}.` 
+          });
+          
+          // Sign out from Firebase Auth to clear session
+          const { logoutWithFirebase } = require("../../../lib/firebaseAuth");
+          await logoutWithFirebase();
+          setIsLoading(false);
+          return;
+        }
+
+        // Sync context
+        loginUser(
+          userProfile.email,
+          userProfile.fullName,
+          userProfile.accountType,
+          {
+            workspaceName: userProfile.workspaceName,
+            workspaceType: userProfile.accountType === "brand" ? "brand" : userProfile.accountType === "agency" ? "agency" : "talent_independent",
+            agencyId: userProfile.agencyId
+          }
+        );
+
+        if (userProfile.accountType === "brand" || userProfile.accountType === "agency") {
+          router.push(safeNextPath || "/branddashboard");
+        } else {
+          router.push(safeNextPath || "/dashboard");
+        }
       }
-    }, 1500);
+    } catch (error: any) {
+      console.error("Firebase login failed:", error);
+      setErrors({ email: error.message || "Failed to log in. Please check your credentials." });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -256,11 +258,11 @@ export default function LoginPage() {
                   setEmail(e.target.value);
                   if (errors.email) setErrors({});
                 }}
-                className={`w-full border !bg-[#0B0B0B] !border-[#262626] ${errors.email ? "border-white/40" : ""} focus:border-white/30 focus:outline-none rounded-lg px-4 py-3 text-sm text-[#F8FAFC] placeholder-[#5A5A62] transition-colors`}
+                className={`w-full border !bg-[#0B0B0B] !border-[#262626] ${errors.email ? "!border-[#ff453a]/50 focus:!border-[#ff453a]" : ""} focus:border-white/30 focus:outline-none rounded-lg px-4 py-3 text-sm text-[#F8FAFC] placeholder-[#5A5A62] transition-colors`}
                 placeholder="you@company.com"
               />
               {errors.email && (
-                <span className="text-xs text-white mt-0.5">{errors.email}</span>
+                <span className="text-xs text-[#ff453a] mt-0.5">{errors.email}</span>
               )}
             </div>
 
@@ -285,11 +287,11 @@ export default function LoginPage() {
                   setPassword(e.target.value);
                   if (errors.password) setErrors({});
                 }}
-                className={`w-full border !bg-[#0B0B0B] !border-[#262626] ${errors.password ? "border-white/40" : ""} focus:border-white/30 focus:outline-none rounded-lg px-4 py-3 text-sm text-[#F8FAFC] placeholder-[#5A5A62] transition-colors`}
+                className={`w-full border !bg-[#0B0B0B] !border-[#262626] ${errors.password ? "!border-[#ff453a]/50 focus:!border-[#ff453a]" : ""} focus:border-white/30 focus:outline-none rounded-lg px-4 py-3 text-sm text-[#F8FAFC] placeholder-[#5A5A62] transition-colors`}
                 placeholder="••••••••"
               />
               {errors.password && (
-                <span className="text-xs text-white mt-0.5">{errors.password}</span>
+                <span className="text-xs text-[#ff453a] mt-0.5">{errors.password}</span>
               )}
             </div>
 

@@ -33,6 +33,7 @@ import {
   Check
 } from "lucide-react";
 import { useApp } from "../../context/AppContext";
+import { subscribeInvoices, updateInvoiceStatus, resetDemoFirestore, createFirestoreInvoice } from "../../lib/firebaseInvoices";
 
 // Refactored Data Models
 interface SplitItem {
@@ -166,43 +167,35 @@ export default function BrandDashboardPage() {
   const [payingInvoiceId, setPayingInvoiceId] = useState<string | null>(null);
   const [payoutingInvoiceId, setPayoutingInvoiceId] = useState<string | null>(null);
 
-  useEffect(() => {
+  // New invoice state hooks
+  const [isNewInvoiceOpen, setIsNewInvoiceOpen] = useState(false);
+  const [newCampaign, setNewCampaign] = useState("");
+  const [newTalent, setNewTalent] = useState("");
+  const [newAmount, setNewAmount] = useState("");
+  const [newDue, setNewDue] = useState("");
+  const [isCreatingInvoice, setIsCreatingInvoice] = useState(false);
 
+  useEffect(() => {
     const savedVolume = localStorage.getItem("brand_stats_paid_volume");
     if (savedVolume) setLivePaidVolume(parseFloat(savedVolume));
     
     const savedSavings = localStorage.getItem("brand_stats_autosplit_savings");
     if (savedSavings) setLiveAutosplitSavings(parseFloat(savedSavings));
 
-    const localInvoices = localStorage.getItem("brand_widget_invoices");
-    if (localInvoices) {
-      setWidgetInvoices(JSON.parse(localInvoices));
-    } else {
-      const initial = [
-        {
-          id: "W-INV-001",
-          agency: "Elite model agency",
-          campaign: "Summer campaign",
-          talent: "sarah",
-          dueDate: "Jul 13",
-          amount: 14999.98,
-          status: "pending",
-          talentPayoutStatus: "pending"
-        },
-        {
-          id: "W-INV-002",
-          agency: "CCA",
-          campaign: "Summer campaign",
-          talent: "Dj kivi",
-          dueDate: "Jul 12",
-          amount: 4499.98,
-          status: "pending",
-          talentPayoutStatus: "pending"
-        }
-      ];
-      setWidgetInvoices(initial);
-      localStorage.setItem("brand_widget_invoices", JSON.stringify(initial));
-    }
+    // Real-time listener for Firestore invoices
+    const unsubscribe = subscribeInvoices((invoicesList) => {
+      const mappedList = invoicesList.map((inv) => ({
+        id: inv.id,
+        agency: inv.agency,
+        campaign: inv.campaign,
+        talent: inv.talent,
+        dueDate: inv.due,
+        amount: inv.amount,
+        status: inv.status,
+        talentPayoutStatus: inv.talentPayoutStatus
+      }));
+      setWidgetInvoices(mappedList);
+    });
 
     const localNotifs = localStorage.getItem("agency_notifications");
     if (localNotifs) {
@@ -223,8 +216,6 @@ export default function BrandDashboardPage() {
       if (savedVolume) setLivePaidVolume(parseFloat(savedVolume));
       const savedSavings = localStorage.getItem("brand_stats_autosplit_savings");
       if (savedSavings) setLiveAutosplitSavings(parseFloat(savedSavings));
-      const localInvoices = localStorage.getItem("brand_widget_invoices");
-      if (localInvoices) setWidgetInvoices(JSON.parse(localInvoices));
       const localNotifs = localStorage.getItem("agency_notifications");
       if (localNotifs) setNotifications(JSON.parse(localNotifs));
       const localQueue = localStorage.getItem("brand_queue_invoices");
@@ -235,6 +226,7 @@ export default function BrandDashboardPage() {
     window.addEventListener("syncBrandDashboard", syncStates);
 
     return () => {
+      unsubscribe();
       window.removeEventListener("storage", syncStates);
       window.removeEventListener("syncBrandDashboard", syncStates);
     };
@@ -281,44 +273,89 @@ export default function BrandDashboardPage() {
     }, 1500);
   };
 
-  const handlePayAll = () => {
-    setIsPayingAll(true);
-    setTimeout(() => {
-      setWidgetInvoices((prev) => {
-        const unpaid = prev.filter((inv) => inv.status === "pending");
-        const next = prev.map((inv) => (inv.status === "pending" ? { ...inv, status: "paid" } : inv));
-        localStorage.setItem("brand_widget_invoices", JSON.stringify(next));
+  const handleCreateInvoice = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCampaign || !newTalent || !newAmount || !newDue) return;
 
-        const totalPaid = unpaid.reduce((sum, inv) => sum + inv.amount, 0);
-        if (totalPaid > 0) {
-          setLivePaidVolume((v) => {
-            const nv = v + totalPaid;
-            localStorage.setItem("brand_stats_paid_volume", nv.toString());
-            return nv;
-          });
-          setLiveAutosplitSavings((v) => {
-            const nv = v + totalPaid * 0.015;
-            localStorage.setItem("brand_stats_autosplit_savings", nv.toString());
-            return nv;
-          });
-
-          const newNotifs = unpaid.map((inv, idx) => ({
-            id: `notif-${Date.now()}-${idx}`,
-            message: `Brand paid invoice to ${inv.agency} ($${inv.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}) for ${inv.campaign}`,
-            timestamp: "Just now",
-            unread: true,
-          }));
-          setNotifications((notifs) => {
-            const updated = [...newNotifs, ...notifs];
-            localStorage.setItem("agency_notifications", JSON.stringify(updated));
-            return updated;
+    setIsCreatingInvoice(true);
+    try {
+      const activeAgencyName = state.workspaces.find(w => w.id === state.activeWorkspaceId)?.name || "Elite model agency";
+      
+      // Format YYYY-MM-DD date picker string to "MMM DD, YYYY" for visual uniformity
+      let formattedDue = newDue;
+      if (newDue.includes("-")) {
+        const dateParts = newDue.split("-");
+        if (dateParts.length === 3) {
+          const dateObj = new Date(parseInt(dateParts[0]), parseInt(dateParts[1]) - 1, parseInt(dateParts[2]));
+          formattedDue = dateObj.toLocaleDateString("en-US", {
+            month: "short",
+            day: "2-digit",
+            year: "numeric"
           });
         }
-        return next;
+      }
+
+      await createFirestoreInvoice({
+        campaign: newCampaign,
+        agency: activeAgencyName,
+        talent: newTalent,
+        amount: parseFloat(newAmount),
+        due: formattedDue
       });
+      
+      // Close and Reset Form
+      setIsNewInvoiceOpen(false);
+      setNewCampaign("");
+      setNewTalent("");
+      setNewAmount("");
+      setNewDue("");
+    } catch (error) {
+      console.error("Error creating invoice in Firestore:", error);
+    } finally {
+      setIsCreatingInvoice(false);
+    }
+  };
+
+  const handlePayAll = async () => {
+    setIsPayingAll(true);
+    try {
+      const unpaid = widgetInvoices.filter((inv) => inv.status === "pending");
+      const totalPaid = unpaid.reduce((sum, inv) => sum + inv.amount, 0);
+
+      // Perform updates in Firestore
+      for (const inv of unpaid) {
+        await updateInvoiceStatus(inv.id, "paid", "pending");
+      }
+
+      if (totalPaid > 0) {
+        setLivePaidVolume((v) => {
+          const nv = v + totalPaid;
+          localStorage.setItem("brand_stats_paid_volume", nv.toString());
+          return nv;
+        });
+        setLiveAutosplitSavings((v) => {
+          const nv = v + totalPaid * 0.015;
+          localStorage.setItem("brand_stats_autosplit_savings", nv.toString());
+          return nv;
+        });
+
+        // Add notifications to localStorage
+        const localNotifs = localStorage.getItem("agency_notifications");
+        const notifs = localNotifs ? JSON.parse(localNotifs) : [];
+        const newNotifs = unpaid.map((inv, idx) => ({
+          id: `notif-${Date.now()}-${idx}`,
+          message: `Brand paid invoice to ${inv.agency} ($${inv.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}) for ${inv.campaign}`,
+          timestamp: "Just now",
+          unread: true,
+        }));
+        localStorage.setItem("agency_notifications", JSON.stringify([...newNotifs, ...notifs]));
+      }
+    } catch (e) {
+      console.error("Error paying all invoices in Firestore:", e);
+    } finally {
       setIsPayingAll(false);
       window.dispatchEvent(new Event("syncBrandDashboard"));
-    }, 2000);
+    }
   };
 
   const handlePayoutTalent = (id: string) => {
@@ -502,16 +539,15 @@ export default function BrandDashboardPage() {
                   className="h-10 w-auto object-contain scale-[1.3] origin-left"
                 />
               </Link>
-              {(workspaceType === "brand" || workspaceType === "agency") && (
-                <span className="absolute -top-1.5 -right-4 translate-x-full rounded-full bg-white/[0.08] border border-white/[0.15] px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-[#A3A3A3]">
-                  {workspaceType === "brand" ? "Brand" : "Agency"}
-                </span>
-              )}
             </div>
             <span className="h-4 w-[1px] bg-white/20 hidden md:block" />
             <div className="hidden md:flex items-center gap-2 px-3 py-1 rounded-full bg-white/[0.03] border border-white/20 text-[11px] font-bold uppercase tracking-wider text-[#A3A3A3]">
               <Building2 className="h-3 w-3 text-white" />
-              Corporate Portal
+              {workspaceType === "brand" 
+                ? "Brand Portal" 
+                : workspaceType === "agency" 
+                ? "Agency Portal" 
+                : "Talent Portal"}
             </div>
           </div>
 
@@ -559,13 +595,12 @@ export default function BrandDashboardPage() {
               </span>
             </div>
             <button
-              onClick={() => {
-                localStorage.removeItem("brand_widget_invoices");
-                localStorage.removeItem("brand_queue_invoices");
-                localStorage.removeItem("agency_notifications");
-                localStorage.removeItem("brand_stats_paid_volume");
-                localStorage.removeItem("brand_stats_autosplit_savings");
+              onClick={async () => {
+                localStorage.clear();
+                await resetDemoFirestore();
+                window.dispatchEvent(new Event("storage"));
                 window.dispatchEvent(new Event("syncBrandDashboard"));
+                router.push("/branddashboard");
               }}
               className="px-3 py-1.5 text-neutral-400 hover:text-white hover:bg-white/5 border border-white/25 hover:border-white/40 rounded-lg cursor-pointer flex items-center gap-1.5 text-[11px] font-bold transition-all"
               title="Reset Demo Data"
@@ -608,6 +643,17 @@ export default function BrandDashboardPage() {
               </>
             )}
           </div>
+
+          {/* "+ New Invoice" Button in the top right corner of the header section */}
+          {workspaceType === "agency" && (
+            <button
+              onClick={() => setIsNewInvoiceOpen(true)}
+              className="h-10 px-5 rounded-lg bg-white hover:bg-neutral-200 text-black text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md shrink-0 animate-fade-in"
+            >
+              <Sparkles className="h-4 w-4 text-black" />
+              + New Invoice
+            </button>
+          )}
         </div>
       </section>
 
@@ -797,8 +843,7 @@ export default function BrandDashboardPage() {
                               ) : (
                                 <button
                                   onClick={() => {
-                                    const targetMbId = inv.id === "W-INV-001" ? "MB-6984" : "MB-7044";
-                                    router.push(`/pay/${targetMbId}?mode=logged_in&returnTo=dashboard`);
+                                    router.push(`/pay/${inv.id}?mode=logged_in&returnTo=dashboard`);
                                   }}
                                   className="h-8 px-4 rounded-lg bg-white/5 border border-white/20 text-[11px] font-bold text-white hover:bg-white/15 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                                 >
@@ -812,13 +857,12 @@ export default function BrandDashboardPage() {
                                      Paid
                                    </span>
                                  ) : (
-                                   <button
-                                     onClick={() => router.push(`/payout/${inv.id}?returnTo=dashboard`)}
-                                     className="text-[10px] font-bold px-3 py-1.5 rounded-lg text-[#ff8a00] bg-[#261603] border border-[#ff8a00]/20 hover:bg-[#ff8a00]/10 hover:border-[#ff8a00]/40 transition-all cursor-pointer"
-                                     title="Click to advance payout to Talent"
-                                   >
-                                     Pending Payer (Pay Talent)
-                                   </button>
+                                   <span
+                                      className="text-[10px] font-bold px-3 py-1.5 rounded-lg text-[#ff8a00] bg-[#261603] border border-[#ff8a00]/20 cursor-default"
+                                      title="Awaiting client payment settlement"
+                                    >
+                                      Pending Payer
+                                    </span>
                                  )}
                                 
                                 {isPaid && (
@@ -1397,6 +1441,118 @@ export default function BrandDashboardPage() {
           </section>
         </div>
       )}
+
+      {/* New Invoice Modal */}
+      <AnimatePresence>
+        {isNewInvoiceOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 px-4 backdrop-blur-[2px]">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.2 }}
+              className="w-full max-w-[440px] rounded-2xl border border-white/20 bg-[#0A0A0A] p-6 shadow-2xl relative text-left"
+            >
+              <div className="pb-4 border-b border-white/20">
+                <h2 className="text-lg font-bold text-white tracking-tight flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-white" />
+                  Create New Invoice
+                </h2>
+                <p className="text-[11px] text-neutral-400 mt-1">
+                  Issue a campaign split invoice. Payout structures (15% agency, 85% talent) will auto-generate.
+                </p>
+              </div>
+
+              <form onSubmit={handleCreateInvoice} className="mt-6 space-y-4">
+                <div>
+                  <label className="block text-[11px] font-bold text-neutral-400 uppercase tracking-wider">
+                    Campaign Name
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Autumn Brand Socials"
+                    value={newCampaign}
+                    onChange={(e) => setNewCampaign(e.target.value)}
+                    className="mt-2 h-11 w-full border border-white/20 bg-black rounded-lg px-4 text-xs font-semibold text-white outline-none focus:border-white transition-all"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[11px] font-bold text-neutral-400 uppercase tracking-wider">
+                      Talent Name
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Sarah"
+                      value={newTalent}
+                      onChange={(e) => setNewTalent(e.target.value)}
+                      className="mt-2 h-11 w-full border border-white/20 bg-black rounded-lg px-4 text-xs font-semibold text-white outline-none focus:border-white transition-all"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-neutral-400 uppercase tracking-wider">
+                      Invoice Total ($)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      required
+                      placeholder="e.g. 14999.98"
+                      value={newAmount}
+                      onChange={(e) => setNewAmount(e.target.value)}
+                      className="mt-2 h-11 w-full border border-white/20 bg-black rounded-lg px-4 text-xs font-semibold text-white outline-none focus:border-white transition-all"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-neutral-400 uppercase tracking-wider">
+                    Due Date
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={newDue}
+                    onChange={(e) => setNewDue(e.target.value)}
+                    className="mt-2 h-11 w-full border border-white/20 bg-black rounded-lg px-4 text-xs font-semibold text-white outline-none focus:border-white transition-all [color-scheme:dark]"
+                  />
+                </div>
+
+                <div className="pt-4 border-t border-white/20 flex gap-3 justify-end text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setIsNewInvoiceOpen(false)}
+                    className="h-10 px-4 rounded-lg border border-white/20 bg-[#050505] font-bold text-white hover:bg-white/5 transition-all cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isCreatingInvoice}
+                    className="h-10 px-5 rounded-lg bg-white hover:bg-neutral-200 text-black font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 animate-pulse"
+                  >
+                    {isCreatingInvoice ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin text-black" />
+                        Creating...
+                      </>
+                    ) : (
+                      <>
+                        <Check className="h-4 w-4 text-black" />
+                        Create Invoice
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </main>
   );
 }

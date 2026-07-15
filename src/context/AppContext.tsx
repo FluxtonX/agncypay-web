@@ -254,7 +254,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<AppState>(DEFAULT_STATE);
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // Load state from localStorage on mount
+  // Load state from localStorage on mount & listen to Firebase Auth
   useEffect(() => {
     try {
       const stored = localStorage.getItem("agncypay_state");
@@ -265,6 +265,64 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       console.error("Failed to load local storage state:", e);
     }
     setIsLoaded(true);
+
+    // Dynamic import to prevent SSR/early loading issues
+    const { onAuthStateChanged } = require("firebase/auth");
+    const { auth, db } = require("../lib/firebase");
+    const { doc, getDoc } = require("firebase/firestore");
+
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: any) => {
+      if (firebaseUser) {
+        try {
+          const docRef = doc(db, "users", firebaseUser.uid);
+          const docSnap = await getDoc(docRef);
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            
+            // Sync user data to local context state
+            setState((prev) => {
+              if (prev.user && prev.user.email === data.email && prev.user.isLoggedIn) {
+                return prev;
+              }
+
+              const workspaceType = data.accountType === "brand" ? "brand" : data.accountType === "agency" ? "agency" : "talent_independent";
+              const workspaceId = prev.activeWorkspaceId || `${workspaceType}-${Date.now()}`;
+              
+              const existingWorkspace = prev.workspaces.find(w => w.id === workspaceId);
+              const workspace = existingWorkspace || {
+                id: workspaceId,
+                type: workspaceType,
+                name: data.workspaceName,
+                agncyId: data.agencyId,
+                verificationTrack: getVerificationTrack(workspaceType),
+                verificationStatus: "draft" as const,
+              };
+
+              return {
+                ...prev,
+                user: {
+                  agncyId: prev.user?.agncyId || `USR-${Math.floor(100000 + Math.random() * 900000)}`,
+                  fullName: data.fullName,
+                  email: data.email,
+                  accountType: data.accountType,
+                  isLoggedIn: true,
+                  emailVerified: true,
+                  activeWorkspaceId: workspaceId,
+                },
+                workspaces: existingWorkspace ? prev.workspaces : [...prev.workspaces, workspace],
+                activeWorkspaceId: workspaceId,
+              };
+            });
+          }
+        } catch (error) {
+          console.error("Error restoring Firebase Auth session:", error);
+        }
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
   }, []);
 
   // Save state to localStorage on state changes
@@ -583,7 +641,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
-  const resetState = () => {
+  const resetState = async () => {
+    try {
+      const { logoutWithFirebase } = require("../lib/firebaseAuth");
+      await logoutWithFirebase();
+    } catch (e) {
+      console.error("Firebase logout failed during resetState:", e);
+    }
     setState(DEFAULT_STATE);
   };
 

@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Check, ShieldCheck } from "lucide-react";
-import { saveRegisteredUser } from "../../../lib/authStorage";
+import { registerWithFirebase } from "../../../lib/firebaseAuth";
 import { WorkspaceType } from "../../../types/workspace";
 
 const DEMO_EMAIL = "martin.safi@adidas.com";
@@ -35,12 +35,12 @@ function FormField({
         type={type}
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className={`w-full rounded-lg border bg-[#0B0B0B] px-4 py-3 text-sm text-[#F8FAFC] placeholder-[#5A5A62] transition-colors focus:border-white/30 focus:outline-none ${
-          error ? "border-white/40" : "border-[#262626]"
+        className={`w-full rounded-lg border bg-[#0B0B0B] px-4 py-3 text-sm text-[#F8FAFC] placeholder-[#5A5A62] transition-colors focus:outline-none ${
+          error ? "border-[#ff453a]/50 focus:border-[#ff453a]" : "border-[#262626] focus:border-white/30"
         }`}
         placeholder={placeholder}
       />
-      {error ? <span className="text-xs text-white">{error}</span> : null}
+      {error ? <span className="text-xs text-[#ff453a] mt-0.5">{error}</span> : null}
     </label>
   );
 }
@@ -97,7 +97,7 @@ export default function RegisterPage() {
     return Object.keys(nextErrors).length === 0;
   };
 
-  const handleSubmit = (event: React.FormEvent) => {
+  const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!validate()) return;
 
@@ -106,19 +106,21 @@ export default function RegisterPage() {
     const normalizedWorkspaceName = workspaceName.trim();
 
     setIsLoading(true);
-    window.setTimeout(() => {
-      saveRegisteredUser({
-        email: normalizedEmail,
+    try {
+      await registerWithFirebase(
+        normalizedEmail,
         password,
-        fullName: normalizedName,
-        accountType: accountType,
-        workspaceType: accountType,
-        workspaceName: normalizedWorkspaceName,
-      });
-
-      setIsLoading(false);
+        normalizedName,
+        accountType,
+        normalizedWorkspaceName
+      );
       router.push("/auth/login");
-    }, 900);
+    } catch (error: any) {
+      console.error("Firebase registration failed:", error);
+      setErrors({ email: error.message || "Failed to create account. Please try again." });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -338,7 +340,7 @@ export default function RegisterPage() {
                 <span className="font-medium text-white">Privacy Policy</span>
               </label>
             </div>
-            {errors.agree ? <span className="block text-xs text-white">{errors.agree}</span> : null}
+            {errors.agree ? <span className="block text-xs text-[#ff453a] mt-0.5">{errors.agree}</span> : null}
 
             <button
               type="submit"
