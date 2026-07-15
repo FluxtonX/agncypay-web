@@ -318,44 +318,56 @@ export default function BrandDashboardPage() {
 
   const handlePayAll = async () => {
     setIsPayingAll(true);
-    try {
-      const unpaid = widgetInvoices.filter((inv) => inv.status === "pending");
-      const totalPaid = unpaid.reduce((sum, inv) => sum + inv.amount, 0);
+    setProcessingStage("verifying");
 
-      // Perform updates in Firestore
-      for (const inv of unpaid) {
-        await updateInvoiceStatus(inv.id, "paid", "pending");
+    setTimeout(async () => {
+      setProcessingStage("routing");
+      try {
+        const unpaid = widgetInvoices.filter((inv) => inv.status === "pending");
+        const totalPaid = unpaid.reduce((sum, inv) => sum + inv.amount, 0);
+
+        // Perform updates in Firestore
+        for (const inv of unpaid) {
+          await updateInvoiceStatus(inv.id, "paid", "pending");
+        }
+
+        if (totalPaid > 0) {
+          setLivePaidVolume((v) => {
+            const nv = v + totalPaid;
+            localStorage.setItem("brand_stats_paid_volume", nv.toString());
+            return nv;
+          });
+          setLiveAutosplitSavings((v) => {
+            const nv = v + totalPaid * 0.015;
+            localStorage.setItem("brand_stats_autosplit_savings", nv.toString());
+            return nv;
+          });
+
+          // Add notifications to localStorage
+          const localNotifs = localStorage.getItem("agency_notifications");
+          const notifs = localNotifs ? JSON.parse(localNotifs) : [];
+          const newNotifs = unpaid.map((inv, idx) => ({
+            id: `notif-${Date.now()}-${idx}`,
+            message: `Brand paid invoice to ${inv.agency} ($${inv.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}) for ${inv.campaign}`,
+            timestamp: "Just now",
+            unread: true,
+          }));
+          localStorage.setItem("agency_notifications", JSON.stringify([...newNotifs, ...notifs]));
+        }
+
+        // Show success state
+        setProcessingStage("success");
+        setTimeout(() => {
+          setIsPayingAll(false);
+          setProcessingStage("idle");
+          window.dispatchEvent(new Event("syncBrandDashboard"));
+        }, 1800);
+      } catch (e) {
+        console.error("Error paying all invoices in Firestore:", e);
+        setIsPayingAll(false);
+        setProcessingStage("idle");
       }
-
-      if (totalPaid > 0) {
-        setLivePaidVolume((v) => {
-          const nv = v + totalPaid;
-          localStorage.setItem("brand_stats_paid_volume", nv.toString());
-          return nv;
-        });
-        setLiveAutosplitSavings((v) => {
-          const nv = v + totalPaid * 0.015;
-          localStorage.setItem("brand_stats_autosplit_savings", nv.toString());
-          return nv;
-        });
-
-        // Add notifications to localStorage
-        const localNotifs = localStorage.getItem("agency_notifications");
-        const notifs = localNotifs ? JSON.parse(localNotifs) : [];
-        const newNotifs = unpaid.map((inv, idx) => ({
-          id: `notif-${Date.now()}-${idx}`,
-          message: `Brand paid invoice to ${inv.agency} ($${inv.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}) for ${inv.campaign}`,
-          timestamp: "Just now",
-          unread: true,
-        }));
-        localStorage.setItem("agency_notifications", JSON.stringify([...newNotifs, ...notifs]));
-      }
-    } catch (e) {
-      console.error("Error paying all invoices in Firestore:", e);
-    } finally {
-      setIsPayingAll(false);
-      window.dispatchEvent(new Event("syncBrandDashboard"));
-    }
+    }, 1200);
   };
 
   const handlePayoutTalent = (id: string) => {
@@ -397,8 +409,54 @@ export default function BrandDashboardPage() {
   const [instantPayoutEnabled, setInstantPayoutEnabled] = useState<boolean>(true);
   const [transactions, setTransactions] = useState(RECENT_TRANSACTIONS);
 
+  // Map functional widget invoices into the full UI shape
+  const liveFunctionalInvoices: InvoiceMock[] = widgetInvoices.map(inv => {
+    // Determine the status equivalent for the UI logic
+    let uiStatus: "awaiting_approval" | "settled" | "talent_disbursed" = "awaiting_approval";
+    if (inv.status === "paid") {
+      uiStatus = inv.talentPayoutStatus === "disbursed" ? "talent_disbursed" : "settled";
+    }
+
+    return {
+      id: inv.id,
+      campaignName: inv.campaign,
+      brandName: "Brand Name",
+      createdDate: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+      dueDate: inv.dueDate,
+      amount: inv.amount,
+      defaultTerm: "Net-30",
+      status: uiStatus,
+      vendorFee: {
+        name: "Processing Fee",
+        role: "Vendor",
+        amount: inv.amount * 0.1, // Example 10%
+        walletId: "@agncypay",
+        avatar: "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=80&auto=format&fit=crop&q=80"
+      },
+      splitPool: {
+        total: inv.amount * 0.9,
+        splits: [
+          { name: inv.talent, role: "Talent", percentage: 85, amount: inv.amount * 0.9 * 0.85, walletId: "@talent", avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&auto=format&fit=crop&q=80" },
+          { name: inv.agency, role: "Agency", percentage: 15, amount: inv.amount * 0.9 * 0.15, walletId: "@agency", avatar: "https://images.unsplash.com/photo-1542204165-65bf26472b9b?w=80&auto=format&fit=crop&q=80" }
+        ]
+      }
+    };
+  });
+
+  // Combine static fallback and live functional data
+  const allInvoices = [...invoices, ...liveFunctionalInvoices];
+
+  // queueInvoices: role-based filtered list used in the Right Column queue panel
+  // We ONLY show live functional invoices in the queue (or all if you want, but functional is preferred)
+  const queueInvoices = liveFunctionalInvoices.filter(inv =>
+    workspaceType === "brand"
+      ? inv.status === "awaiting_approval"
+      : inv.status === "settled"
+  );
+
   // Active invoice helper
-  const activeInvoice = invoices.find(inv => inv.id === selectedInvoiceId) || invoices[0] || INITIAL_INVOICES[0];
+  // Falls back to first invoice in queue or first overall
+  const activeInvoice = allInvoices.find(inv => inv.id === selectedInvoiceId) || queueInvoices[0] || allInvoices[0] || null;
 
   // Set default term when active invoice changes
   useEffect(() => {
@@ -411,7 +469,7 @@ export default function BrandDashboardPage() {
   const [processingStage, setProcessingStage] = useState<"idle" | "verifying" | "routing" | "success">("idle");
 
   const handleApproveAndPay = () => {
-    if (activeInvoice.status !== "awaiting_approval") return;
+    if (!activeInvoice || activeInvoice.status !== "awaiting_approval") return;
     
     setProcessingStage("verifying");
     
@@ -661,48 +719,45 @@ export default function BrandDashboardPage() {
       <div className="max-w-[1520px] w-full mx-auto px-6 py-8 flex-1 grid grid-cols-1 lg:grid-cols-12 gap-8">
         
         {/* Left Column - Core Approval and Splits (Wider) */}
-        <div className={`${workspaceType === "brand" ? "lg:col-span-12" : "lg:col-span-8"} space-y-6`}>
+        <div className="lg:col-span-8 space-y-6">
           
 
 
           {/* Analytics Cards Grid */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {[
-              { label: "Total Paid Volume", value: `$${livePaidVolume.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, trend: "+12.4%", icon: TrendingUp },
-              { 
-                label: "Awaiting Approval", 
-                value: `$${(
-                  invoices.filter(i => i.status === "awaiting_approval").reduce((acc, curr) => acc + curr.amount, 0) +
-                  widgetInvoices.filter(i => i.status === "pending").reduce((acc, curr) => acc + curr.amount, 0)
-                ).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 
-                count: `${
-                  invoices.filter(i => i.status === "awaiting_approval").length +
-                  widgetInvoices.filter(i => i.status === "pending").length
-                } invoices`, 
-                icon: Clock 
-              },
-              { label: "Instant Net-0 Funded", value: `$${liveNet0Funded.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, detail: "AgncyPay liquidity", icon: Coins },
-              { label: "Autosplit Fee Savings", value: `$${liveAutosplitSavings.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, detail: "Single payment rail", icon: ShieldCheck }
-            ].map((stat, idx) => {
-              const isAwaitingApproval = stat.label === "Awaiting Approval";
+            {(() => {
+              // Pre-compute awaiting amounts per role to avoid IIFE in array literal
+              const awaitingItems = workspaceType === "brand"
+                ? [
+                    ...invoices.filter(i => i.status === "awaiting_approval"),
+                    ...widgetInvoices.filter(i => i.status === "pending")
+                  ]
+                : widgetInvoices.filter(i => i.status === "paid" && i.talentPayoutStatus !== "disbursed");
+              const awaitingTotal = awaitingItems.reduce((acc, curr) => acc + curr.amount, 0);
+              const awaitingCount = awaitingItems.length;
+
+              const stats = [
+                { label: "Total Paid Volume", value: `$${livePaidVolume.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, trend: "+12.4%", icon: TrendingUp },
+                {
+                  label: "Awaiting Approval",
+                  value: `$${awaitingTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+                  count: `${awaitingCount} invoice${awaitingCount !== 1 ? "s" : ""}`,
+                  icon: Clock
+                },
+                { label: "Instant Net-0 Funded", value: `$${liveNet0Funded.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, detail: "AgncyPay liquidity", icon: Coins },
+                { label: "Autosplit Fee Savings", value: `$${liveAutosplitSavings.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, detail: "Single payment rail", icon: ShieldCheck }
+              ];
+
+              return stats.map((stat, idx) => {
+                const isAwaitingApproval = stat.label === "Awaiting Approval";
               return (
                 <div 
                   key={idx} 
-                  onClick={() => {
-                    if (isAwaitingApproval) {
-                      router.push("/branddashboard/invoices");
-                    }
-                  }}
-                  className={`bg-[#050505] rounded-xl border border-white/20 p-4 shadow-sm transition-all ${
-                    isAwaitingApproval 
-                      ? "cursor-pointer hover:border-white/20 hover:bg-white/[0.01]" 
-                      : ""
-                  }`}
+                  className="bg-[#050505] rounded-xl border border-white/20 p-4 shadow-sm"
                 >
                   <div className="flex justify-between items-start">
                     <span className="text-[11px] font-bold text-[#8f8f8f] uppercase tracking-wider flex items-center gap-1">
                       {stat.label}
-                      {isAwaitingApproval && <ChevronRight className="h-3 w-3 text-[#4B6BFB]" />}
                     </span>
                     <stat.icon className="h-4 w-4 text-[#8f8f8f]" />
                   </div>
@@ -715,7 +770,8 @@ export default function BrandDashboardPage() {
                   </div>
                 </div>
               );
-            })}
+              });
+            })()}
           </div>
 
           {/* CRM Invoices Widget */}
@@ -1259,20 +1315,27 @@ export default function BrandDashboardPage() {
         </div>
 
         {/* Right Column - Queue and History Ledger (Narrower) */}
-        {workspaceType === "agency" && (
-          <div className="lg:col-span-4 space-y-6">
-            
-            {/* Invoice Approval Queue */}
-            <div className="bg-[#050505] rounded-2xl border border-white/20 p-5 shadow-sm">
-              <div className="flex justify-between items-center pb-3 border-b border-white/20">
-                <h3 className="text-xs font-black uppercase tracking-wider text-[#8f8f8f]">Approval Queue</h3>
-                <span className="text-[10px] font-bold text-white bg-white/10 border border-white/20 px-2 py-0.5 rounded-full">
-                  {invoices.filter(i => i.status === "awaiting_approval").length} Pending
-                </span>
-              </div>
+        <div id="approval-queue-section" className="lg:col-span-4 space-y-6">
+          
+          {/* Invoice Approval Queue */}
+          <div className="bg-[#050505] rounded-2xl border border-white/20 p-5 shadow-sm">
+            <div className="flex justify-between items-center pb-3 border-b border-white/20">
+              <h3 className="text-xs font-black uppercase tracking-wider text-[#8f8f8f]">Approval Queue</h3>
+              <span className="text-[10px] font-bold text-white bg-white/10 border border-white/20 px-2 py-0.5 rounded-full">
+                {queueInvoices.length} Pending
+              </span>
+            </div>
 
-              <div className="mt-4 space-y-3">
-                {invoices.map((inv) => {
+            <div className="mt-4 space-y-3">
+              {queueInvoices.length === 0 ? (
+                <div className="py-8 text-center">
+                  <CheckCircle2 className="h-6 w-6 text-emerald-500 mx-auto mb-2" />
+                  <p className="text-xs font-semibold text-neutral-500">
+                    {workspaceType === "brand" ? "No pending approvals" : "No pending talent payouts"}
+                  </p>
+                </div>
+              ) : (
+                queueInvoices.map((inv) => {
                   const isSelected = inv.id === selectedInvoiceId;
                   const isAwaiting = inv.status === "awaiting_approval";
 
@@ -1309,80 +1372,83 @@ export default function BrandDashboardPage() {
                       </div>
                     </button>
                   );
-                })}
+                })
+              )}
               </div>
             </div>
 
             {/* Node Map Panel */}
-            <div className="bg-[#050505] rounded-2xl border border-white/20 p-5 shadow-sm">
-              <h3 className="text-xs font-black uppercase tracking-wider text-[#8f8f8f] pb-3 border-b border-white/20">
-                Creative Node Network
-              </h3>
+            {workspaceType !== "brand" && (
+              <div className="bg-[#050505] rounded-2xl border border-white/20 p-5 shadow-sm">
+                <h3 className="text-xs font-black uppercase tracking-wider text-[#8f8f8f] pb-3 border-b border-white/20">
+                  Creative Node Network
+                </h3>
 
-              {/* Map representation */}
-              <div className="mt-4 h-48 rounded-xl border border-white/20 bg-black relative overflow-hidden flex flex-col justify-end p-4 shadow-inner">
-                {/* Dot grid back */}
-                <div className="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.05)_1px,transparent_1px)] [background-size:16px_16px] opacity-70" />
+                {/* Map representation */}
+                <div className="mt-4 h-48 rounded-xl border border-white/20 bg-black relative overflow-hidden flex flex-col justify-end p-4 shadow-inner">
+                  {/* Dot grid back */}
+                  <div className="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.05)_1px,transparent_1px)] [background-size:16px_16px] opacity-70" />
 
-                {/* Glowing active node lines */}
-                <svg className="absolute inset-0 h-full w-full pointer-events-none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M 50 50 L 150 100 L 250 60" fill="none" stroke="#ffffff" strokeWidth="1.5" strokeDasharray="4 4" className="animate-[dash_10s_linear_infinite]" />
-                  <path d="M 150 100 L 80 150" fill="none" stroke="#ffffff" strokeWidth="1.5" strokeDasharray="4 4" className="animate-[dash_8s_linear_infinite]" />
-                </svg>
+                  {/* Glowing active node lines */}
+                  <svg className="absolute inset-0 h-full w-full pointer-events-none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M 50 50 L 150 100 L 250 60" fill="none" stroke="#ffffff" strokeWidth="1.5" strokeDasharray="4 4" className="animate-[dash_10s_linear_infinite]" />
+                    <path d="M 150 100 L 80 150" fill="none" stroke="#ffffff" strokeWidth="1.5" strokeDasharray="4 4" className="animate-[dash_8s_linear_infinite]" />
+                  </svg>
 
-                {/* Nodes */}
-                <div className="absolute top-10 left-12 flex flex-col items-center">
-                  <div className="h-6 w-6 rounded-full bg-neutral-800 border-2 border-white flex items-center justify-center text-[8px] font-black text-white shadow">
-                    NY
+                  {/* Nodes */}
+                  <div className="absolute top-10 left-12 flex flex-col items-center">
+                    <div className="h-6 w-6 rounded-full bg-neutral-800 border-2 border-white flex items-center justify-center text-[8px] font-black text-white shadow">
+                      NY
+                    </div>
+                    <span className="text-[8px] font-bold text-[#8f8f8f] mt-1">Brand Node</span>
                   </div>
-                  <span className="text-[8px] font-bold text-[#8f8f8f] mt-1">Brand Node</span>
+
+                  <div className="absolute top-20 right-16 flex flex-col items-center">
+                    <div className="h-6 w-6 rounded-full bg-neutral-800 border-2 border-white flex items-center justify-center text-[8px] font-black text-white shadow">
+                      LDN
+                    </div>
+                    <span className="text-[8px] font-bold text-[#8f8f8f] mt-1">Talent Node</span>
+                  </div>
+
+                  <div className="absolute bottom-10 left-16 flex flex-col items-center">
+                    <div className="h-6 w-6 rounded-full bg-neutral-800 border-2 border-white flex items-center justify-center text-[8px] font-black text-white shadow">
+                      PAR
+                    </div>
+                    <span className="text-[8px] font-bold text-[#8f8f8f] mt-1">Agency Node</span>
+                  </div>
+
+                  {/* Map Button indicator */}
+                  <div className="relative z-10 bg-[#0A0A0A] border border-white/20 rounded-lg p-2.5 shadow-sm text-[11px]">
+                    <div className="flex justify-between items-center">
+                      <span className="font-bold text-white flex items-center gap-1.5">
+                        <MapPin className="h-3.5 w-3.5 text-white" />
+                        3 Active Nodes Connected
+                      </span>
+                      <ArrowUpRight className="h-3.5 w-3.5 text-neutral-400" />
+                    </div>
+                  </div>
                 </div>
 
-                <div className="absolute top-20 right-16 flex flex-col items-center">
-                  <div className="h-6 w-6 rounded-full bg-neutral-800 border-2 border-white flex items-center justify-center text-[8px] font-black text-white shadow">
-                    LDN
+                {/* General Info list */}
+                <div className="mt-4 space-y-2 text-xs">
+                  <div className="flex justify-between items-center py-2 border-b border-white/20">
+                    <span className="text-[#8f8f8f] font-semibold">Active Campaign</span>
+                    <span className="font-bold text-white">Adidas Originals Q3</span>
                   </div>
-                  <span className="text-[8px] font-bold text-[#8f8f8f] mt-1">Talent Node</span>
-                </div>
-
-                <div className="absolute bottom-10 left-16 flex flex-col items-center">
-                  <div className="h-6 w-6 rounded-full bg-neutral-800 border-2 border-white flex items-center justify-center text-[8px] font-black text-white shadow">
-                    PAR
+                  <div className="flex justify-between items-center py-2 border-b border-white/20">
+                    <span className="text-[#8f8f8f] font-semibold">Settlement Period</span>
+                    <span className="font-bold text-white">Jul 1 - Sep 30, 2026</span>
                   </div>
-                  <span className="text-[8px] font-bold text-[#8f8f8f] mt-1">Agency Node</span>
-                </div>
-
-                {/* Map Button indicator */}
-                <div className="relative z-10 bg-[#0A0A0A] border border-white/20 rounded-lg p-2.5 shadow-sm text-[11px]">
-                  <div className="flex justify-between items-center">
-                    <span className="font-bold text-white flex items-center gap-1.5">
-                      <MapPin className="h-3.5 w-3.5 text-white" />
-                      3 Active Nodes Connected
+                  <div className="flex justify-between items-center py-2">
+                    <span className="text-[#8f8f8f] font-semibold">Tax Documentation</span>
+                    <span className="font-bold text-emerald-400 flex items-center gap-1">
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                      All Nodes W-9 Active
                     </span>
-                    <ArrowUpRight className="h-3.5 w-3.5 text-neutral-400" />
                   </div>
                 </div>
               </div>
-
-              {/* General Info list */}
-              <div className="mt-4 space-y-2 text-xs">
-                <div className="flex justify-between items-center py-2 border-b border-white/20">
-                  <span className="text-[#8f8f8f] font-semibold">Active Campaign</span>
-                  <span className="font-bold text-white">Adidas Originals Q3</span>
-                </div>
-                <div className="flex justify-between items-center py-2 border-b border-white/20">
-                  <span className="text-[#8f8f8f] font-semibold">Settlement Period</span>
-                  <span className="font-bold text-white">Jul 1 - Sep 30, 2026</span>
-                </div>
-                <div className="flex justify-between items-center py-2">
-                  <span className="text-[#8f8f8f] font-semibold">Tax Documentation</span>
-                  <span className="font-bold text-emerald-400 flex items-center gap-1">
-                    <CheckCircle2 className="h-3.5 w-3.5" />
-                    All Nodes W-9 Active
-                  </span>
-                </div>
-              </div>
-            </div>
+            )}
 
             {/* Recent Transactions Ledger */}
             <div className="bg-[#050505] rounded-2xl border border-white/20 p-5 shadow-sm">
@@ -1391,27 +1457,40 @@ export default function BrandDashboardPage() {
               </h3>
 
               <div className="mt-4 space-y-4">
-                {transactions.map((tx) => (
-                  <div key={tx.id} className="flex justify-between items-start gap-4 text-xs">
-                    <div className="min-w-0">
-                      <p className="font-bold text-white truncate leading-tight">{tx.campaign}</p>
-                      <div className="mt-1 flex items-center gap-2 text-[10px] text-[#8f8f8f] font-semibold">
-                        <span>{tx.date}</span>
-                        <span>•</span>
-                        <span>{tx.termSelected}</span>
+                {(() => {
+                  const realTxs = widgetInvoices.filter(inv =>
+                    workspaceType === "brand" ? inv.status === "paid" : inv.talentPayoutStatus === "disbursed"
+                  );
+                  
+                  if (realTxs.length === 0) {
+                    return (
+                      <div className="py-6 text-center text-xs text-neutral-500 font-semibold">
+                        No recent transactions found
+                      </div>
+                    );
+                  }
+
+                  return realTxs.map((tx) => (
+                    <div key={tx.id} className="flex justify-between items-start gap-4 text-xs">
+                      <div className="min-w-0">
+                        <p className="font-bold text-white truncate leading-tight">{tx.campaign}</p>
+                        <div className="mt-1 flex items-center gap-2 text-[10px] text-[#8f8f8f] font-semibold">
+                          <span>{new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
+                          <span>•</span>
+                          <span>{workspaceType === "brand" ? "Net-30" : "Net-0 (Instant)"}</span>
+                        </div>
+                      </div>
+
+                      <div className="text-right shrink-0">
+                        <p className="font-bold text-white">${tx.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                        <span className="text-[10px] text-white font-bold block mt-0.5">{workspaceType === "brand" ? "ACH Direct" : "AgncyPay Wallet"}</span>
                       </div>
                     </div>
-
-                    <div className="text-right shrink-0">
-                      <p className="font-bold text-white">{tx.total}</p>
-                      <span className="text-[10px] text-white font-bold block mt-0.5">{tx.method}</span>
-                    </div>
-                  </div>
-                ))}
+                  ));
+                })()}
               </div>
-            </div>
           </div>
-        )}
+        </div>
       </div>
 
       {/* Footer */}
@@ -1433,11 +1512,33 @@ export default function BrandDashboardPage() {
       {isPayingAll && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 px-4 backdrop-blur-[2px]">
           <section className="w-full max-w-[300px] rounded-[10px] border border-[#2f2f2f] bg-[#202020] p-6 text-center shadow-2xl">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-[#555] bg-[#151515]">
-              <Lock className="h-7 w-7 animate-pulse text-white" />
-            </div>
-            <h2 className="mt-5 text-[23px] font-bold tracking-[-0.03em] text-white">processing payment</h2>
-            <p className="mt-2 text-[11px] leading-5 text-[#bdbdbd]">AgncyPay is securing the payment session.</p>
+            {(processingStage === "idle" || processingStage === "verifying") && (
+              <>
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-[#555] bg-[#151515]">
+                  <Lock className="h-7 w-7 animate-pulse text-white" />
+                </div>
+                <h2 className="mt-5 text-[23px] font-bold tracking-[-0.03em] text-white">verifying</h2>
+                <p className="mt-2 text-[11px] leading-5 text-[#bdbdbd]">Securing the payment session.</p>
+              </>
+            )}
+            {processingStage === "routing" && (
+              <>
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-[#555] bg-[#151515]">
+                  <Loader2 className="h-7 w-7 animate-spin text-white" />
+                </div>
+                <h2 className="mt-5 text-[23px] font-bold tracking-[-0.03em] text-white">processing</h2>
+                <p className="mt-2 text-[11px] leading-5 text-[#bdbdbd]">Routing funds to nodes.</p>
+              </>
+            )}
+            {processingStage === "success" && (
+              <>
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#16c95f] text-white shadow-[0_0_28px_rgba(22,201,95,0.3)]">
+                  <CheckCircle2 className="h-9 w-9" />
+                </div>
+                <h2 className="mt-5 text-[23px] font-bold tracking-[-0.03em] text-[#69f39b]">Success</h2>
+                <p className="mt-2 text-[11px] leading-5 text-[#c8f5d5]">Invoices successfully paid.</p>
+              </>
+            )}
           </section>
         </div>
       )}

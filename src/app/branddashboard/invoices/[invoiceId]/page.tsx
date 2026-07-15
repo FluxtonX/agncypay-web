@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Building2,
@@ -155,13 +155,10 @@ const INITIAL_INVOICES: InvoiceMock[] = [
   }
 ];
 
-interface PageProps {
-  params: Promise<{ invoiceId: string }>;
-}
-
-export default function InvoiceDetailPage({ params }: PageProps) {
+export default function InvoiceDetailPage() {
   const router = useRouter();
-  const { invoiceId } = React.use(params);
+  const params = useParams<{ invoiceId: string }>();
+  const invoiceId = params?.invoiceId;
   const { state, resetState } = useApp();
   const workspaceType = state.user ? state.user.accountType : "brand";
 
@@ -175,17 +172,26 @@ export default function InvoiceDetailPage({ params }: PageProps) {
   const activeInvoice = invoices.find(inv => inv.id === invoiceId) || invoices[0] || INITIAL_INVOICES[0];
 
   React.useEffect(() => {
-    const localQueue = localStorage.getItem("brand_queue_invoices");
+    const userEmail = state.user?.email || "guest";
+    const isDemoUser = userEmail === "martin.safi@adidas.com";
+    const queueKey = `brand_queue_invoices_${userEmail}`;
+
+    const localQueue = localStorage.getItem(queueKey);
+    const defaultQueue = isDemoUser ? INITIAL_INVOICES : [];
     if (localQueue) {
       setInvoices(JSON.parse(localQueue));
     } else {
-      setInvoices(INITIAL_INVOICES);
-      localStorage.setItem("brand_queue_invoices", JSON.stringify(INITIAL_INVOICES));
+      setInvoices(defaultQueue);
+      localStorage.setItem(queueKey, JSON.stringify(defaultQueue));
     }
 
     const syncStates = () => {
-      const localQueue = localStorage.getItem("brand_queue_invoices");
-      if (localQueue) setInvoices(JSON.parse(localQueue));
+      const localQueue = localStorage.getItem(queueKey);
+      if (localQueue) {
+        setInvoices(JSON.parse(localQueue));
+      } else {
+        setInvoices(defaultQueue);
+      }
     };
 
     window.addEventListener("storage", syncStates);
@@ -195,7 +201,7 @@ export default function InvoiceDetailPage({ params }: PageProps) {
       window.removeEventListener("storage", syncStates);
       window.removeEventListener("syncBrandDashboard", syncStates);
     };
-  }, []);
+  }, [state.user]);
 
   React.useEffect(() => {
     if (activeInvoice) {
@@ -206,6 +212,10 @@ export default function InvoiceDetailPage({ params }: PageProps) {
   const handleApproveAndPay = () => {
     if (activeInvoice.status !== "awaiting_approval") return;
     
+    const userEmail = state.user?.email || "guest";
+    const queueKey = `brand_queue_invoices_${userEmail}`;
+    const notifsKey = `agency_notifications_${userEmail}`;
+
     setProcessingStage("verifying");
     
     setTimeout(() => {
@@ -219,22 +229,12 @@ export default function InvoiceDetailPage({ params }: PageProps) {
             const next = prev.map(inv => 
               inv.id === activeInvoice.id ? { ...inv, status: "settled" as const } : inv
             );
-            localStorage.setItem("brand_queue_invoices", JSON.stringify(next));
+            localStorage.setItem(queueKey, JSON.stringify(next));
             return next;
           });
 
-          // Add to paid stats
-          const amt = activeInvoice.amount;
-          const savedVolume = localStorage.getItem("brand_stats_paid_volume");
-          const v = savedVolume ? parseFloat(savedVolume) : 424500.00;
-          localStorage.setItem("brand_stats_paid_volume", (v + amt).toString());
-
-          const savedSavings = localStorage.getItem("brand_stats_autosplit_savings");
-          const s = savedSavings ? parseFloat(savedSavings) : 4250.00;
-          localStorage.setItem("brand_stats_autosplit_savings", (s + amt * 0.015).toString());
-
           // Add notification
-          const localNotifs = localStorage.getItem("agency_notifications");
+          const localNotifs = localStorage.getItem(notifsKey);
           const notifs = localNotifs ? JSON.parse(localNotifs) : [];
           const newNotif = {
             id: `notif-${Date.now()}`,
@@ -242,7 +242,7 @@ export default function InvoiceDetailPage({ params }: PageProps) {
             timestamp: "Just now",
             unread: true,
           };
-          localStorage.setItem("agency_notifications", JSON.stringify([newNotif, ...notifs]));
+          localStorage.setItem(notifsKey, JSON.stringify([newNotif, ...notifs]));
 
           setProcessingStage("idle");
           window.dispatchEvent(new Event("syncBrandDashboard"));

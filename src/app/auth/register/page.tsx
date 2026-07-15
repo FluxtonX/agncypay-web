@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Check, ShieldCheck, Eye, EyeOff } from "lucide-react";
+import { Check, ShieldCheck, Eye, EyeOff, Loader2 } from "lucide-react";
 import { registerWithFirebase } from "../../../lib/firebaseAuth";
 import { WorkspaceType } from "../../../types/workspace";
 
@@ -98,7 +98,9 @@ export default function RegisterPage() {
     } else if (!/\S+@\S+\.\S+/.test(email)) {
       nextErrors.email = "Invalid email format";
     }
-    if (!workspaceName.trim()) nextErrors.workspaceName = "Workspace name is required";
+    if (roleType !== "individual" && !workspaceName.trim()) {
+      nextErrors.workspaceName = "Workspace name is required";
+    }
     if (!password) {
       nextErrors.password = "Password is required";
     } else if (password.length < 8) {
@@ -118,7 +120,7 @@ export default function RegisterPage() {
 
     const normalizedEmail = email.trim().toLowerCase();
     const normalizedName = fullName.trim();
-    const normalizedWorkspaceName = workspaceName.trim();
+    const normalizedWorkspaceName = roleType === "individual" ? `${normalizedName} Workspace` : workspaceName.trim();
 
     setIsLoading(true);
     try {
@@ -273,22 +275,7 @@ export default function RegisterPage() {
                 </div>
               </div>
 
-              {(roleType === "brand" || roleType === "agency") && (
-                <div className="mb-6">
-                  <label className="text-[13px] font-medium text-[#E5E5EA] mb-3 block">Connect Accounting (Optional)</label>
-                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                    {["QuickBooks", "Xero", "NetSuite", "Sage"].map((erp) => (
-                      <button
-                        key={erp}
-                        type="button"
-                        className="flex h-10 items-center justify-center rounded-lg border border-[#262626] bg-[#0B0B0B] text-[11px] font-semibold text-[#8E8E93] transition-colors hover:border-white/40 hover:text-white"
-                      >
-                        {erp}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
+
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <FormField
@@ -313,17 +300,19 @@ export default function RegisterPage() {
                   placeholder="you@company.com"
                   error={errors.email}
                 />
-                <FormField
-                  id="workspaceName"
-                  label="Company / Workspace Name"
-                  value={workspaceName}
-                  onChange={(value) => {
-                    setWorkspaceName(value);
-                    if (errors.workspaceName) setErrors({});
-                  }}
-                  placeholder="Adidas"
-                  error={errors.workspaceName}
-                />
+                {roleType !== "individual" && (
+                  <FormField
+                    id="workspaceName"
+                    label="Company / Workspace Name"
+                    value={workspaceName}
+                    onChange={(value) => {
+                      setWorkspaceName(value);
+                      if (errors.workspaceName) setErrors({});
+                    }}
+                    placeholder="Adidas"
+                    error={errors.workspaceName}
+                  />
+                )}
                 <FormField
                   id="password"
                   type="password"
@@ -362,7 +351,14 @@ export default function RegisterPage() {
               disabled={isLoading}
               className="flex h-[46px] w-full items-center justify-center gap-2 rounded-lg bg-white text-sm font-semibold text-black transition-colors hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-70"
             >
-              {isLoading ? "Creating Account..." : "Create Account"}
+              {isLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin text-black" />
+                  Creating Account...
+                </>
+              ) : (
+                "Create Account"
+              )}
             </button>
 
             <div className="flex items-center justify-center gap-2 rounded-[10px] border border-[#262626] bg-[#0B0B0B] px-4 py-3 text-[13px] text-[#8E8E93]">

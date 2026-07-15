@@ -15,6 +15,13 @@ import {
   Settings,
   Users,
   X,
+  Loader2,
+  Sparkles,
+  RefreshCw,
+  Check,
+  Wallet,
+  Lock,
+  LogOut,
 } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { mainboardInvoices, formatMainboardMoney } from "../../lib/mainboard";
@@ -302,7 +309,7 @@ function Panel({
   children: React.ReactNode;
   className?: string;
 }) {
-  return <section className={cn("rounded-[13px] border border-[#3a3a3a] bg-[#050505]", className)}>{children}</section>;
+  return <section className={cn("rounded-[13px] border border-white/20 bg-[#050505]", className)}>{children}</section>;
 }
 
 function FinanceAppPromoCard({ className }: { className?: string }) {
@@ -700,9 +707,80 @@ function WalletContactsOverlay({
   );
 }
 
+function CreativeBankingPanel({
+  liquidity,
+  crystallised,
+  onWithdraw,
+  onNet0,
+}: {
+  liquidity: number;
+  crystallised: number;
+  onWithdraw: () => void;
+  onNet0: () => void;
+}) {
+  return (
+    <Panel className="p-5 relative overflow-hidden border-white/20">
+      <div>
+        <h2 className="text-[20px] font-bold text-white tracking-tight">Payout Balance</h2>
+        <p className="text-[12px] text-[#8E8E93] mt-1">Your available balances and earnings.</p>
+      </div>
+
+      <div className="mt-5 space-y-4">
+        {/* Liquidity Balance Row */}
+        <div className="p-5 bg-[#050505] border border-white/10 rounded-xl flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#0A2616] text-[#14C96B] border border-[#10b95f]/20">
+              <Wallet className="h-5 w-5" />
+            </div>
+            <div>
+              <span className="text-[12px] font-semibold text-neutral-400">Liquidity Balance</span>
+              <p className="mt-1 text-[26px] font-black text-white tracking-tight leading-none">
+                ${liquidity.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </p>
+              <p className="text-[11px] text-[#8E8E93] mt-1.5">Available to send, withdraw, or spend anytime.</p>
+            </div>
+          </div>
+          <button
+            onClick={onWithdraw}
+            disabled={liquidity <= 0}
+            className="h-10 px-4 rounded-xl border border-white/20 hover:border-white/40 bg-black hover:bg-white/[0.02] text-white text-[12px] font-bold transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+          >
+            Withdraw
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* Crystallised Balance Row */}
+        <div className="p-5 bg-[#050505] border border-white/10 rounded-xl flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#1A0B2E] text-[#9b51e0] border border-[#8a2be2]/20">
+              <Lock className="h-5 w-5" />
+            </div>
+            <div>
+              <span className="text-[12px] font-semibold text-neutral-400">Crystallised Balance</span>
+              <p className="mt-1 text-[26px] font-black text-white tracking-tight leading-none">
+                ${crystallised.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </p>
+              <p className="text-[11px] text-[#8E8E93] mt-1.5">Earnings locked from completed settlements.</p>
+            </div>
+          </div>
+          <button
+            onClick={onNet0}
+            disabled={crystallised <= 0}
+            className="h-10 px-4 rounded-xl border border-white/20 hover:border-white/40 bg-black hover:bg-white/[0.02] text-white text-[12px] font-bold transition-all flex items-center gap-1 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+          >
+            Early Payout
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+    </Panel>
+  );
+}
+
 function DashboardFooter() {
   return (
-    <footer className="mt-8 border-y border-[#343434]">
+    <footer className="mt-8 border-y border-white/20">
       <div className="mx-auto flex max-w-[1040px] flex-wrap items-center justify-center gap-8 px-4 py-8 text-[12px] font-bold text-white">
         <img src="/agncypaybrand.png" alt="AgncyPay" className="h-[48px] w-auto object-contain scale-[1.45]" />
         <Link href="/dashboard/support">Help</Link>
@@ -716,9 +794,14 @@ function DashboardFooter() {
 
 export default function DashboardHomePage() {
   const router = useRouter();
-  const { state } = useApp();
+  const { state, resetState } = useApp();
   const activeWorkspace = state.workspaces.find((w) => w.id === state.activeWorkspaceId);
   const workspaceType = activeWorkspace?.type || state.user?.accountType || "brand";
+
+  const handleLogout = () => {
+    resetState();
+    router.push("/auth/login");
+  };
 
   const [autosplitInvoiceIds, setAutosplitInvoiceIds] = useState<string[]>([dashboardInvoices[0]?.id || ""]);
   const [autosplitContactIds, setAutosplitContactIds] = useState<string[]>([]);
@@ -729,12 +812,163 @@ export default function DashboardHomePage() {
   const [liveAvailable] = useState(24500.00);
   const [liveSpent] = useState(1200.00);
 
+  const [liquidityBalance, setLiquidityBalance] = useState(0);
+  const [crystallisedBalance, setCrystallisedBalance] = useState(0);
+
   useEffect(() => {
+    const userEmail = state.user?.email || "guest";
+    const isDemoUser = userEmail === "martin.safi@adidas.com";
+
+    const liqKey = `talent_liquidity_balance_${userEmail}`;
+    const cryKey = `talent_crystallised_balance_${userEmail}`;
+
+    const savedLiq = localStorage.getItem(liqKey);
+    const defaultLiq = isDemoUser ? 12540.00 : 0.00;
+    setLiquidityBalance(savedLiq !== null ? parseFloat(savedLiq) : defaultLiq);
+
+    const savedCry = localStorage.getItem(cryKey);
+    const defaultCry = isDemoUser ? 38275.80 : 0.00;
+    setCrystallisedBalance(savedCry !== null ? parseFloat(savedCry) : defaultCry);
+  }, [state.user]);
+
+  const [isNet0Open, setIsNet0Open] = useState(false);
+  const [isWithdrawOpen, setIsWithdrawOpen] = useState(false);
+  const [net0Stage, setNet0Stage] = useState<"idle" | "verifying" | "advancing" | "crediting" | "success">("idle");
+  const [withdrawStage, setWithdrawStage] = useState<"idle" | "submitting" | "success">("idle");
+  const [withdrawAmount, setWithdrawAmount] = useState("");
+  const [withdrawError, setWithdrawError] = useState("");
+  const [selectedWithdrawCard, setSelectedWithdrawCard] = useState(0);
+
+  const handleProcessNet0 = () => {
+    const userEmail = state.user?.email || "guest";
+    const liqKey = `talent_liquidity_balance_${userEmail}`;
+    const cryKey = `talent_crystallised_balance_${userEmail}`;
+    const net0Key = `brand_stats_net0_funded_${userEmail}`;
+    const incomesKey = `uploadedIncomes_${userEmail}`;
+
+    setNet0Stage("verifying");
+    setTimeout(() => {
+      setNet0Stage("advancing");
+      setTimeout(() => {
+        setNet0Stage("crediting");
+        setTimeout(() => {
+          setNet0Stage("success");
+          
+          const advAmt = 38275.80;
+          const fee = advAmt * 0.015;
+          const netCredit = advAmt - fee;
+
+          setLiquidityBalance((prev) => {
+            const next = prev + netCredit;
+            localStorage.setItem(liqKey, next.toString());
+            return next;
+          });
+          setCrystallisedBalance(() => {
+            localStorage.setItem(cryKey, "0");
+            return 0;
+          });
+
+          // Sync with Brand/Agency Net-0 Funded stats card
+          const currentNet0 = localStorage.getItem(net0Key);
+          const defaultNet0 = userEmail === "martin.safi@adidas.com" ? 186000.00 : 0.00;
+          const nextNet0 = (currentNet0 ? parseFloat(currentNet0) : defaultNet0) + advAmt;
+          localStorage.setItem(net0Key, nextNet0.toString());
+
+          const newIncome = {
+            slug: `net0-advance-${Date.now()}`,
+            name: "AgncyPay Net-0 Treasury",
+            detail: "Instant Campaign Cash Advance",
+            date: "Today, Just now",
+            amount: `+$${netCredit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+            src: "/agncypaybrand.png",
+            fallback: "AP",
+            className: "bg-white/10",
+            imageClassName: "scale-[1.1] p-1",
+          };
+
+          const stored = localStorage.getItem(incomesKey);
+          const existing = stored ? JSON.parse(stored) : [];
+          const nextIncomes = [newIncome, ...existing];
+          localStorage.setItem(incomesKey, JSON.stringify(nextIncomes));
+
+          window.dispatchEvent(new Event("incomesUpdated"));
+          window.dispatchEvent(new Event("syncBrandDashboard"));
+
+          setTimeout(() => {
+            setIsNet0Open(false);
+            setNet0Stage("idle");
+          }, 2000);
+        }, 1500);
+      }, 1500);
+    }, 1200);
+  };
+
+  const handleProcessWithdrawal = (e: React.FormEvent) => {
+    e.preventDefault();
+    const amt = parseFloat(withdrawAmount);
+    if (isNaN(amt) || amt <= 0) {
+      setWithdrawError("Please enter a valid amount.");
+      return;
+    }
+    if (amt > liquidityBalance) {
+      setWithdrawError("Amount exceeds your available liquidity balance.");
+      return;
+    }
+
+    const userEmail = state.user?.email || "guest";
+    const liqKey = `talent_liquidity_balance_${userEmail}`;
+    const incomesKey = `uploadedIncomes_${userEmail}`;
+
+    setWithdrawError("");
+    setWithdrawStage("submitting");
+
+    setTimeout(() => {
+      setWithdrawStage("success");
+      setLiquidityBalance((prev) => {
+        const next = prev - amt;
+        localStorage.setItem(liqKey, next.toString());
+        return next;
+      });
+
+      const newIncome = {
+        slug: `withdrawal-${Date.now()}`,
+        name: `Transfer to ${bankCards[selectedWithdrawCard].fallback}`,
+        detail: bankCards[selectedWithdrawCard].name,
+        date: "Today, Just now",
+        amount: `-$${amt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+        src: bankCards[selectedWithdrawCard].cardImage,
+        fallback: bankCards[selectedWithdrawCard].fallback.substring(0, 2),
+        className: "bg-[#111]",
+        imageClassName: "object-cover",
+      };
+
+      const stored = localStorage.getItem(incomesKey);
+      const existing = stored ? JSON.parse(stored) : [];
+      const nextIncomes = [newIncome, ...existing];
+      localStorage.setItem(incomesKey, JSON.stringify(nextIncomes));
+
+      window.dispatchEvent(new Event("incomesUpdated"));
+
+      setTimeout(() => {
+        setIsWithdrawOpen(false);
+        setWithdrawStage("idle");
+        setWithdrawAmount("");
+      }, 2000);
+    }, 2000);
+  };
+
+  useEffect(() => {
+    const userEmail = state.user?.email || "guest";
+    const isDemoUser = userEmail === "martin.safi@adidas.com";
+    const incomesKey = `uploadedIncomes_${userEmail}`;
+
     const loadIncomes = () => {
       try {
-        const stored = localStorage.getItem("uploadedIncomes");
+        const stored = localStorage.getItem(incomesKey);
         if (stored) {
           setDynamicIncomes(JSON.parse(stored));
+        } else {
+          setDynamicIncomes(isDemoUser ? (musicIncomeItems as unknown as any[]) : []);
         }
       } catch (e) {
         // ignore
@@ -743,9 +977,9 @@ export default function DashboardHomePage() {
     loadIncomes();
     window.addEventListener("incomesUpdated", loadIncomes);
     return () => window.removeEventListener("incomesUpdated", loadIncomes);
-  }, []);
+  }, [state.user]);
 
-  const allIncomes = dynamicIncomes.length > 0 ? dynamicIncomes : musicIncomeItems;
+  const allIncomes = dynamicIncomes;
 
   const toggleAutosplitInvoice = (invoiceId: string) => {
     const isActive = autosplitInvoiceIds.includes(invoiceId);
@@ -771,9 +1005,24 @@ export default function DashboardHomePage() {
   return (
     <main className="min-h-screen bg-black text-white">
       <div className="mx-auto max-w-[1520px] px-4 py-4 sm:px-6 lg:px-8">
-        <div className="flex flex-nowrap items-center justify-start gap-4 pb-4">
+        <div className="flex flex-nowrap items-center justify-between gap-4 pb-4">
           <div className="relative flex items-center">
             <img src="/agncypaybrand.png" alt="AgncyPay" className="h-[52px] w-auto shrink-0 object-contain scale-[1.5] origin-left" />
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="h-8 w-8 rounded-full bg-white/[0.05] border border-white/20 flex items-center justify-center font-bold text-xs text-white">
+              {state.user?.fullName ? state.user.fullName.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2) : "TL"}
+            </div>
+            <span className="text-xs font-bold text-[#E5E5EA] hidden sm:inline">
+              {state.user?.fullName || "Talent"}
+            </span>
+            <button
+              onClick={handleLogout}
+              className="p-2 text-neutral-400 hover:text-white transition-colors"
+              title="Log Out"
+            >
+              <LogOut className="h-4 w-4" />
+            </button>
           </div>
         </div>
 
@@ -1071,7 +1320,12 @@ export default function DashboardHomePage() {
               </div>
             </Panel>
 
-            <CatalogValuationPanel />
+            <CreativeBankingPanel
+              liquidity={liquidityBalance}
+              crystallised={crystallisedBalance}
+              onWithdraw={() => setIsWithdrawOpen(true)}
+              onNet0={() => setIsNet0Open(true)}
+            />
 
             <Panel className="p-4 sm:p-5">
               <div className="flex items-center justify-between gap-4">
@@ -1149,6 +1403,247 @@ export default function DashboardHomePage() {
         />
       )}
       {isAutosplitNoticeOpen && <AutoSplitNotice onClose={() => setIsAutosplitNoticeOpen(false)} />}
+      
+      {/* Net-0 Early Payout Modal */}
+      {isNet0Open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 px-4 backdrop-blur-[2px]">
+          <div className="w-full max-w-[460px] rounded-2xl border border-white/20 bg-[#0A0A0A] p-6 text-white shadow-2xl relative overflow-hidden">
+            
+            {net0Stage === "idle" && (
+              <>
+                <div className="flex justify-between items-start mb-6">
+                  <div>
+                    <h2 className="text-xl font-bold text-white flex items-center gap-1.5">
+                      <Sparkles className="h-4.5 w-4.5 text-white" />
+                      Net-0 Early Payout
+                    </h2>
+                    <p className="text-xs text-neutral-400 mt-1 font-semibold">Advance secure campaign earnings instantly.</p>
+                  </div>
+                  <button type="button" onClick={() => setIsNet0Open(false)} className="text-neutral-400 hover:text-white transition-colors">
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+
+                <div className="space-y-4">
+                  {/* Campaign List */}
+                  <div className="p-4 bg-white/[0.02] border border-white/10 rounded-xl">
+                    <span className="text-[9px] font-bold uppercase tracking-wider text-[#A3A3A3]">Locked Campaign Invoice</span>
+                    <div className="flex justify-between items-center mt-2">
+                      <div>
+                        <h4 className="text-xs font-bold text-white">Adidas Originals Summer Campaign</h4>
+                        <p className="text-[10px] text-neutral-400 mt-0.5">Payout due date: July 20, 2026</p>
+                      </div>
+                      <span className="text-sm font-bold text-white">$38,275.80</span>
+                    </div>
+                  </div>
+
+                  {/* Calculations */}
+                  <div className="p-4 bg-white/[0.01] border border-white/10 rounded-xl space-y-3 text-xs">
+                    <div className="flex justify-between">
+                      <span className="text-neutral-400">Total Crystallised Value</span>
+                      <span className="text-white font-semibold">$38,275.80</span>
+                    </div>
+                    <div className="flex justify-between text-[#ff453a]">
+                      <span>Early Routing Fee (1.5%)</span>
+                      <span className="font-semibold">-$574.14</span>
+                    </div>
+                    <div className="flex justify-between border-t border-white/10 pt-3 text-sm font-bold">
+                      <span className="text-white">Net Advanced Credit</span>
+                      <span className="text-[#13d463] font-black">$37,701.66</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-2 mt-6">
+                  <button
+                    type="button"
+                    onClick={handleProcessNet0}
+                    className="w-full h-11 rounded-xl bg-white hover:bg-neutral-200 text-black text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-md"
+                  >
+                    Confirm & Deposit Instantly
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsNet0Open(false)}
+                    className="w-full h-11 rounded-xl bg-white/5 border border-white/20 text-white text-xs font-bold transition-all hover:bg-white/10 cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </>
+            )}
+
+            {net0Stage !== "idle" && net0Stage !== "success" && (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <RefreshCw className="h-8 w-8 text-white animate-spin mb-4" />
+                <h3 className="text-base font-bold text-white">Processing Net-0 Advance</h3>
+                <p className="text-xs text-neutral-400 mt-2 max-w-[280px]">
+                  {net0Stage === "verifying" && "Verifying campaign contract clearance..."}
+                  {net0Stage === "advancing" && "Advancing funds from Net-0 treasury pool..."}
+                  {net0Stage === "crediting" && "Crediting active liquidity balance..."}
+                </p>
+              </div>
+            )}
+
+            {net0Stage === "success" && (
+              <div className="flex flex-col items-center justify-center py-8 text-center animate-in zoom-in duration-300">
+                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#13d463]/20 text-[#13d463] mb-4 border border-[#13d463]/30">
+                  <Check className="h-6 w-6" />
+                </div>
+                <h3 className="text-lg font-bold text-white">Advance Complete!</h3>
+                <p className="text-xs text-[#13d463] mt-2 max-w-[260px] font-semibold">
+                  $37,701.66 has been credited to your Liquidity Balance.
+                </p>
+                <p className="text-[10px] text-neutral-500 font-semibold mt-3 font-mono">
+                  TX-ADV-AP{Date.now().toString().slice(-6)}
+                </p>
+              </div>
+            )}
+
+          </div>
+        </div>
+      )}
+
+      {/* Withdraw Funds Modal */}
+      {isWithdrawOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 px-4 backdrop-blur-[2px]">
+          <div className="w-full max-w-[440px] rounded-2xl border border-white/20 bg-[#0A0A0A] p-6 text-white shadow-2xl relative overflow-hidden">
+            
+            {withdrawStage === "idle" && (
+              <form onSubmit={handleProcessWithdrawal}>
+                <div className="flex justify-between items-start mb-6">
+                  <div>
+                    <h2 className="text-xl font-bold text-white flex items-center gap-1.5">
+                      <Wallet className="h-4.5 w-4.5 text-white" />
+                      Withdraw Funds
+                    </h2>
+                    <p className="text-xs text-neutral-400 mt-1 font-semibold">Transfer cleared liquidity to your bank.</p>
+                  </div>
+                  <button type="button" onClick={() => setIsWithdrawOpen(false)} className="text-neutral-400 hover:text-white transition-colors">
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+
+                <div className="space-y-4">
+                  {/* Select Card */}
+                  <div className="flex flex-col gap-2">
+                    <label className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider">Select Destination Card</label>
+                    <div className="grid grid-cols-1 gap-2">
+                      {bankCards.slice(0, 2).map((card, idx) => (
+                        <button
+                          key={card.name}
+                          type="button"
+                          onClick={() => setSelectedWithdrawCard(idx)}
+                          className={cn(
+                            "flex items-center gap-3 p-3 rounded-xl border text-left transition-all cursor-pointer",
+                            selectedWithdrawCard === idx
+                              ? "border-white bg-white/[0.05]"
+                              : "border-white/10 bg-white/[0.01] hover:border-white/20"
+                          )}
+                        >
+                          <div className="h-8 w-14 shrink-0 rounded bg-black overflow-hidden border border-white/15">
+                            <img src={card.cardImage} alt={card.name} className="h-full w-full object-cover" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <h4 className="text-xs font-bold text-white truncate">{card.name}</h4>
+                            <p className="text-[10px] text-neutral-400 mt-0.5">{card.detail}</p>
+                          </div>
+                          {selectedWithdrawCard === idx && (
+                            <div className="h-4 w-4 rounded-full bg-white flex items-center justify-center text-black shrink-0">
+                              <Check className="h-2.5 w-2.5" />
+                            </div>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Input Amount */}
+                  <div className="flex flex-col gap-2">
+                    <div className="flex justify-between items-center">
+                      <label htmlFor="withdrawAmount" className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider">Amount to Withdraw</label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setWithdrawAmount(liquidityBalance.toString());
+                          setWithdrawError("");
+                        }}
+                        className="text-[10px] font-bold text-white hover:underline cursor-pointer"
+                      >
+                        Use Max (${liquidityBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
+                      </button>
+                    </div>
+                    <div className="relative">
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400 text-sm font-semibold">$</span>
+                      <input
+                        id="withdrawAmount"
+                        type="number"
+                        step="0.01"
+                        min="0.01"
+                        max={liquidityBalance}
+                        value={withdrawAmount}
+                        onChange={(e) => {
+                          setWithdrawAmount(e.target.value);
+                          if (withdrawError) setWithdrawError("");
+                        }}
+                        className={cn(
+                          "w-full h-11 bg-black border rounded-xl pl-8 pr-4 text-sm text-white focus:outline-none transition-colors focus:border-white/30",
+                          withdrawError ? "border-[#ff453a]/50 focus:border-[#ff453a]" : "border-white/15"
+                        )}
+                        placeholder="0.00"
+                        required
+                      />
+                    </div>
+                    {withdrawError && (
+                      <span className="text-xs text-[#ff453a] font-semibold mt-0.5">{withdrawError}</span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-2 mt-6">
+                  <button
+                    type="submit"
+                    className="w-full h-11 rounded-xl bg-white hover:bg-neutral-200 text-black text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-md"
+                  >
+                    Withdraw Funds
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsWithdrawOpen(false)}
+                    className="w-full h-11 rounded-xl bg-white/5 border border-white/20 text-white text-xs font-bold transition-all hover:bg-white/10 cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {withdrawStage === "submitting" && (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <RefreshCw className="h-8 w-8 text-white animate-spin mb-4" />
+                <h3 className="text-base font-bold text-white">Initiating Bank Transfer</h3>
+                <p className="text-xs text-neutral-400 mt-2">Routing instant ACH payment splits...</p>
+              </div>
+            )}
+
+            {withdrawStage === "success" && (
+              <div className="flex flex-col items-center justify-center py-8 text-center animate-in zoom-in duration-300">
+                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#13d463]/20 text-[#13d463] mb-4 border border-[#13d463]/30">
+                  <Check className="h-6 w-6" />
+                </div>
+                <h3 className="text-lg font-bold text-white">Transfer Successful!</h3>
+                <p className="text-xs text-[#13d463] mt-2 max-w-[260px] font-semibold">
+                  ${parseFloat(withdrawAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} has been sent to your {bankCards[selectedWithdrawCard].fallback} account.
+                </p>
+                <p className="text-[10px] text-neutral-500 font-semibold mt-3 font-mono">
+                  TX-WIT-AP{Date.now().toString().slice(-6)}
+                </p>
+              </div>
+            )}
+
+          </div>
+        </div>
+      )}
       <DashboardFooter />
     </main>
   );

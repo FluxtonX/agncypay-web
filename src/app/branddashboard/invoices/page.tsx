@@ -142,17 +142,26 @@ export default function InvoicesQueuePage() {
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
-    const localQueue = localStorage.getItem("brand_queue_invoices");
+    const userEmail = state.user?.email || "guest";
+    const isDemoUser = userEmail === "martin.safi@adidas.com";
+    const queueKey = `brand_queue_invoices_${userEmail}`;
+
+    const localQueue = localStorage.getItem(queueKey);
+    const defaultQueue = isDemoUser ? INITIAL_INVOICES : [];
     if (localQueue) {
       setInvoices(JSON.parse(localQueue));
     } else {
-      setInvoices(INITIAL_INVOICES);
-      localStorage.setItem("brand_queue_invoices", JSON.stringify(INITIAL_INVOICES));
+      setInvoices(defaultQueue);
+      localStorage.setItem(queueKey, JSON.stringify(defaultQueue));
     }
 
     const syncStates = () => {
-      const localQueue = localStorage.getItem("brand_queue_invoices");
-      if (localQueue) setInvoices(JSON.parse(localQueue));
+      const localQueue = localStorage.getItem(queueKey);
+      if (localQueue) {
+        setInvoices(JSON.parse(localQueue));
+      } else {
+        setInvoices(defaultQueue);
+      }
     };
 
     window.addEventListener("storage", syncStates);
@@ -162,7 +171,7 @@ export default function InvoicesQueuePage() {
       window.removeEventListener("storage", syncStates);
       window.removeEventListener("syncBrandDashboard", syncStates);
     };
-  }, []);
+  }, [state.user]);
 
   const handleLogout = () => {
     resetState();

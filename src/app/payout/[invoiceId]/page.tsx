@@ -345,13 +345,13 @@ export default function PayoutDisbursementPage() {
                   <CheckCircle2 className="h-9 w-9" />
                 </div>
                 <div>
-                  <h2 className="text-[20px] font-bold text-[#69f39b] tracking-tight">Disbursement Complete</h2>
+                  <h2 className="text-[20px] font-bold text-[#69f39b] tracking-tight">Payout Complete</h2>
                   <p className="mt-1.5 text-[10px] leading-relaxed text-[#c8f5d5]">
                     Transaction {transactionId} processed successfully. Retainer deducted, splits routed.
                   </p>
                 </div>
                 <button
-                  onClick={() => router.push("/branddashboard")}
+                  onClick={() => window.location.href = "/branddashboard"}
                   className="w-full inline-flex h-11 items-center justify-center rounded-xl border border-white bg-white text-[12px] font-black text-black hover:bg-neutral-200 transition-colors cursor-pointer"
                 >
                   Return to Dashboard
