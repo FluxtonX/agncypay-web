@@ -116,15 +116,15 @@ const DEFAULT_STATE: AppState = {
   memberships: [],
   activeWorkspaceId: null,
   businessSetup: {
-    legalName: "Adidas AG",
-    brandName: "Adidas",
-    businessType: "Public Company",
-    country: "Germany",
-    website: "https://www.adidas.com",
-    email: "compliance@adidas-group.com",
-    phone: "+49 9132 84-0",
+    legalName: "",
+    brandName: "",
+    businessType: "",
+    country: "",
+    website: "",
+    email: "",
+    phone: "",
     verificationStatus: "draft",
-    industry: "Sportswear / Apparel",
+    industry: "",
   },
   representative: {
     fullName: "",
@@ -153,27 +153,18 @@ const DEFAULT_STATE: AppState = {
     incorporationState: "",
     employeeRange: "",
     monthlyPaymentVolume: "",
-    owners: [
-      {
-        fullName: "Bjørn Gulden",
-        role: "CEO / Director",
-        ownership: 0.1,
-        country: "Norway",
-        email: "bjorn.gulden@adidas.com",
-        idRequired: true,
-      }
-    ],
+    owners: [],
   },
   documents: INITIAL_DOCUMENTS,
   brand: {
-    id: "brand-adidas-001",
-    brandName: "Adidas",
-    officialWebsite: "https://www.adidas.com",
+    id: "",
+    brandName: "",
+    officialWebsite: "",
     officialEmail: "",
     domainVerified: false,
-    trademarkNumber: "US-TM-89429402",
+    trademarkNumber: "",
     status: "draft",
-    brandCategory: "Sportswear & Footwear",
+    brandCategory: "",
     logoUploaded: false,
     brandProofUploaded: false,
     trademarkCertUploaded: false,
@@ -185,9 +176,9 @@ const DEFAULT_STATE: AppState = {
     emailDomainWarning: false,
   },
   bankDetails: {
-    accountHolderName: "Adidas AG",
-    bankName: "Deutsche Bank",
-    country: "Germany",
+    accountHolderName: "",
+    bankName: "",
+    country: "",
     currency: "USD",
     accountNumber: "",
     routingNumber: "",
@@ -485,7 +476,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const sendBrandDomainCode = (email: string) => {
-    const isEnterprise = email.endsWith("@adidas.com") || email.endsWith("@adidas-group.com");
+    // Check if email uses a professional domain (not generic like gmail, yahoo, etc.)
+    const genericDomains = ["gmail.com", "yahoo.com", "hotmail.com", "outlook.com", "icloud.com", "aol.com"];
+    const emailDomain = email.split("@")[1]?.toLowerCase() || "";
+    const isEnterprise = emailDomain.length > 0 && !genericDomains.includes(emailDomain);
     setState((prev) => ({
       ...prev,
       brand: {

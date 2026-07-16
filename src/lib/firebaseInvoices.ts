@@ -19,9 +19,11 @@ export interface FirestoreInvoice {
   campaign: string;
   agency: string;
   agencyEmail: string;
+  agencyUid?: string;
   talent: string;
   talentEmail: string;
   brandName: string;
+  brandEmail: string;
   amount: number;
   due: string;
   status: "pending" | "paid";
@@ -35,107 +37,12 @@ export interface FirestoreInvoice {
 
 const INVOICES_COLLECTION = "invoices";
 
-// Seeding default demo data if invoices collection is empty
-export async function seedDefaultInvoices() {
-  try {
-    const q = query(collection(db, INVOICES_COLLECTION));
-    const querySnapshot = await getDocs(q);
-    
-    if (querySnapshot.empty) {
-      console.log("Firestore invoices collection is empty. Seeding default demo invoices...");
-      
-      const defaultInvoices: FirestoreInvoice[] = [
-        {
-          id: "W-INV-001",
-          campaign: "Summer campaign",
-          agency: "Elite model agency",
-          agencyEmail: "agency@elite.com",
-          talent: "sarah",
-          talentEmail: "sarah@talent.com",
-          brandName: "Adidas Corporate",
-          amount: 14999.98,
-          due: "Jul 13, 2026",
-          status: "pending",
-          talentPayoutStatus: "pending",
-          createdDate: "Jul 05, 2026",
-          payerId: "MB-6984",
-          payerEmail: "martin.safi@adidas.com",
-          payerAddress: ["Elite Models Inc.", "10 Hudson Yards, 24th Fl", "New York, NY 10001"]
-        },
-        {
-          id: "W-INV-002",
-          campaign: "Summer campaign",
-          agency: "CCA",
-          agencyEmail: "agency@elite.com",
-          talent: "Dj kivi",
-          talentEmail: "djkivi@talent.com",
-          brandName: "Adidas Corporate",
-          amount: 4499.98,
-          due: "Jul 12, 2026",
-          status: "pending",
-          talentPayoutStatus: "pending",
-          createdDate: "Jul 04, 2026",
-          payerId: "MB-7044",
-          payerEmail: "martin.safi@adidas.com",
-          payerAddress: ["Creative Artists Assoc.", "2000 Avenue of the Stars", "Los Angeles, CA 90067"]
-        }
-      ];
-
-      for (const inv of defaultInvoices) {
-        const docRef = doc(db, INVOICES_COLLECTION, inv.id);
-        await setDoc(docRef, {
-          ...inv,
-          createdAt: serverTimestamp()
-        });
-      }
-      
-      console.log("Demo invoices seeded successfully!");
-    }
-  } catch (error) {
-    console.error("Error seeding default invoices in Firestore:", error);
-  }
-}
-
-// Reset/Re-seed Demo database
-export async function resetDemoFirestore() {
-  try {
-    // 1. Get all documents
-    const q = query(collection(db, INVOICES_COLLECTION));
-    const querySnapshot = await getDocs(q);
-    
-    // 2. Set status of default ones back to pending
-    // and delete any user-created ones so we get back to baseline
-    for (const document of querySnapshot.docs) {
-      const id = document.id;
-      if (id === "W-INV-001" || id === "W-INV-002") {
-        const docRef = doc(db, INVOICES_COLLECTION, id);
-        await updateDoc(docRef, {
-          status: "pending",
-          talentPayoutStatus: "pending"
-        });
-      } else {
-        // Delete custom invoice to restore clean demo
-        const docRef = doc(db, INVOICES_COLLECTION, id);
-        // Instead of hard deleting (which might require permissions), we can just set them to a hidden state
-        // or set status/talentPayoutStatus. For a complete reset we delete the document
-        // To be safe and clean, we delete:
-        const { deleteDoc } = await import("firebase/firestore");
-        await deleteDoc(docRef);
-      }
-    }
-    
-    // Re-seed if somehow deleted completely
-    await seedDefaultInvoices();
-  } catch (error) {
-    console.error("Error resetting demo database in Firestore:", error);
-  }
-}
-
 // Create a new invoice document
 export async function createFirestoreInvoice(data: {
   campaign: string;
   agency: string;
   agencyEmail: string;
+  agencyUid?: string;
   talent: string;
   talentEmail: string;
   brandName: string;
@@ -155,16 +62,18 @@ export async function createFirestoreInvoice(data: {
     // Generate a unique sequential ID
     const invoicesRef = collection(db, INVOICES_COLLECTION);
     const querySnapshot = await getDocs(invoicesRef);
-    const customId = `W-INV-00${querySnapshot.size + 1}`;
+    const customId = `W-INV-${String(querySnapshot.size + 1).padStart(3, "0")}`;
 
     const newInvoice: FirestoreInvoice = {
       id: customId,
       campaign: data.campaign,
       agency: data.agency,
-      agencyEmail: data.agencyEmail,
+      agencyEmail: data.agencyEmail.trim().toLowerCase(),
+      agencyUid: data.agencyUid || "",
       talent: data.talent,
-      talentEmail: data.talentEmail,
+      talentEmail: data.talentEmail.trim().toLowerCase(),
       brandName: data.brandName,
+      brandEmail: data.brandEmail.trim().toLowerCase(),
       amount: Number(data.amount),
       due: data.due,
       status: "pending",
@@ -188,11 +97,8 @@ export async function createFirestoreInvoice(data: {
   }
 }
 
-// Subscribe to real-time invoice updates
+// Subscribe to ALL invoices (no filtering — used only if explicitly needed)
 export function subscribeInvoices(callback: (invoices: FirestoreInvoice[]) => void) {
-  // First seed defaults if not already present
-  seedDefaultInvoices();
-
   const q = query(collection(db, INVOICES_COLLECTION), orderBy("createdAt", "asc"));
   
   return onSnapshot(q, (snapshot) => {
@@ -200,9 +106,104 @@ export function subscribeInvoices(callback: (invoices: FirestoreInvoice[]) => vo
     snapshot.forEach((document) => {
       list.push(document.data() as FirestoreInvoice);
     });
+    list.sort((a, b) => {
+      const aTime = a.createdAt?.seconds || 0;
+      const bTime = b.createdAt?.seconds || 0;
+      return aTime - bTime;
+    });
     callback(list);
   }, (error) => {
     console.error("Error listening to Firestore updates:", error);
+  });
+}
+
+// Subscribe to invoices created by a specific agency (by agencyEmail)
+export function subscribeInvoicesByAgency(agencyEmail: string, callback: (invoices: FirestoreInvoice[]) => void) {
+  if (!agencyEmail) {
+    callback([]);
+    return () => {};
+  }
+
+  const normalizedEmail = agencyEmail.trim().toLowerCase();
+  const q = query(
+    collection(db, INVOICES_COLLECTION),
+    where("agencyEmail", "==", normalizedEmail)
+  );
+  
+  return onSnapshot(q, (snapshot) => {
+    const list: FirestoreInvoice[] = [];
+    snapshot.forEach((document) => {
+      list.push(document.data() as FirestoreInvoice);
+    });
+    list.sort((a, b) => {
+      const aTime = a.createdAt?.seconds || 0;
+      const bTime = b.createdAt?.seconds || 0;
+      return aTime - bTime;
+    });
+    callback(list);
+  }, (error) => {
+    console.error("Error listening to agency invoices:", error);
+    callback([]);
+  });
+}
+
+// Subscribe to invoices addressed to a specific brand (by brandEmail)
+export function subscribeInvoicesByBrand(brandEmail: string, callback: (invoices: FirestoreInvoice[]) => void) {
+  if (!brandEmail) {
+    callback([]);
+    return () => {};
+  }
+
+  const normalizedEmail = brandEmail.trim().toLowerCase();
+  const q = query(
+    collection(db, INVOICES_COLLECTION),
+    where("brandEmail", "==", normalizedEmail)
+  );
+  
+  return onSnapshot(q, (snapshot) => {
+    const list: FirestoreInvoice[] = [];
+    snapshot.forEach((document) => {
+      list.push(document.data() as FirestoreInvoice);
+    });
+    list.sort((a, b) => {
+      const aTime = a.createdAt?.seconds || 0;
+      const bTime = b.createdAt?.seconds || 0;
+      return aTime - bTime;
+    });
+    callback(list);
+  }, (error) => {
+    console.error("Error listening to brand invoices:", error);
+    callback([]);
+  });
+}
+
+// Subscribe to invoices where the user is the talent (by talentEmail)
+export function subscribeInvoicesByTalent(talentEmail: string, callback: (invoices: FirestoreInvoice[]) => void) {
+  if (!talentEmail) {
+    callback([]);
+    return () => {};
+  }
+
+  const normalizedEmail = talentEmail.trim().toLowerCase();
+  const q = query(
+    collection(db, INVOICES_COLLECTION),
+    where("talentEmail", "==", normalizedEmail)
+  );
+  
+  return onSnapshot(q, (snapshot) => {
+    const list: FirestoreInvoice[] = [];
+    snapshot.forEach((document) => {
+      list.push(document.data() as FirestoreInvoice);
+    });
+    list.sort((a, b) => {
+      const aTime = a.createdAt?.seconds || 0;
+      const bTime = b.createdAt?.seconds || 0;
+      return aTime - bTime;
+    });
+    callback(list);
+  }, (error) => {
+    console.error("Error listening to talent invoices:", error);
+    callback([]);
   });
 }
 
@@ -227,12 +228,7 @@ export async function updateInvoiceStatus(
 // Fetch single invoice
 export async function fetchSingleInvoice(id: string): Promise<FirestoreInvoice | null> {
   try {
-    // If it's a mock checkout ID MB-6984/MB-7044, map to the default invoice
-    let mappedId = id;
-    if (id === "MB-6984") mappedId = "W-INV-001";
-    if (id === "MB-7044") mappedId = "W-INV-002";
-
-    const docRef = doc(db, INVOICES_COLLECTION, mappedId);
+    const docRef = doc(db, INVOICES_COLLECTION, id);
     const docSnap = await getDoc(docRef);
     
     if (docSnap.exists()) {

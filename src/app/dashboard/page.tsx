@@ -24,9 +24,9 @@ import {
   LogOut,
 } from "lucide-react";
 import { cn } from "../../lib/utils";
-import { mainboardInvoices, formatMainboardMoney } from "../../lib/mainboard";
+import { mainboardInvoices, formatMainboardMoney, type MainboardInvoice } from "../../lib/mainboard";
 import { useApp } from "../../context/AppContext";
-import { subscribeInvoices } from "../../lib/firebaseInvoices";
+import { subscribeInvoicesByAgency, subscribeInvoicesByTalent } from "../../lib/firebaseInvoices";
 import { ModelIncomeList, ModelPayoutsList, CsvDropzonePanel } from "../../components/dashboard/ModelAgencyDashboard";
 
 const BOFA_BUSINESS_DEBIT_VISA_IMAGE =
@@ -226,15 +226,9 @@ const yearlyActivity = [
   { month: "Dec", label: "D", height: 86, revenue: "$407K", streams: "8.1M", growth: "+26.9%" },
 ] as const;
 
-const dashboardInvoices = mainboardInvoices.slice(0, 5);
+const dashboardInvoices: MainboardInvoice[] = [];
 
-const dashboardPeopleByInvoiceId: Record<string, string> = {
-  "MB-6984": "Nike",
-  "MB-7012": "Zara",
-  "MB-7044": "Adidas",
-  "MB-6890": "Spotify",
-  "MB-6815": "Netflix",
-};
+const dashboardPeopleByInvoiceId: Record<string, string> = {};
 
 const payeeLogoByInvoiceId: Record<
   string,
@@ -246,38 +240,7 @@ const payeeLogoByInvoiceId: Record<
     className: string;
     markClassName?: string;
   }
-> = {
-  "MB-6984": {
-    mark: "Nike",
-    label: "Nike",
-    src: "https://cdn.simpleicons.org/nike/FFFFFF",
-    className: "bg-black text-white",
-  },
-  "MB-7012": {
-    mark: "Zara",
-    label: "Zara",
-    src: "https://cdn.simpleicons.org/zara/000000",
-    className: "bg-white text-black",
-  },
-  "MB-7044": {
-    mark: "Adidas",
-    label: "Adidas",
-    src: "https://upload.wikimedia.org/wikipedia/commons/2/20/Adidas_Logo.svg",
-    className: "bg-white",
-  },
-  "MB-6890": {
-    mark: "Spotify",
-    label: "Spotify",
-    src: "https://cdn.simpleicons.org/spotify/1DB954",
-    className: "bg-black text-white",
-  },
-  "MB-6815": {
-    mark: "Netflix",
-    label: "Netflix",
-    src: "https://cdn.simpleicons.org/netflix/E50914",
-    className: "bg-black text-white",
-  },
-};
+> = {};
 
 const activityDates = ["Today, 10:24 AM", "Today, 9:42 AM", "Yesterday", "May 31", "May 24"];
 
@@ -818,11 +781,23 @@ export default function DashboardHomePage() {
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
     setMounted(true);
-    const unsubscribe = subscribeInvoices((invoicesList) => {
-      setWidgetInvoices(invoicesList);
-    });
+    const userEmail = state.user?.email || "";
+    const accountType = state.user?.accountType || "agency";
+
+    // Scope subscription by account type
+    let unsubscribe: () => void;
+    if (accountType === "agency") {
+      unsubscribe = subscribeInvoicesByAgency(userEmail, (invoicesList) => {
+        setWidgetInvoices(invoicesList);
+      });
+    } else {
+      // Talent accounts
+      unsubscribe = subscribeInvoicesByTalent(userEmail, (invoicesList) => {
+        setWidgetInvoices(invoicesList);
+      });
+    }
     return () => unsubscribe();
-  }, []);
+  }, [state.user]);
 
   useEffect(() => {
     const userEmail = state.user?.email || "guest";
@@ -851,9 +826,9 @@ export default function DashboardHomePage() {
       .filter(i => i.talentPayoutStatus === "disbursed")
       .reduce((sum, i) => sum + i.amount * 0.85, 0);
 
-    const isDemoUser = userEmail === "martin.safi@adidas.com";
-    const defaultLiq = isDemoUser ? 12540.00 : 4500.00;
-    const defaultCry = isDemoUser ? 38275.80 : 12500.50;
+    // Start at $0 — balances build from real Firestore data
+    const defaultLiq = 0;
+    const defaultCry = 0;
 
     const finalCry = Math.max(0, (defaultCry + dynamicCrystallised) - sessionNet0Advanced);
     const finalLiq = Math.max(0, (defaultLiq + dynamicLiquidity) + (sessionNet0Advanced * 0.985) - sessionWithdrawAmount);
@@ -895,7 +870,7 @@ export default function DashboardHomePage() {
 
           // Sync with Brand/Agency Net-0 Funded stats card
           const currentNet0 = localStorage.getItem(net0Key);
-          const defaultNet0 = userEmail === "martin.safi@adidas.com" ? 186000.00 : 0.00;
+          const defaultNet0 = 0;
           const nextNet0 = (currentNet0 ? parseFloat(currentNet0) : defaultNet0) + advAmt;
           localStorage.setItem(net0Key, nextNet0.toString());
 
@@ -983,7 +958,6 @@ export default function DashboardHomePage() {
 
   useEffect(() => {
     const userEmail = state.user?.email || "guest";
-    const isDemoUser = userEmail === "martin.safi@adidas.com";
     const incomesKey = `uploadedIncomes_${userEmail}`;
 
     const loadIncomes = () => {
@@ -992,7 +966,7 @@ export default function DashboardHomePage() {
         if (stored) {
           setDynamicIncomes(JSON.parse(stored));
         } else {
-          setDynamicIncomes(isDemoUser ? (musicIncomeItems as unknown as any[]) : []);
+          setDynamicIncomes([]);
         }
       } catch (e) {
         // ignore
@@ -1096,7 +1070,7 @@ export default function DashboardHomePage() {
             </Panel>
 
             {workspaceType === "agency" && (
-              <ModelPayoutsList />
+              <ModelPayoutsList invoices={widgetInvoices} />
             )}
 
             {/* Old invoices table preserved for reuse.
@@ -1328,8 +1302,8 @@ export default function DashboardHomePage() {
               </div>
             </Panel>
 
-            {workspaceType !== "brand" && (
-              <CsvDropzonePanel />
+            {["individual", "talent_independent", "talent_agency"].includes(workspaceType) && (
+              <ModelIncomeList invoices={widgetInvoices} />
             )}
 
             <Panel className="p-4 sm:p-5">

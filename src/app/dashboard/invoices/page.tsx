@@ -37,98 +37,15 @@ import {
   normalizeWorkspaceType,
 } from "../../../types/workspace";
 
-const initialInvoices = [
-  {
-    id: "INV-2845",
-    agency: "Creative Co",
-    campaign: "Q2 Brand Campaign",
-    amount: "$24,500",
-    fees: "$245",
-    status: "Pending",
-    due: "22/05/2026",
-  },
-  {
-    id: "INV-2844",
-    agency: "Media Partners",
-    campaign: "Digital Ads May",
-    amount: "$18,200",
-    fees: "$182",
-    status: "Approved",
-    due: "21/05/2026",
-  },
-  {
-    id: "INV-2843",
-    agency: "Digital Agency",
-    campaign: "Social Media Management",
-    amount: "$32,100",
-    fees: "$321",
-    status: "Processing",
-    due: "20/05/2026",
-  },
-  {
-    id: "INV-2842",
-    agency: "Brand Studio",
-    campaign: "Creative Services",
-    amount: "$15,800",
-    fees: "$158",
-    status: "Paid",
-    due: "19/05/2026",
-  },
-  {
-    id: "INV-2841",
-    agency: "Marketing Pro",
-    campaign: "Email Campaign",
-    amount: "$8,900",
-    fees: "$89",
-    status: "Paid",
-    due: "18/05/2026",
-  },
-  {
-    id: "INV-2840",
-    agency: "Creative Co",
-    campaign: "Video Production",
-    amount: "$45,000",
-    fees: "$450",
-    status: "Pending",
-    due: "17/05/2026",
-  },
-  {
-    id: "INV-2839",
-    agency: "Digital Agency",
-    campaign: "SEO Services",
-    amount: "$12,400",
-    fees: "$124",
-    status: "Approved",
-    due: "16/05/2026",
-  },
-  {
-    id: "INV-2838",
-    agency: "Media Partners",
-    campaign: "Influencer Campaign",
-    amount: "$28,700",
-    fees: "$287",
-    status: "Processing",
-    due: "15/05/2026",
-  },
-  {
-    id: "INV-2837",
-    agency: "Brand Studio",
-    campaign: "Print Advertising",
-    amount: "$19,200",
-    fees: "$192",
-    status: "Paid",
-    due: "14/05/2026",
-  },
-  {
-    id: "INV-2836",
-    agency: "Marketing Pro",
-    campaign: "Content Marketing",
-    amount: "$14,300",
-    fees: "$143",
-    status: "Failed",
-    due: "13/05/2026",
-  },
-];
+const initialInvoices: {
+  id: string;
+  agency: string;
+  campaign: string;
+  amount: string;
+  fees: string;
+  status: string;
+  due: string;
+}[] = [];
 
 const filterOptions = ["All Invoices", "Pending", "Approved", "Processing", "Paid", "Failed"] as const;
 

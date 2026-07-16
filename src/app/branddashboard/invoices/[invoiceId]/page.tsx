@@ -71,89 +71,7 @@ interface InvoiceMock {
   defaultTerm: "Net-30" | "Net-60" | "Net-90";
 }
 
-const INITIAL_INVOICES: InvoiceMock[] = [
-  {
-    id: "AP-INV-9024",
-    campaignName: "Adidas Originals TikTok Launch",
-    brandName: "Adidas AG",
-    createdDate: "July 12, 2026",
-    dueDate: "August 11, 2026",
-    amount: 18500.00,
-    defaultTerm: "Net-30",
-    status: "awaiting_approval",
-    location: "5th Ave Flagship Plaza, NYC",
-    costCenter: "#TikTok-2026",
-    initials: ["MC", "IM", "LS"],
-    vendorFee: {
-      name: "Lumina Production Studios",
-      role: "Vendor",
-      amount: 1850.00,
-      walletId: "@lumina.studios",
-      avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&auto=format&fit=crop&q=80"
-    },
-    splitPool: {
-      total: 16650.00,
-      splits: [
-        { name: "Maya Chen", role: "Talent", percentage: 80, amount: 13320.00, walletId: "@maya.chen.wallet", avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=80&auto=format&fit=crop&q=80" },
-        { name: "IMG Models Worldwide", role: "Agency", percentage: 20, amount: 3330.00, walletId: "@img.models.agency", avatar: "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=80&auto=format&fit=crop&q=80" }
-      ]
-    }
-  },
-  {
-    id: "AP-INV-8911",
-    campaignName: "Fall/Winter Editorial Shoots",
-    brandName: "Adidas AG",
-    createdDate: "July 10, 2026",
-    dueDate: "September 8, 2026",
-    amount: 32000.00,
-    defaultTerm: "Net-60",
-    status: "awaiting_approval",
-    location: "World Headquarters, Portland",
-    costCenter: "#FW-Editorial",
-    initials: ["NR", "UM", "FR"],
-    vendorFee: {
-      name: "Frame Rental Co",
-      role: "Vendor",
-      amount: 3200.00,
-      walletId: "@framerent",
-      avatar: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=80&auto=format&fit=crop&q=80"
-    },
-    splitPool: {
-      total: 28800.00,
-      splits: [
-        { name: "Noah Rivera", role: "Talent", percentage: 85, amount: 24480.00, walletId: "@noah.rivera.wallet", avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=80&auto=format&fit=crop&q=80" },
-        { name: "UTA Models", role: "Agency", percentage: 15, amount: 4320.00, walletId: "@uta.talent.agency", avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=80&auto=format&fit=crop&q=80" }
-      ]
-    }
-  },
-  {
-    id: "AP-INV-8854",
-    campaignName: "UltraBoost 26 Social Campaign",
-    brandName: "Adidas AG",
-    createdDate: "June 28, 2026",
-    dueDate: "August 27, 2026",
-    amount: 45000.00,
-    defaultTerm: "Net-60",
-    status: "settled",
-    location: "Santa Monica Office, CA",
-    costCenter: "#UB-Social",
-    initials: ["JL", "CA", "SS"],
-    vendorFee: {
-      name: "SoundStage NY",
-      role: "Vendor",
-      amount: 2250.00,
-      walletId: "@soundstage",
-      avatar: "https://images.unsplash.com/photo-1537368910025-700350fe46c7?w=80&auto=format&fit=crop&q=80"
-    },
-    splitPool: {
-      total: 42750.00,
-      splits: [
-        { name: "Jordan Lee", role: "Talent", percentage: 85, amount: 36337.50, walletId: "@jordan.lee", avatar: "https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=80&auto=format&fit=crop&q=80" },
-        { name: "Creative Artists Agency (CAA)", role: "Agency", percentage: 15, amount: 6412.50, walletId: "@caa", avatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=80&auto=format&fit=crop&q=80" }
-      ]
-    }
-  }
-];
+const INITIAL_INVOICES: InvoiceMock[] = [];
 
 export default function InvoiceDetailPage() {
   const router = useRouter();
@@ -169,38 +87,11 @@ export default function InvoiceDetailPage() {
   // Simulation processing state
   const [processingStage, setProcessingStage] = useState<"idle" | "verifying" | "routing" | "success">("idle");
 
-  const activeInvoice = invoices.find(inv => inv.id === invoiceId) || invoices[0] || INITIAL_INVOICES[0];
+  const activeInvoice = invoices.find(inv => inv.id === invoiceId) || invoices[0] || null;
 
   React.useEffect(() => {
-    const userEmail = state.user?.email || "guest";
-    const isDemoUser = userEmail === "martin.safi@adidas.com";
-    const queueKey = `brand_queue_invoices_${userEmail}`;
-
-    const localQueue = localStorage.getItem(queueKey);
-    const defaultQueue = isDemoUser ? INITIAL_INVOICES : [];
-    if (localQueue) {
-      setInvoices(JSON.parse(localQueue));
-    } else {
-      setInvoices(defaultQueue);
-      localStorage.setItem(queueKey, JSON.stringify(defaultQueue));
-    }
-
-    const syncStates = () => {
-      const localQueue = localStorage.getItem(queueKey);
-      if (localQueue) {
-        setInvoices(JSON.parse(localQueue));
-      } else {
-        setInvoices(defaultQueue);
-      }
-    };
-
-    window.addEventListener("storage", syncStates);
-    window.addEventListener("syncBrandDashboard", syncStates);
-
-    return () => {
-      window.removeEventListener("storage", syncStates);
-      window.removeEventListener("syncBrandDashboard", syncStates);
-    };
+    // No more localStorage fallback — invoices come from Firestore
+    setInvoices([]);
   }, [state.user]);
 
   React.useEffect(() => {

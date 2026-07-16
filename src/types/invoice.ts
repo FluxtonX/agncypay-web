@@ -6,11 +6,11 @@ export interface InvoiceItem {
 
 export interface Invoice {
   id: string;
-  brandName: "Adidas";
+  brandName: string;
   invoiceDate: string;
   dueDate: string;
   amount: number;
-  currency: "USD";
+  currency: string;
   status: "pending" | "paid" | "overdue" | "processing";
   items: InvoiceItem[];
 }

@@ -164,9 +164,20 @@ export function useDynamicIncomes() {
   return dynamicIncomes;
 }
 
-export function ModelIncomeList() {
+export function ModelIncomeList({ invoices = [] }: { invoices?: any[] }) {
   const dynamicIncomes = useDynamicIncomes();
-  const allIncomes = dynamicIncomes.length > 0 ? dynamicIncomes : modelIncomeItems;
+  const allIncomes = invoices.length > 0
+    ? invoices.map(inv => ({
+        name: inv.brandName || "Brand Payment",
+        date: "Recent",
+        amount: `$${inv.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+        detail: inv.campaign || "Campaign Split",
+        src: `https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://${(inv.brandName || "brand").toLowerCase().replace(/\s+/g, "")}.com&size=128`,
+        fallback: (inv.brandName || "BR").substring(0, 2).toUpperCase(),
+        className: "bg-[#111]",
+        imageClassName: "scale-[1]",
+      }))
+    : (dynamicIncomes.length > 0 ? dynamicIncomes : modelIncomeItems);
 
   return (
     <Panel className="p-4 sm:p-5">
@@ -210,7 +221,19 @@ export function ModelIncomeList() {
   );
 }
 
-export function ModelPayoutsList() {
+export function ModelPayoutsList({ invoices = [] }: { invoices?: any[] }) {
+  const allPayouts = invoices.length > 0
+    ? invoices.filter(inv => inv.talentPayoutStatus === "disbursed" || inv.status === "paid").map(inv => ({
+        name: inv.talent || "Talent",
+        date: "Recent",
+        amount: `$${(inv.amount * 0.85).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+        detail: inv.campaign || "Campaign Payout",
+        src: `https://ui-avatars.com/api/?name=${encodeURIComponent(inv.talent || "Talent")}&background=random`,
+        fallback: (inv.talent || "TL").substring(0, 2).toUpperCase(),
+        isAgency: false
+      }))
+    : modelPayoutItems;
+
   return (
     <Panel className="p-4 sm:p-5 mt-5">
       <div className="flex items-center justify-between gap-4">
@@ -227,7 +250,7 @@ export function ModelPayoutsList() {
         </Link>
       </div>
       <div className="mt-4 space-y-2">
-        {modelPayoutItems.map((item) => (
+        {allPayouts.map((item) => (
           <div
             key={`${item.name}-${item.date}`}
             className="flex items-center gap-3 rounded-[8px] border border-[#333] bg-black px-3 py-2 transition-colors hover:border-[#555] hover:bg-white/[0.04]"

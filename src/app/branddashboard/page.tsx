@@ -33,7 +33,7 @@ import {
   Check
 } from "lucide-react";
 import { useApp } from "../../context/AppContext";
-import { subscribeInvoices, updateInvoiceStatus, resetDemoFirestore, createFirestoreInvoice, getRegisteredBrands, getRegisteredTalents } from "../../lib/firebaseInvoices";
+import { subscribeInvoicesByBrand, subscribeInvoicesByAgency, updateInvoiceStatus, createFirestoreInvoice, getRegisteredBrands, getRegisteredTalents } from "../../lib/firebaseInvoices";
 import { FirestoreUser } from "../../lib/firebaseAuth";
 
 // Refactored Data Models
@@ -70,96 +70,18 @@ interface InvoiceMock {
   defaultTerm: "Net-30" | "Net-60" | "Net-90";
 }
 
-const INITIAL_INVOICES: InvoiceMock[] = [
-  {
-    id: "AP-INV-9024",
-    campaignName: "Adidas Originals TikTok Launch",
-    brandName: "Adidas AG",
-    createdDate: "July 12, 2026",
-    dueDate: "August 11, 2026",
-    amount: 18500.00,
-    defaultTerm: "Net-30",
-    status: "awaiting_approval",
-    vendorFee: {
-      name: "Lumina Production Studios",
-      role: "Vendor",
-      amount: 1850.00,
-      walletId: "@lumina.studios",
-      avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&auto=format&fit=crop&q=80"
-    },
-    splitPool: {
-      total: 16650.00,
-      splits: [
-        { name: "Maya Chen", role: "Talent", percentage: 80, amount: 13320.00, walletId: "@maya.chen.wallet", avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=80&auto=format&fit=crop&q=80" },
-        { name: "IMG Models Worldwide", role: "Agency", percentage: 20, amount: 3330.00, walletId: "@img.models.agency", avatar: "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=80&auto=format&fit=crop&q=80" }
-      ]
-    }
-  },
-  {
-    id: "AP-INV-8911",
-    campaignName: "Fall/Winter Editorial Shoots",
-    brandName: "Adidas AG",
-    createdDate: "July 10, 2026",
-    dueDate: "September 8, 2026",
-    amount: 32000.00,
-    defaultTerm: "Net-60",
-    status: "awaiting_approval",
-    vendorFee: {
-      name: "Frame Rental Co",
-      role: "Vendor",
-      amount: 3200.00,
-      walletId: "@framerent",
-      avatar: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=80&auto=format&fit=crop&q=80"
-    },
-    splitPool: {
-      total: 28800.00,
-      splits: [
-        { name: "Noah Rivera", role: "Talent", percentage: 85, amount: 24480.00, walletId: "@noah.rivera.wallet", avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=80&auto=format&fit=crop&q=80" },
-        { name: "UTA Models", role: "Agency", percentage: 15, amount: 4320.00, walletId: "@uta.talent.agency", avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=80&auto=format&fit=crop&q=80" }
-      ]
-    }
-  },
-  {
-    id: "AP-INV-8854",
-    campaignName: "UltraBoost 26 Social Campaign",
-    brandName: "Adidas AG",
-    createdDate: "June 28, 2026",
-    dueDate: "August 27, 2026",
-    amount: 45000.00,
-    defaultTerm: "Net-60",
-    status: "settled",
-    vendorFee: {
-      name: "SoundStage NY",
-      role: "Vendor",
-      amount: 2250.00,
-      walletId: "@soundstage",
-      avatar: "https://images.unsplash.com/photo-1537368910025-700350fe46c7?w=80&auto=format&fit=crop&q=80"
-    },
-    splitPool: {
-      total: 42750.00,
-      splits: [
-        { name: "Jordan Lee", role: "Talent", percentage: 85, amount: 36337.50, walletId: "@jordan.lee", avatar: "https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=80&auto=format&fit=crop&q=80" },
-        { name: "Creative Artists Agency (CAA)", role: "Agency", percentage: 15, amount: 6412.50, walletId: "@caa", avatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=80&auto=format&fit=crop&q=80" }
-      ]
-    }
-  }
-];
+const INITIAL_INVOICES: InvoiceMock[] = [];
 
-const RECENT_TRANSACTIONS = [
-  { id: "AP-TX-5091", invoiceId: "AP-INV-8854", campaign: "UltraBoost 26 Social Campaign", date: "Today, 2:14 PM", total: "$45,000.00", status: "settled", termSelected: "Net-60", method: "AgncyPay Network" },
-  { id: "AP-TX-4902", invoiceId: "AP-INV-8732", campaign: "Adidas Runner Launch Promo", date: "July 8, 2026", total: "$12,000.00", status: "settled", termSelected: "Net-30", method: "ACH Direct" },
-  { id: "AP-TX-4881", invoiceId: "AP-INV-8650", campaign: "Originals Creator Batch A", date: "July 2, 2026", total: "$8,500.00", status: "settled", termSelected: "Net-0 (Instant)", method: "AgncyPay Wallet" },
-  { id: "AP-TX-4712", invoiceId: "AP-INV-8520", campaign: "Zinedine Zidane Heritage Shoot", date: "June 24, 2026", total: "$150,000.00", status: "settled", termSelected: "Net-90", method: "Wire Transfer" }
-];
+const RECENT_TRANSACTIONS: any[] = [];
 
 export default function BrandDashboardPage() {
   const router = useRouter();
   const { state, resetState } = useApp();
   const workspaceType = state.user ? state.user.accountType : "brand";
 
-  const [livePaidVolume, setLivePaidVolume] = useState(424500.00);
-  const [liveNet0Funded, setLiveNet0Funded] = useState(186000.00);
-  const [liveAutosplitSavings, setLiveAutosplitSavings] = useState(4250.00);
+  const [livePaidVolume, setLivePaidVolume] = useState(0);
+  const [liveNet0Funded, setLiveNet0Funded] = useState(0);
+  const [liveAutosplitSavings, setLiveAutosplitSavings] = useState(0);
 
   // Widget invoices state
   const [widgetInvoices, setWidgetInvoices] = useState<any[]>([]);
@@ -196,14 +118,16 @@ export default function BrandDashboardPage() {
   const [isCreatingInvoice, setIsCreatingInvoice] = useState(false);
 
   useEffect(() => {
+    const userEmail = state.user?.email || "";
+    
     const savedVolume = localStorage.getItem("brand_stats_paid_volume");
     if (savedVolume) setLivePaidVolume(parseFloat(savedVolume));
     
     const savedSavings = localStorage.getItem("brand_stats_autosplit_savings");
     if (savedSavings) setLiveAutosplitSavings(parseFloat(savedSavings));
 
-    // Real-time listener for Firestore invoices
-    const unsubscribe = subscribeInvoices((invoicesList) => {
+    // Real-time listener for Firestore invoices scoped to the current user's role
+    const handleInvoicesUpdate = (invoicesList: any[]) => {
       const mappedList = invoicesList.map((inv) => ({
         id: inv.id,
         agency: inv.agency,
@@ -219,20 +143,22 @@ export default function BrandDashboardPage() {
         payerEmail: inv.payerEmail || ""
       }));
       setWidgetInvoices(mappedList);
-    });
+    };
+
+    let unsubscribe = () => {};
+    if (workspaceType === "brand") {
+      unsubscribe = subscribeInvoicesByBrand(userEmail, handleInvoicesUpdate);
+    } else {
+      unsubscribe = subscribeInvoicesByAgency(userEmail, handleInvoicesUpdate);
+    }
 
     const localNotifs = localStorage.getItem("agency_notifications");
     if (localNotifs) {
       setNotifications(JSON.parse(localNotifs));
     }
 
-    const localQueue = localStorage.getItem("brand_queue_invoices");
-    if (localQueue) {
-      setInvoices(JSON.parse(localQueue));
-    } else {
-      setInvoices(INITIAL_INVOICES);
-      localStorage.setItem("brand_queue_invoices", JSON.stringify(INITIAL_INVOICES));
-    }
+    // Start with empty invoices — they come from Firestore now
+    setInvoices([]);
 
     // Set up a listener for storage events to sync across tabs/logins
     const syncStates = () => {
@@ -242,8 +168,6 @@ export default function BrandDashboardPage() {
       if (savedSavings) setLiveAutosplitSavings(parseFloat(savedSavings));
       const localNotifs = localStorage.getItem("agency_notifications");
       if (localNotifs) setNotifications(JSON.parse(localNotifs));
-      const localQueue = localStorage.getItem("brand_queue_invoices");
-      if (localQueue) setInvoices(JSON.parse(localQueue));
     };
 
     window.addEventListener("storage", syncStates);
@@ -254,7 +178,7 @@ export default function BrandDashboardPage() {
       window.removeEventListener("storage", syncStates);
       window.removeEventListener("syncBrandDashboard", syncStates);
     };
-  }, []);
+  }, [state.user]);
 
   const handlePayInvoice = (id: string) => {
     setPayingInvoiceId(id);
@@ -759,8 +683,6 @@ export default function BrandDashboardPage() {
           {/* Analytics Cards Grid */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {(() => {
-              const isDemo = state.user?.email === "martin.safi@adidas.com";
-
               const paidInvoices = liveFunctionalInvoices.filter(i => 
                 workspaceType === "brand" 
                   ? (i.status === "settled" || i.status === "talent_disbursed")
@@ -768,10 +690,10 @@ export default function BrandDashboardPage() {
               );
               const dynamicPaidVolume = paidInvoices.reduce((acc, curr) => acc + curr.amount, 0);
 
-              const displayPaidVolume = isDemo ? (424500.00 + dynamicPaidVolume) : dynamicPaidVolume;
+              const displayPaidVolume = dynamicPaidVolume;
               const disbursedVolume = liveFunctionalInvoices.filter(i => i.status === "talent_disbursed").reduce((acc, curr) => acc + curr.amount, 0);
-              const displayNet0Funded = isDemo ? (186000.00 + disbursedVolume * 0.85) : (disbursedVolume * 0.85);
-              const displayAutosplitSavings = isDemo ? (4250.00 + dynamicPaidVolume * 0.015) : (dynamicPaidVolume * 0.015);
+              const displayNet0Funded = disbursedVolume * 0.85;
+              const displayAutosplitSavings = dynamicPaidVolume * 0.015;
 
               const awaitingItems = workspaceType === "brand"
                 ? liveFunctionalInvoices.filter(i => i.status === "awaiting_approval")
@@ -779,17 +701,29 @@ export default function BrandDashboardPage() {
               const awaitingTotal = awaitingItems.reduce((acc, curr) => acc + curr.amount, 0);
               const awaitingCount = awaitingItems.length;
 
-              const stats = [
-                { label: "Total Paid Volume", value: `$${displayPaidVolume.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, trend: "+12.4%", icon: TrendingUp },
-                {
-                  label: "Awaiting Approval",
-                  value: `$${awaitingTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-                  count: `${awaitingCount} invoice${awaitingCount !== 1 ? "s" : ""}`,
-                  icon: Clock
-                },
-                { label: "Instant Net-0 Funded", value: `$${displayNet0Funded.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, detail: "AgncyPay liquidity", icon: Coins },
-                { label: "Autosplit Fee Savings", value: `$${displayAutosplitSavings.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, detail: "Single payment rail", icon: ShieldCheck }
-              ];
+              const stats = workspaceType === "brand"
+                ? [
+                    { label: "Total Paid Volume", value: `$${displayPaidVolume.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, trend: "+12.4%", icon: TrendingUp },
+                    {
+                      label: "Awaiting Approval",
+                      value: `$${awaitingTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+                      count: `${awaitingCount} invoice${awaitingCount !== 1 ? "s" : ""}`,
+                      icon: Clock
+                    },
+                    { label: "Instant Net-0 Funded", value: `$${displayNet0Funded.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, detail: "AgncyPay liquidity", icon: Coins },
+                    { label: "Autosplit Fee Savings", value: `$${displayAutosplitSavings.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, detail: "Single payment rail", icon: ShieldCheck }
+                  ]
+                : [
+                    { label: "Total Billed", value: `$${liveFunctionalInvoices.reduce((a, b) => a + b.amount, 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, trend: "+15.2%", icon: TrendingUp },
+                    {
+                      label: "Pending Revenue",
+                      value: `$${awaitingTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+                      count: `${awaitingCount} invoice${awaitingCount !== 1 ? "s" : ""}`,
+                      icon: Clock
+                    },
+                    { label: "Total Paid", value: `$${displayPaidVolume.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, detail: "Settled to agency", icon: Coins },
+                    { label: "Talent Payouts", value: `$${disbursedVolume.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, detail: "Disbursed to talent", icon: Users }
+                  ];
 
               return stats.map((stat, idx) => {
                 const isAwaitingApproval = stat.label === "Awaiting Approval";
