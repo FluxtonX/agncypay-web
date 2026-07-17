@@ -1,0 +1,266 @@
+"use client";
+
+import React from "react";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import { motion } from "framer-motion";
+import {
+  Building2,
+  Check,
+  ClipboardCheck,
+  CreditCard,
+  FileText,
+  Settings,
+  Shield,
+  Upload,
+  Users,
+  UserRound,
+} from "lucide-react";
+import { cn } from "../../lib/utils";
+import { useApp } from "../../context/AppContext";
+import { WorkspaceType, normalizeWorkspaceType } from "../../types/workspace";
+
+interface VerificationLayoutProps {
+  children: React.ReactNode;
+}
+
+type VerificationStep = {
+  id: number;
+  label: string;
+  path: string;
+  icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
+};
+
+const BRAND_STEPS: VerificationStep[] = [
+  {
+    id: 1,
+    label: "Brand KYB",
+    path: "/verification/business-info",
+    icon: Building2,
+  },
+  {
+    id: 2,
+    label: "Company Details",
+    path: "/verification/business-details",
+    icon: FileText,
+  },
+  {
+    id: 3,
+    label: "Finance Admin",
+    path: "/verification/representative",
+    icon: UserRound,
+  },
+  {
+    id: 4,
+    label: "Approval Controls",
+    path: "/verification/authorization",
+    icon: Shield,
+  },
+  {
+    id: 5,
+    label: "KYB Documents",
+    path: "/verification/documents",
+    icon: Upload,
+  },
+  {
+    id: 6,
+    label: "Bank Account",
+    path: "/verification/bank-details",
+    icon: CreditCard,
+  },
+  {
+    id: 7,
+    label: "Team Users",
+    path: "/verification/brand",
+    icon: Users,
+  },
+  {
+    id: 8,
+    label: "Payment Rules",
+    path: "/verification/payment-preferences",
+    icon: Settings,
+  },
+  {
+    id: 9,
+    label: "Review & Submit",
+    path: "/verification/review",
+    icon: ClipboardCheck,
+  },
+];
+
+const AGENCY_STEPS: VerificationStep[] = [
+  { id: 1, label: "Agency KYB", path: "/verification/business-info", icon: Building2 },
+  { id: 2, label: "Agency Details", path: "/verification/business-details", icon: FileText },
+  { id: 3, label: "Authorized Admin", path: "/verification/representative", icon: UserRound },
+  { id: 4, label: "Payout Authority", path: "/verification/authorization", icon: Shield },
+  { id: 5, label: "KYB Documents", path: "/verification/documents", icon: Upload },
+  { id: 6, label: "Payout Bank", path: "/verification/bank-details", icon: CreditCard },
+  { id: 7, label: "Talent Setup", path: "/verification/brand", icon: Users },
+  { id: 8, label: "Split Rules", path: "/verification/payment-preferences", icon: Settings },
+  { id: 9, label: "Review & Submit", path: "/verification/review", icon: ClipboardCheck },
+];
+
+const TALENT_STEPS: VerificationStep[] = [
+  { id: 1, label: "Identity Profile", path: "/verification/representative", icon: UserRound },
+  { id: 2, label: "KYC Documents", path: "/verification/documents", icon: Upload },
+  { id: 3, label: "Payout Bank", path: "/verification/bank-details", icon: CreditCard },
+  { id: 4, label: "Tax & Payout Info", path: "/verification/payment-preferences", icon: Settings },
+  { id: 5, label: "Review & Submit", path: "/verification/review", icon: ClipboardCheck },
+];
+
+const MOTHER_AGENCY_STEPS: VerificationStep[] = [
+  { id: 1, label: "Enterprise KYB", path: "/verification/business-info", icon: Building2 },
+  { id: 2, label: "Organization Details", path: "/verification/business-details", icon: FileText },
+  { id: 3, label: "Super Admin", path: "/verification/representative", icon: UserRound },
+  { id: 4, label: "Treasury Authority", path: "/verification/authorization", icon: Shield },
+  { id: 5, label: "Enterprise Docs", path: "/verification/documents", icon: Upload },
+  { id: 6, label: "Treasury Bank", path: "/verification/bank-details", icon: CreditCard },
+  { id: 7, label: "Child Agencies", path: "/verification/brand", icon: Users },
+  { id: 8, label: "Access Rules", path: "/verification/payment-preferences", icon: Settings },
+  { id: 9, label: "Review & Submit", path: "/verification/review", icon: ClipboardCheck },
+];
+
+const INSTANT_STEPS: VerificationStep[] = [
+  {
+    id: 1,
+    label: "Simple Signup",
+    path: "/verification/instant",
+    icon: UserRound,
+  },
+  {
+    id: 2,
+    label: "Bank Verification",
+    path: "/verification/instant/connect-bank",
+    icon: CreditCard,
+  },
+];
+
+function getSteps(workspaceType: WorkspaceType, isInstantFlow: boolean) {
+  if (isInstantFlow) return INSTANT_STEPS;
+  if (workspaceType === "agency") return AGENCY_STEPS;
+  if (workspaceType === "mother_agency") return MOTHER_AGENCY_STEPS;
+  if (workspaceType === "talent_agency" || workspaceType === "talent_independent") return TALENT_STEPS;
+  return BRAND_STEPS;
+}
+
+export function VerificationLayout({ children }: VerificationLayoutProps) {
+  const pathname = usePathname();
+  const router = useRouter();
+  const { state } = useApp();
+  const stepperRef = React.useRef<HTMLDivElement | null>(null);
+  const activeStepRef = React.useRef<HTMLButtonElement | null>(null);
+  const isInstantFlow = pathname.startsWith("/verification/instant");
+  const workspaceType = state.user ? normalizeWorkspaceType(state.user.accountType) : "brand";
+  const steps = getSteps(workspaceType, isInstantFlow);
+  const currentIndex = Math.max(
+    0,
+    steps.findIndex((step) => step.path === pathname)
+  );
+  const currentStep = steps[currentIndex] || steps[0];
+  const progressWidth = `${((currentStep.id - 1) / steps.length) * 100 + 100 / steps.length}%`;
+
+  React.useEffect(() => {
+    const stepper = stepperRef.current;
+    const activeStep = activeStepRef.current;
+
+    if (!stepper || !activeStep) return;
+
+    const targetLeft = Math.max(activeStep.offsetLeft - 28, 0);
+    stepper.scrollTo({
+      left: targetLeft,
+      behavior: "smooth",
+    });
+  }, [pathname, currentStep.id]);
+
+  return (
+    <div className="min-h-screen overflow-hidden bg-black text-white">
+      <header className="relative h-[76px] bg-black px-5 sm:px-8 lg:px-10">
+        <div className="flex h-[71px] items-center justify-between">
+          <Link href="/" className="flex items-center" aria-label="AgncyPay home">
+            <img
+              src="/agncypaybrand.png"
+              alt="AgncyPay"
+              className="h-[44px] w-auto object-contain sm:h-[48px]"
+            />
+          </Link>
+
+          <div className="text-[13px] font-medium leading-none text-[#8B8B8B] sm:text-[15px]">
+            Step {currentStep.id} of {steps.length}
+          </div>
+        </div>
+
+        <div className="absolute bottom-0 left-5 right-5 h-1 bg-[#242424] sm:left-8 sm:right-8 lg:left-10 lg:right-10">
+          <div
+            className="h-full bg-white transition-[width] duration-300"
+            style={{ width: progressWidth }}
+          />
+        </div>
+      </header>
+
+      <nav
+        ref={stepperRef}
+        className="h-[78px] overflow-x-auto overflow-y-hidden border-b border-[#171717] bg-black px-5 sm:h-[86px] sm:px-8 lg:px-10 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      >
+        <div className="flex h-full w-max min-w-full items-center gap-2 pr-8 sm:gap-[10px] sm:pr-12">
+          {steps.map((step, index) => {
+            const Icon = step.icon;
+            const isActive = step.id === currentStep.id;
+            const isPast = step.id < currentStep.id;
+            const StepIcon = isPast ? Check : Icon;
+
+            return (
+              <React.Fragment key={`${step.id}-${step.label}`}>
+                <button
+                  ref={isActive ? activeStepRef : null}
+                  type="button"
+                  onClick={() => router.push(step.path)}
+                  className={cn(
+                    "flex shrink-0 items-center gap-2 text-left transition-colors sm:gap-[10px]",
+                    isActive ? "text-white" : "text-[#555555] hover:text-[#8C8C8C]"
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full border sm:h-[38px] sm:w-[38px]",
+                      isActive
+                        ? "border-white text-white"
+                        : isPast
+                        ? "border-[#7D7D7D] text-[#9A9A9A]"
+                        : "border-[#555555] text-[#666666]"
+                    )}
+                  >
+                    <StepIcon className="h-4 w-4 sm:h-[17px] sm:w-[17px]" strokeWidth={1.8} />
+                  </span>
+                  <span
+                    className={cn(
+                      "whitespace-nowrap text-[13px] font-semibold leading-none tracking-normal sm:text-[14px]",
+                      isActive ? "text-white" : "text-[#555555]"
+                    )}
+                  >
+                    {step.label}
+                  </span>
+                </button>
+
+                {index < steps.length - 1 && (
+                  <span className="block h-px w-5 shrink-0 bg-[#A7A7A7] sm:w-7" />
+                )}
+              </React.Fragment>
+            );
+          })}
+        </div>
+      </nav>
+
+      <main className="h-[calc(100vh-154px)] overflow-y-auto bg-black px-5 sm:h-[calc(100vh-162px)] sm:px-8 lg:px-10">
+        <motion.div
+          key={pathname}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }}
+          transition={{ duration: 0.2, ease: "easeOut" }}
+        >
+          {children}
+        </motion.div>
+      </main>
+    </div>
+  );
+}
