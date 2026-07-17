@@ -43,6 +43,15 @@ interface AppState {
     businessState?: string;
     zipCode?: string;
     companyDescription?: string;
+    addressLine1?: string;
+    addressLine2?: string;
+    stateOrProvince?: string;
+    postalCode?: string;
+    country?: string;
+    firstName?: string;
+    lastName?: string;
+    dob?: string;
+    ssnLast4?: string;
   };
   representative: {
     fullName: string;
