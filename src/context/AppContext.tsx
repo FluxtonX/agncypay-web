@@ -25,6 +25,7 @@ import { doc, getDoc } from "firebase/firestore";
 
 interface AppState {
   user: {
+    uid: string;
     agncyId: string;
     fullName: string;
     email: string;
@@ -32,6 +33,8 @@ interface AppState {
     isLoggedIn: boolean;
     emailVerified: boolean;
     activeWorkspaceId?: string;
+    parentAgencyEmail?: string;
+    parentAgencyUid?: string;
   } | null;
   workspaces: Workspace[];
   memberships: Membership[];
@@ -43,6 +46,14 @@ interface AppState {
     businessState?: string;
     zipCode?: string;
     companyDescription?: string;
+    addressLine1?: string;
+    addressLine2?: string;
+    stateOrProvince?: string;
+    postalCode?: string;
+    firstName?: string;
+    lastName?: string;
+    dob?: string;
+    ssnLast4?: string;
   };
   representative: {
     fullName: string;
@@ -202,6 +213,9 @@ interface AppContextType {
       workspaceName?: string;
       workspaceType?: WorkspaceType;
       agencyId?: string;
+      uid?: string;
+      parentAgencyEmail?: string;
+      parentAgencyUid?: string;
     }
   ) => void;
   verifyEmail: (code: string) => boolean;
@@ -237,8 +251,11 @@ function normalizeStoredState(state: AppState): AppState {
     user: state.user
       ? {
           ...state.user,
+          uid: state.user.uid ?? "",
           agncyId: state.user.agncyId ?? createAgncyId("USR"),
           activeWorkspaceId: state.user.activeWorkspaceId ?? state.activeWorkspaceId ?? undefined,
+          parentAgencyEmail: state.user.parentAgencyEmail,
+          parentAgencyUid: state.user.parentAgencyUid,
         }
       : null,
   };
@@ -293,13 +310,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               return {
                 ...prev,
                 user: {
-                  agncyId: prev.user?.agncyId || `USR-${Math.floor(100000 + Math.random() * 900000)}`,
+                  uid: firebaseUser.uid,
+                  agncyId: prev.user?.agncyId || data.agencyId || `USR-${Math.floor(100000 + Math.random() * 900000)}`,
                   fullName: data.fullName,
                   email: data.email,
                   accountType: data.accountType,
                   isLoggedIn: true,
                   emailVerified: true,
                   activeWorkspaceId: workspaceId,
+                  parentAgencyEmail: data.parentAgencyEmail,
+                  parentAgencyUid: data.parentAgencyUid,
                 },
                 workspaces: existingWorkspace ? prev.workspaces : [...prev.workspaces, workspace],
                 activeWorkspaceId: workspaceId,
@@ -335,6 +355,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       workspaceName?: string;
       workspaceType?: WorkspaceType;
       agencyId?: string;
+      uid?: string;
+      parentAgencyEmail?: string;
+      parentAgencyUid?: string;
     }
   ) => {
     const normalizedEmail = email.trim().toLowerCase();
@@ -367,13 +390,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setState((prev) => ({
       ...prev,
       user: {
-        agncyId: prev.user?.email === normalizedEmail ? prev.user.agncyId : createAgncyId("USR"),
+        uid: workspaceOptions?.uid || prev.user?.uid || "",
+        agncyId: prev.user?.email === normalizedEmail ? prev.user.agncyId : (workspaceOptions?.agencyId || createAgncyId("USR")),
         fullName,
         email: normalizedEmail,
         accountType,
         isLoggedIn: true,
         emailVerified: false,
         activeWorkspaceId: workspaceId,
+        parentAgencyEmail: workspaceOptions?.parentAgencyEmail,
+        parentAgencyUid: workspaceOptions?.parentAgencyUid,
       },
       workspaces: [
         ...prev.workspaces.filter((existingWorkspace) => existingWorkspace.id !== workspaceId),

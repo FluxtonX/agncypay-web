@@ -2,7 +2,7 @@
 
 :root {
   --background: #0A0A0A;
-  --foreground: #f8fafc;
+  --foreground: #F8FAFC;
   
   --color-brand-deep: #0A0A0A;
   --color-brand-mid: #0D0D0D;
@@ -11,12 +11,35 @@
   --color-primary: #ffffff;
   --color-primary-hover: #e5e5e5;
   --color-secondary: #a3a3a3;
-  --color-success: #ffffff;
-  --color-warning: #bdbdbd;
-  --color-error: #ffffff;
+  --color-success: #10B981;
+  --color-warning: #F59E0B;
+  --color-error: #EF4444;
   
-  --text-primary: #f8fafc;
-  --text-secondary: #6B7280;
+  --text-primary: #F8FAFC;
+  --text-secondary: #8E9196;
+  --border-color: rgba(255, 255, 255, 0.1);
+  --card-bg: rgba(255, 255, 255, 0.02);
+}
+
+:root.light {
+  --background: #F8FAFC;
+  --foreground: #0A0A0A;
+  
+  --color-brand-deep: #F8FAFC;
+  --color-brand-mid: #F1F5F9;
+  --color-brand-light: #E2E8F0;
+  
+  --color-primary: #0A0A0A;
+  --color-primary-hover: #1E293B;
+  --color-secondary: #64748B;
+  --color-success: #10B981;
+  --color-warning: #D97706;
+  --color-error: #DC2626;
+  
+  --text-primary: #0A0A0A;
+  --text-secondary: #475569;
+  --border-color: rgba(0, 0, 0, 0.1);
+  --card-bg: rgba(0, 0, 0, 0.02);
 }
 
 @theme {
@@ -29,9 +52,25 @@
   
   --color-accent-primary: var(--color-primary);
   --color-accent-secondary: var(--color-secondary);
+  --color-border-custom: var(--border-color);
+  --color-card-custom: var(--card-bg);
   
-  --font-sans: var(--font-geist-sans), Inter, system-ui, -apple-system, sans-serif;
-  --font-mono: var(--font-geist-mono), monospace;
+  --font-sans: var(--font-plus-jakarta), Inter, system-ui, -apple-system, sans-serif;
+  --font-heading: var(--font-outfit), Inter, system-ui, -apple-system, sans-serif;
+  
+  /* Standardized font scale optimized for high legibility */
+  --font-size-xs: 13px;
+  --font-size-sm: 14.5px;
+  --font-size-base: 16px;
+  --font-size-xl: 21px;
+  --font-size-2xl: 26px;
+  --font-size-3xl: 34px;
+  
+  /* Standardized corner radii */
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-2xl: 16px;
+  --radius-3xl: 24px;
 }
 
 body {
@@ -39,6 +78,10 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans);
   overflow-x: hidden;
+}
+
+h1, h2, h3, h4, h5, h6, .font-semibold, .font-bold, .font-extrabold, .font-black {
+  font-family: var(--font-heading);
 }
 
 /* Custom Scrollbar */
@@ -188,4 +231,151 @@ body {
 .dashboard-action-surface a[href]:active {
   transform: translateY(0);
   opacity: 0.88;
+}
+
+/* Light mode global overrides for visual elements and contrast indicators */
+:root.light .glass-panel {
+  background: rgba(0, 0, 0, 0.02) !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+:root.light .glass-panel-hover:hover {
+  background: rgba(0, 0, 0, 0.04) !important;
+  border-color: rgba(0, 0, 0, 0.15) !important;
+}
+
+:root.light input,
+:root.light select,
+:root.light textarea {
+  background-color: #FFFFFF !important;
+  color: #0A0A0A !important;
+  border-color: rgba(0, 0, 0, 0.15) !important;
+}
+
+:root.light input:focus,
+:root.light select:focus,
+:root.light textarea:focus {
+  border-color: #000000 !important;
+}
+
+:root.light button.bg-white {
+  background-color: #0A0A0A !important;
+  color: #FFFFFF !important;
+}
+
+:root.light button.bg-white:hover {
+  background-color: #1E293B !important;
+}
+
+:root.light button.text-black {
+  color: #FFFFFF !important;
+}
+
+:root.light .text-white {
+  color: #0A0A0A !important;
+}
+
+:root.light .bg-black {
+  background-color: #FFFFFF !important;
+}
+
+:root.light .bg-\[\#050505\] {
+  background-color: #FFFFFF !important;
+}
+
+:root.light .bg-\[\#0A0A0A\] {
+  background-color: #F8FAFC !important;
+}
+
+:root.light .border-white\/10 {
+  border-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+:root.light .border-white\/20 {
+  border-color: rgba(0, 0, 0, 0.15) !important;
+}
+
+:root.light .text-neutral-400 {
+  color: #475569 !important;
+}
+
+:root.light .text-neutral-500 {
+  color: #64748B !important;
+}
+
+:root.light .bg-white\/\[0\.03\] {
+  background-color: rgba(0, 0, 0, 0.03) !important;
+}
+
+:root.light .bg-white\/5 {
+  background-color: rgba(0, 0, 0, 0.03) !important;
+}
+
+:root.light .bg-white\/10 {
+  background-color: rgba(0, 0, 0, 0.06) !important;
+}
+
+/* Invert white agncypay logo to dark black in light mode */
+:root.light img[src*="agncypaybrand.png"] {
+  filter: invert(1) brightness(0.2);
+}
+
+/* Color adjustments for specific grey texts to improve legibility */
+:root.light .text-\[\#8f8f8f\] {
+  color: #475569 !important;
+}
+
+:root.light .text-\[\#c1c1c7\] {
+  color: #1E293B !important;
+}
+
+:root.light .text-\[\#A3A3A3\] {
+  color: #475569 !important;
+}
+
+:root.light .text-neutral-400 {
+  color: #334155 !important;
+}
+
+/* Light mode specific Creative Node Network overrides */
+:root.light svg path {
+  stroke: rgba(15, 23, 42, 0.4) !important;
+}
+
+:root.light .absolute.inset-0.bg-\[radial-gradient\(rgba\(255\,255\,255\,0\.05\)_1px\,transparent_1px\)\] {
+  background-image: radial-gradient(rgba(15, 23, 42, 0.08) 1px, transparent 1px) !important;
+}
+
+:root.light .h-6.w-6.rounded-full.bg-neutral-800.border-2.border-white {
+  background-color: #0F172A !important;
+  color: #FFFFFF !important;
+  border-color: #FFFFFF !important;
+}
+
+:root.light .relative.z-10.bg-\[\#0A0A0A\] {
+  background-color: #FFFFFF !important;
+  border-color: rgba(0, 0, 0, 0.1) !important;
+}
+
+:root.light .relative.z-10.bg-\[\#0A0A0A\] span {
+  color: #0F172A !important;
+}
+
+:root.light .relative.z-10.bg-\[\#0A0A0A\] svg {
+  color: #0F172A !important;
+}
+
+:root.light .mt-4.h-48.rounded-xl.border.border-white\/20.bg-black {
+  background-color: #F8FAFC !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+:root.light .h-10.w-10.rounded-xl.bg-\[\#111\] {
+  background-color: rgba(0, 0, 0, 0.04) !important;
+  color: #0F172A !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+:root.light .h-10.w-10.rounded-xl.bg-\[\#111\] text-neutral-400 {
+  color: #0F172A !important;
 }

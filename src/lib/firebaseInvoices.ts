@@ -14,6 +14,13 @@ import {
 import { db } from "./firebase";
 import { FirestoreUser } from "./firebaseAuth";
 
+export interface InvoiceSplit {
+  talentName: string;
+  talentEmail: string;
+  amount: number;
+  status: "pending" | "disbursed";
+}
+
 export interface FirestoreInvoice {
   id: string;
   campaign: string;
@@ -33,6 +40,8 @@ export interface FirestoreInvoice {
   payerId: string;
   payerEmail: string;
   payerAddress: string[];
+  splits?: InvoiceSplit[];
+  talentEmails?: string[];
 }
 
 const INVOICES_COLLECTION = "invoices";
@@ -49,6 +58,7 @@ export async function createFirestoreInvoice(data: {
   brandEmail: string;
   amount: number;
   due: string;
+  splits?: InvoiceSplit[];
 }) {
   try {
     // Format timestamp dates
@@ -81,7 +91,11 @@ export async function createFirestoreInvoice(data: {
       createdDate: formattedDate,
       payerId: `MB-${Math.floor(6000 + Math.random() * 3000)}`,
       payerEmail: data.brandEmail,
-      payerAddress: ["Corporate Headquarters", "100 Broadway St", "New York, NY 10005"]
+      payerAddress: ["Corporate Headquarters", "100 Broadway St", "New York, NY 10005"],
+      splits: data.splits || [],
+      talentEmails: data.splits && data.splits.length > 0
+        ? data.splits.map(s => s.talentEmail.trim().toLowerCase())
+        : [data.talentEmail.trim().toLowerCase()]
     };
 
     const docRef = doc(db, INVOICES_COLLECTION, customId);
@@ -187,7 +201,7 @@ export function subscribeInvoicesByTalent(talentEmail: string, callback: (invoic
   const normalizedEmail = talentEmail.trim().toLowerCase();
   const q = query(
     collection(db, INVOICES_COLLECTION),
-    where("talentEmail", "==", normalizedEmail)
+    where("talentEmails", "array-contains", normalizedEmail)
   );
   
   return onSnapshot(q, (snapshot) => {
@@ -215,10 +229,23 @@ export async function updateInvoiceStatus(
 ) {
   try {
     const docRef = doc(db, INVOICES_COLLECTION, id);
-    await updateDoc(docRef, {
+    const docSnap = await getDoc(docRef);
+    const updateData: any = {
       status,
       talentPayoutStatus
-    });
+    };
+    
+    if (docSnap.exists()) {
+      const data = docSnap.data() as FirestoreInvoice;
+      if (data.splits && data.splits.length > 0 && talentPayoutStatus === "disbursed") {
+        updateData.splits = data.splits.map(s => ({
+          ...s,
+          status: "disbursed"
+        }));
+      }
+    }
+
+    await updateDoc(docRef, updateData);
   } catch (error) {
     console.error(`Error updating invoice status for ${id}:`, error);
     throw error;
@@ -269,6 +296,28 @@ export async function getRegisteredTalents(): Promise<FirestoreUser[]> {
     return talents;
   } catch (error) {
     console.error("Error getting registered talents from Firestore:", error);
+    return [];
+  }
+}
+
+// Fetch all registered talents represented by a specific agency from Firestore users collection
+export async function getRegisteredTalentsByAgency(agencyEmail: string): Promise<FirestoreUser[]> {
+  try {
+    if (!agencyEmail) return [];
+    const normalizedEmail = agencyEmail.trim().toLowerCase();
+    const q = query(
+      collection(db, "users"),
+      where("accountType", "in", ["individual", "talent_independent", "talent", "talent_agency"]),
+      where("parentAgencyEmail", "==", normalizedEmail)
+    );
+    const querySnapshot = await getDocs(q);
+    const talents: FirestoreUser[] = [];
+    querySnapshot.forEach((doc) => {
+      talents.push(doc.data() as FirestoreUser);
+    });
+    return talents;
+  } catch (error) {
+    console.error(`Error getting registered talents by agency ${agencyEmail}:`, error);
     return [];
   }
 }

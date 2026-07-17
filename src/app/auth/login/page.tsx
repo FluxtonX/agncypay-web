@@ -92,7 +92,10 @@ export default function LoginPage() {
           {
             workspaceName: userProfile.workspaceName,
             workspaceType: userProfile.accountType === "brand" ? "brand" : userProfile.accountType === "agency" ? "agency" : "talent_independent",
-            agencyId: userProfile.agencyId
+            agencyId: userProfile.agencyId,
+            uid: userProfile.uid,
+            parentAgencyEmail: userProfile.parentAgencyEmail,
+            parentAgencyUid: userProfile.parentAgencyUid,
           }
         );
 
@@ -111,7 +114,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 min-h-screen w-full bg-[#000000] text-white font-sans relative overflow-hidden">
+    <div className="grid grid-cols-1 md:grid-cols-2 min-h-screen w-full bg-background text-foreground font-sans relative overflow-hidden transition-colors duration-200">
       {/* Strict CSS overrides to force input elements to stay dark `#0B0B0B` and handle browser autofills */}
       <style dangerouslySetInnerHTML={{__html: `
         #email, #password {

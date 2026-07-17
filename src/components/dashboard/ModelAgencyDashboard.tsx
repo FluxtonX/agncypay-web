@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { ChevronRight, EllipsisVertical, Search, UploadCloud, X, ArrowUpRight, FileText, Inbox } from "lucide-react";
 import { cn } from "../../lib/utils";
+import { useApp } from "../../context/AppContext";
 
 const getFavicon = (domain: string) => `https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://${domain}&size=128`;
 
@@ -144,13 +145,17 @@ function Panel({ children, className }: { children: React.ReactNode; className?:
 
 export function useDynamicIncomes() {
   const [dynamicIncomes, setDynamicIncomes] = useState<any[]>([]);
+  const { state } = useApp();
+  const userEmail = state.user?.email || "guest";
 
   useEffect(() => {
     const loadIncomes = () => {
       try {
-        const stored = localStorage.getItem("uploadedIncomes");
+        const stored = localStorage.getItem(`uploadedIncomes_${userEmail}`);
         if (stored) {
           setDynamicIncomes(JSON.parse(stored));
+        } else {
+          setDynamicIncomes([]);
         }
       } catch (e) {
         // ignore
@@ -159,7 +164,7 @@ export function useDynamicIncomes() {
     loadIncomes();
     window.addEventListener("incomesUpdated", loadIncomes);
     return () => window.removeEventListener("incomesUpdated", loadIncomes);
-  }, []);
+  }, [userEmail]);
 
   return dynamicIncomes;
 }
@@ -277,6 +282,8 @@ export function ModelPayoutsList({ invoices = [] }: { invoices?: any[] }) {
 }
 
 export function CsvDropzonePanel() {
+  const { state } = useApp();
+  const userEmail = state.user?.email || "guest";
   const [isDragActive, setIsDragActive] = useState(false);
   const [uploadState, setUploadState] = useState<"idle" | "parsing" | "success" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState("");
@@ -335,9 +342,9 @@ export function CsvDropzonePanel() {
               imageClassName: "scale-[1]",
             }));
 
-            const existingIncomes = JSON.parse(localStorage.getItem("uploadedIncomes") || "[]");
+            const existingIncomes = JSON.parse(localStorage.getItem(`uploadedIncomes_${userEmail}`) || "[]");
             const updatedIncomes = [...newIncomes, ...existingIncomes];
-            localStorage.setItem("uploadedIncomes", JSON.stringify(updatedIncomes));
+            localStorage.setItem(`uploadedIncomes_${userEmail}`, JSON.stringify(updatedIncomes));
             
             // Dispatch event to update the UI
             window.dispatchEvent(new Event("incomesUpdated"));

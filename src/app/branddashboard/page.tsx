@@ -30,10 +30,12 @@ import {
   RefreshCw,
   Search,
   Loader2,
-  Check
+  Check,
+  Sun,
+  Moon
 } from "lucide-react";
 import { useApp } from "../../context/AppContext";
-import { subscribeInvoicesByBrand, subscribeInvoicesByAgency, updateInvoiceStatus, createFirestoreInvoice, getRegisteredBrands, getRegisteredTalents } from "../../lib/firebaseInvoices";
+import { subscribeInvoicesByBrand, subscribeInvoicesByAgency, updateInvoiceStatus, createFirestoreInvoice, getRegisteredBrands, getRegisteredTalents, getRegisteredTalentsByAgency } from "../../lib/firebaseInvoices";
 import { FirestoreUser } from "../../lib/firebaseAuth";
 
 // Refactored Data Models
@@ -100,14 +102,39 @@ export default function BrandDashboardPage() {
     setMounted(true);
     async function loadData() {
       const brands = await getRegisteredBrands();
-      const talents = await getRegisteredTalents();
+      const userEmail = state.user?.email || "";
+      const accountType = state.user?.accountType || "agency";
+      
+      let talents: FirestoreUser[] = [];
+      if (accountType === "agency" && userEmail) {
+        talents = await getRegisteredTalentsByAgency(userEmail);
+      } else {
+        talents = await getRegisteredTalents();
+      }
       setRegisteredBrands(brands);
       setRegisteredTalents(talents);
       if (brands.length > 0) setSelectedBrandEmail(brands[0].email);
+      if (talents.length > 0) setSelectedTalentEmail(talents[0].email);
     }
     loadData();
+  }, [state.user]);
+
+
+  const [isLightTheme, setIsLightTheme] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setIsLightTheme(document.documentElement.classList.contains("light"));
+    }
   }, []);
 
+  const toggleTheme = () => {
+    if (typeof window !== "undefined") {
+      const isLight = document.documentElement.classList.toggle("light");
+      setIsLightTheme(isLight);
+      localStorage.setItem("agncypay_theme", isLight ? "light" : "dark");
+    }
+  };
 
   // New invoice state hooks
   const [isNewInvoiceOpen, setIsNewInvoiceOpen] = useState(false);
@@ -116,14 +143,18 @@ export default function BrandDashboardPage() {
   const [newAmount, setNewAmount] = useState("");
   const [newDue, setNewDue] = useState("");
   const [isCreatingInvoice, setIsCreatingInvoice] = useState(false);
+  const [newSplits, setNewSplits] = useState<{ talentName: string; talentEmail: string; amount: number; status: "pending" | "disbursed" }[]>([]);
+  const [splitTalentEmail, setSplitTalentEmail] = useState("");
+  const [splitAmount, setSplitAmount] = useState("");
 
   useEffect(() => {
     const userEmail = state.user?.email || "";
+    if (!userEmail) return;
     
-    const savedVolume = localStorage.getItem("brand_stats_paid_volume");
+    const savedVolume = localStorage.getItem(`brand_stats_paid_volume_${userEmail}`);
     if (savedVolume) setLivePaidVolume(parseFloat(savedVolume));
     
-    const savedSavings = localStorage.getItem("brand_stats_autosplit_savings");
+    const savedSavings = localStorage.getItem(`brand_stats_autosplit_savings_${userEmail}`);
     if (savedSavings) setLiveAutosplitSavings(parseFloat(savedSavings));
 
     // Real-time listener for Firestore invoices scoped to the current user's role
@@ -152,7 +183,7 @@ export default function BrandDashboardPage() {
       unsubscribe = subscribeInvoicesByAgency(userEmail, handleInvoicesUpdate);
     }
 
-    const localNotifs = localStorage.getItem("agency_notifications");
+    const localNotifs = localStorage.getItem(`agency_notifications_${userEmail}`);
     if (localNotifs) {
       setNotifications(JSON.parse(localNotifs));
     }
@@ -162,11 +193,11 @@ export default function BrandDashboardPage() {
 
     // Set up a listener for storage events to sync across tabs/logins
     const syncStates = () => {
-      const savedVolume = localStorage.getItem("brand_stats_paid_volume");
+      const savedVolume = localStorage.getItem(`brand_stats_paid_volume_${userEmail}`);
       if (savedVolume) setLivePaidVolume(parseFloat(savedVolume));
-      const savedSavings = localStorage.getItem("brand_stats_autosplit_savings");
+      const savedSavings = localStorage.getItem(`brand_stats_autosplit_savings_${userEmail}`);
       if (savedSavings) setLiveAutosplitSavings(parseFloat(savedSavings));
-      const localNotifs = localStorage.getItem("agency_notifications");
+      const localNotifs = localStorage.getItem(`agency_notifications_${userEmail}`);
       if (localNotifs) setNotifications(JSON.parse(localNotifs));
     };
 
@@ -181,23 +212,24 @@ export default function BrandDashboardPage() {
   }, [state.user]);
 
   const handlePayInvoice = (id: string) => {
+    const userEmail = state.user?.email || "";
     setPayingInvoiceId(id);
     setTimeout(() => {
       setWidgetInvoices((prev) => {
         const next = prev.map((inv) => (inv.id === id ? { ...inv, status: "paid" } : inv));
-        localStorage.setItem("brand_widget_invoices", JSON.stringify(next));
+        localStorage.setItem(`brand_widget_invoices_${userEmail}`, JSON.stringify(next));
         
         const paidInvoice = prev.find((inv) => inv.id === id);
         if (paidInvoice) {
           const amt = paidInvoice.amount;
           setLivePaidVolume((v) => {
             const nv = v + amt;
-            localStorage.setItem("brand_stats_paid_volume", nv.toString());
+            localStorage.setItem(`brand_stats_paid_volume_${userEmail}`, nv.toString());
             return nv;
           });
           setLiveAutosplitSavings((v) => {
             const nv = v + amt * 0.015;
-            localStorage.setItem("brand_stats_autosplit_savings", nv.toString());
+            localStorage.setItem(`brand_stats_autosplit_savings_${userEmail}`, nv.toString());
             return nv;
           });
 
@@ -210,7 +242,7 @@ export default function BrandDashboardPage() {
           };
           setNotifications((notifs) => {
             const updated = [newNotif, ...notifs];
-            localStorage.setItem("agency_notifications", JSON.stringify(updated));
+            localStorage.setItem(`agency_notifications_${userEmail}`, JSON.stringify(updated));
             return updated;
           });
         }
@@ -236,6 +268,25 @@ export default function BrandDashboardPage() {
       const talentUser = registeredTalents.find(t => t.email === selectedTalentEmail);
       const talentName = talentUser ? talentUser.fullName : "sarah";
 
+      // Build splits array
+      let finalSplits = [...newSplits];
+      let primaryTalentName = talentName;
+      let primaryTalentEmail = selectedTalentEmail;
+
+      if (finalSplits.length === 0) {
+        // Fallback for single talent split (85%)
+        finalSplits = [{
+          talentName: primaryTalentName,
+          talentEmail: primaryTalentEmail,
+          amount: parseFloat(newAmount) * 0.85,
+          status: "pending"
+        }];
+      } else {
+        // Multi-talent splits already populated. Set primary talent as the first split talent.
+        primaryTalentName = finalSplits[0].talentName;
+        primaryTalentEmail = finalSplits[0].talentEmail;
+      }
+
       // Format YYYY-MM-DD date picker string to "MMM DD, YYYY" for visual uniformity
       let formattedDue = newDue;
       if (newDue.includes("-")) {
@@ -254,12 +305,13 @@ export default function BrandDashboardPage() {
         campaign: newCampaign,
         agency: activeAgencyName,
         agencyEmail: agencyEmail,
-        talent: talentName,
-        talentEmail: selectedTalentEmail,
+        talent: primaryTalentName,
+        talentEmail: primaryTalentEmail,
         brandName: brandName,
         brandEmail: selectedBrandEmail,
         amount: parseFloat(newAmount),
-        due: formattedDue
+        due: formattedDue,
+        splits: finalSplits
       });
       
       // Close and Reset Form
@@ -267,6 +319,9 @@ export default function BrandDashboardPage() {
       setNewCampaign("");
       setNewAmount("");
       setNewDue("");
+      setNewSplits([]);
+      setSplitTalentEmail("");
+      setSplitAmount("");
     } catch (error) {
       console.error("Error creating invoice in Firestore:", error);
     } finally {
@@ -275,6 +330,7 @@ export default function BrandDashboardPage() {
   };
 
   const handlePayAll = async () => {
+    const userEmail = state.user?.email || "";
     setIsPayingAll(true);
     setProcessingStage("verifying");
 
@@ -292,17 +348,17 @@ export default function BrandDashboardPage() {
         if (totalPaid > 0) {
           setLivePaidVolume((v) => {
             const nv = v + totalPaid;
-            localStorage.setItem("brand_stats_paid_volume", nv.toString());
+            localStorage.setItem(`brand_stats_paid_volume_${userEmail}`, nv.toString());
             return nv;
           });
           setLiveAutosplitSavings((v) => {
             const nv = v + totalPaid * 0.015;
-            localStorage.setItem("brand_stats_autosplit_savings", nv.toString());
+            localStorage.setItem(`brand_stats_autosplit_savings_${userEmail}`, nv.toString());
             return nv;
           });
 
           // Add notifications to localStorage
-          const localNotifs = localStorage.getItem("agency_notifications");
+          const localNotifs = localStorage.getItem(`agency_notifications_${userEmail}`);
           const notifs = localNotifs ? JSON.parse(localNotifs) : [];
           const newNotifs = unpaid.map((inv, idx) => ({
             id: `notif-${Date.now()}-${idx}`,
@@ -310,7 +366,7 @@ export default function BrandDashboardPage() {
             timestamp: "Just now",
             unread: true,
           }));
-          localStorage.setItem("agency_notifications", JSON.stringify([...newNotifs, ...notifs]));
+          localStorage.setItem(`agency_notifications_${userEmail}`, JSON.stringify([...newNotifs, ...notifs]));
         }
 
         // Show success state
@@ -551,12 +607,12 @@ export default function BrandDashboardPage() {
   if (!mounted) return null;
 
   return (
-    <main className="min-h-screen bg-[#000000] text-white flex flex-col font-sans antialiased selection:bg-white selection:text-black relative">
+    <main className="min-h-screen bg-background text-foreground flex flex-col font-sans antialiased relative transition-colors duration-200">
       {/* Background radial gradient decoration */}
       <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-white/[0.01] rounded-full blur-[100px] pointer-events-none" />
 
-      {/* Header - Unified Dark Theme */}
-      <header className="border-b border-white/20 bg-black/90 sticky top-0 z-50 shadow-sm backdrop-blur">
+      {/* Header - Adaptive Theme */}
+      <header className="border-b border-border-custom bg-background/90 sticky top-0 z-50 shadow-sm backdrop-blur">
         <div className="max-w-[1520px] mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-6">
             <div className="relative flex items-center mr-12">
@@ -593,10 +649,16 @@ export default function BrandDashboardPage() {
             >
               {workspaceType === "brand" ? "Invoice Queue" : "Sent Invoices"}
             </button>
-            <button className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#8f8f8f] hover:text-white transition-all">
+            <button 
+              onClick={() => router.push("/branddashboard/nodes")}
+              className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#8f8f8f] hover:text-white transition-all cursor-pointer"
+            >
               {workspaceType === "brand" ? "Settlement Nodes" : "Payout Split Nodes"}
             </button>
-            <button className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#8f8f8f] hover:text-white transition-all">
+            <button 
+              onClick={() => router.push("/branddashboard/analytics")}
+              className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#8f8f8f] hover:text-white transition-all cursor-pointer"
+            >
               {workspaceType === "brand" ? "Analytics" : "Agency Earnings"}
             </button>
           </nav>
@@ -622,6 +684,14 @@ export default function BrandDashboardPage() {
                 {state.workspaces.find(w => w.id === state.activeWorkspaceId)?.name || state.user?.fullName || "Adidas Corporate"}
               </span>
             </div>
+
+            <button
+              onClick={toggleTheme}
+              className="p-2 text-neutral-400 hover:text-white transition-colors cursor-pointer"
+              title="Toggle Theme"
+            >
+              {isLightTheme ? <Moon className="h-4 w-4 text-neutral-400 hover:text-white" /> : <Sun className="h-4 w-4 text-neutral-400 hover:text-white" />}
+            </button>
 
             <button
               onClick={handleLogout}
@@ -1597,7 +1667,8 @@ export default function BrandDashboardPage() {
                     <select
                       value={selectedTalentEmail}
                       onChange={(e) => setSelectedTalentEmail(e.target.value)}
-                      className="mt-2 h-11 w-full border border-white/20 bg-black rounded-lg px-4 text-xs font-semibold text-white outline-none focus:border-white transition-all cursor-pointer"
+                      disabled={newSplits.length > 0}
+                      className={`mt-2 h-11 w-full border border-white/20 bg-black rounded-lg px-4 text-xs font-semibold text-white outline-none focus:border-white transition-all cursor-pointer ${newSplits.length > 0 ? "opacity-60 cursor-not-allowed" : ""}`}
                     >
                       <option value="">Select Talent (Optional)</option>
                       {registeredTalents.map((t) => (
@@ -1616,12 +1687,126 @@ export default function BrandDashboardPage() {
                       type="number"
                       step="0.01"
                       required
+                      readOnly={newSplits.length > 0}
                       placeholder="e.g. 14999.98"
                       value={newAmount}
                       onChange={(e) => setNewAmount(e.target.value)}
-                      className="mt-2 h-11 w-full border border-white/20 bg-black rounded-lg px-4 text-xs font-semibold text-white outline-none focus:border-white transition-all"
+                      className={`mt-2 h-11 w-full border border-white/20 bg-black rounded-lg px-4 text-xs font-semibold text-white outline-none focus:border-white transition-all ${newSplits.length > 0 ? "opacity-60 cursor-not-allowed" : ""}`}
                     />
                   </div>
+                </div>
+
+                {/* Multi-Talent Splits Builder Section */}
+                <div className="border border-white/10 rounded-xl p-3 bg-white/[0.01] space-y-3">
+                  <span className="block text-[10px] font-bold text-neutral-400 uppercase tracking-widest">
+                    Campaign splits (Multi-Talent Payouts)
+                  </span>
+
+                  {newSplits.length > 0 && (
+                    <div className="space-y-1.5 max-h-[120px] overflow-y-auto pr-1">
+                      {newSplits.map((split, idx) => (
+                        <div key={idx} className="flex items-center justify-between text-xs bg-white/5 px-2.5 py-1.5 rounded-lg border border-white/5">
+                          <div className="flex flex-col">
+                            <span className="font-bold text-white text-[11px]">{split.talentName}</span>
+                            <span className="text-[9px] text-neutral-400 font-mono">{split.talentEmail}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono text-[#13d463] font-semibold">${split.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const next = newSplits.filter((_, i) => i !== idx);
+                                setNewSplits(next);
+                                const sum = next.reduce((acc, cur) => acc + cur.amount, 0);
+                                if (sum > 0) {
+                                  setNewAmount((sum / 0.85).toFixed(2));
+                                } else {
+                                  setNewAmount("");
+                                  setSelectedTalentEmail("");
+                                }
+                              }}
+                              className="text-red-400 hover:text-red-300 font-bold px-1 text-sm cursor-pointer"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="flex gap-2">
+                    <div className="flex-1">
+                      <select
+                        value={splitTalentEmail}
+                        onChange={(e) => setSplitTalentEmail(e.target.value)}
+                        className="h-9 w-full border border-white/10 bg-black rounded-lg px-2 text-[11px] font-semibold text-white outline-none focus:border-white transition-all cursor-pointer"
+                      >
+                        <option value="">Choose Talent</option>
+                        {registeredTalents
+                          .filter(t => !newSplits.some(s => s.talentEmail === t.email))
+                          .map((t) => (
+                            <option key={t.uid} value={t.email} className="bg-[#0A0A0A] text-white">
+                              {t.fullName}
+                            </option>
+                          ))
+                        }
+                      </select>
+                    </div>
+                    <div className="w-[85px]">
+                      <input
+                        type="number"
+                        placeholder="USD ($)"
+                        value={splitAmount}
+                        onChange={(e) => setSplitAmount(e.target.value)}
+                        className="h-9 w-full border border-white/10 bg-black rounded-lg px-2 text-[11px] font-semibold text-white outline-none focus:border-white transition-all"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!splitTalentEmail || !splitAmount) return;
+                        const talentUser = registeredTalents.find(t => t.email === splitTalentEmail);
+                        if (!talentUser) return;
+                        const amt = parseFloat(splitAmount);
+                        if (isNaN(amt) || amt <= 0) return;
+
+                        const next = [...newSplits, {
+                          talentName: talentUser.fullName,
+                          talentEmail: splitTalentEmail,
+                          amount: amt,
+                          status: "pending" as const
+                        }];
+                        setNewSplits(next);
+                        
+                        const sum = next.reduce((acc, cur) => acc + cur.amount, 0);
+                        setNewAmount((sum / 0.85).toFixed(2));
+
+                        if (next.length === 1) {
+                          setSelectedTalentEmail(splitTalentEmail);
+                        }
+
+                        setSplitTalentEmail("");
+                        setSplitAmount("");
+                      }}
+                      className="h-9 px-3 rounded-lg bg-white/10 hover:bg-white/20 text-white font-bold text-[11px] transition-all cursor-pointer"
+                    >
+                      + Add
+                    </button>
+                  </div>
+
+                  {newSplits.length > 0 && (
+                    <div className="text-[10px] text-neutral-400 space-y-0.5 pt-1 border-t border-white/5 font-medium leading-4">
+                      <div className="flex justify-between">
+                        <span>Total Talent Payout (85%):</span>
+                        <span className="font-semibold text-white">${newSplits.reduce((acc, cur) => acc + cur.amount, 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Agency Commission (15%):</span>
+                        <span className="font-semibold text-white">${(newSplits.reduce((acc, cur) => acc + cur.amount, 0) * 0.15 / 0.85).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div>

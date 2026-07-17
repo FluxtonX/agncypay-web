@@ -35,6 +35,12 @@ interface normalizedPayoutInvoice {
   agencyAmount: number;
   isWidget: boolean;
   status: string;
+  splits?: {
+    talentName: string;
+    talentEmail: string;
+    amount: number;
+    status: "pending" | "disbursed";
+  }[];
 }
 
 export default function PayoutDisbursementPage() {
@@ -56,16 +62,22 @@ export default function PayoutDisbursementPage() {
       try {
         const w = await fetchSingleInvoice(rawInvoiceId);
         if (w) {
+          const talentTotal = w.splits && w.splits.length > 0
+            ? w.splits.reduce((acc, cur) => acc + cur.amount, 0)
+            : w.amount * 0.85;
+          const agencyTotal = w.amount - talentTotal;
+
           setInvoice({
             id: w.id,
             campaignName: w.campaign,
             recipient: w.agency,
             talentName: w.talent,
             amount: w.amount,
-            talentAmount: w.amount * 0.85,
-            agencyAmount: w.amount * 0.15,
+            talentAmount: talentTotal,
+            agencyAmount: agencyTotal,
             isWidget: true,
             status: w.status,
+            splits: w.splits || [],
           });
         } else {
           // Fallback
@@ -79,6 +91,7 @@ export default function PayoutDisbursementPage() {
             agencyAmount: 2250.00,
             isWidget: true,
             status: "pending",
+            splits: [],
           });
         }
       } catch (error) {
@@ -115,15 +128,21 @@ export default function PayoutDisbursementPage() {
         }
 
         // Add payout success notification
-        const localNotifs = localStorage.getItem("agency_notifications");
+        const userEmail = state.user?.email || "";
+        const localNotifs = localStorage.getItem(`agency_notifications_${userEmail}`);
         const notifs = localNotifs ? JSON.parse(localNotifs) : [];
+        
+        const description = invoice.splits && invoice.splits.length > 1
+          ? `${invoice.recipient} paid campaign splits to ${invoice.splits.length} talents ($${invoice.talentAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}) after agency cut ($${invoice.agencyAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })})`
+          : `${invoice.recipient} paid talent ${invoice.talentName} ($${invoice.talentAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}) after deducting 15% agency fee ($${invoice.agencyAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })})`;
+
         const newNotif = {
           id: `notif-${Date.now()}`,
-          message: `${invoice.recipient} paid talent ${invoice.talentName} ($${invoice.talentAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}) after deducting 15% agency fee ($${invoice.agencyAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })})`,
+          message: description,
           timestamp: "Just now",
           unread: true,
         };
-        localStorage.setItem("agency_notifications", JSON.stringify([newNotif, ...notifs]));
+        localStorage.setItem(`agency_notifications_${userEmail}`, JSON.stringify([newNotif, ...notifs]));
       } catch (error) {
         console.error("Error updating payout status in Firestore:", error);
       }
@@ -142,15 +161,15 @@ export default function PayoutDisbursementPage() {
 
   if (!invoice) {
     return (
-      <div className="min-h-screen bg-black text-white flex items-center justify-center font-sans">
+      <div className="min-h-screen bg-background text-foreground flex items-center justify-center font-sans transition-colors duration-200">
         <div className="animate-spin h-6 w-6 border-2 border-white border-t-transparent rounded-full" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-black text-white font-sans antialiased selection:bg-white selection:text-black">
-      <header className="sticky top-0 z-30 border-b border-white/20 bg-black/95 backdrop-blur">
+    <div className="min-h-screen bg-background text-foreground font-sans antialiased transition-colors duration-200">
+      <header className="sticky top-0 z-30 border-b border-border-custom bg-background/95 backdrop-blur">
         <div className="mx-auto flex h-[76px] max-w-[1480px] items-center justify-between gap-4 px-6">
           <button 
             onClick={() => router.push("/branddashboard")} 
@@ -199,10 +218,39 @@ export default function PayoutDisbursementPage() {
               <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Talent Net Payout (85%)</span>
               <p className="text-xl font-extrabold text-white">{formatMainboardMoney(invoice.talentAmount)}</p>
               <p className="text-[9px] text-neutral-400 font-semibold flex items-center gap-1">
-                To talent: <span className="font-bold">@{invoice.talentName}</span>
+                {invoice.splits && invoice.splits.length > 1
+                  ? `${invoice.splits.length} Talent Recipients`
+                  : `To talent: @${invoice.talentName}`
+                }
               </p>
             </div>
           </div>
+
+          {/* Splits Breakdown */}
+          {invoice.splits && invoice.splits.length > 0 && (
+            <div className="space-y-4 pt-4 border-t border-white/10">
+              <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                <Users className="h-4 w-4 text-neutral-400" />
+                Splits Routing Paths
+              </h3>
+              <div className="grid grid-cols-1 gap-2.5">
+                {invoice.splits.map((s, idx) => (
+                  <div key={idx} className="flex items-center justify-between text-xs bg-black border border-white/10 p-3 rounded-xl">
+                    <div className="flex flex-col">
+                      <span className="font-bold text-white">{s.talentName}</span>
+                      <span className="text-[10px] text-neutral-500 font-mono">{s.talentEmail}</span>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <span className="font-mono text-[#13d463] font-semibold">${s.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                      <span className="text-[9px] font-bold text-emerald-400 bg-emerald-950/80 px-2.5 py-0.5 rounded-full uppercase border border-emerald-900">
+                        {s.status}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Selector for Payout Destination */}
           <div className="space-y-4">

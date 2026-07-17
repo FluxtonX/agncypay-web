@@ -16,6 +16,8 @@ export interface FirestoreUser {
   workspaceName: string;
   agencyId: string;
   createdAt: string;
+  parentAgencyEmail?: string;
+  parentAgencyUid?: string;
 }
 
 const USERS_COLLECTION = "users";

@@ -30,9 +30,12 @@ import {
   TrendingUp,
   AlertTriangle,
   FileText,
-  Users
+  Users,
+  Sun,
+  Moon
 } from "lucide-react";
 import { useApp } from "../../../../context/AppContext";
+import { subscribeInvoicesByBrand, subscribeInvoicesByAgency } from "../../../../lib/firebaseInvoices";
 
 // Types
 interface SplitItem {
@@ -80,6 +83,22 @@ export default function InvoiceDetailPage() {
   const { state, resetState } = useApp();
   const workspaceType = state.user ? state.user.accountType : "brand";
 
+  const [isLightTheme, setIsLightTheme] = useState(false);
+
+  React.useEffect(() => {
+    if (typeof window !== "undefined") {
+      setIsLightTheme(document.documentElement.classList.contains("light"));
+    }
+  }, []);
+
+  const toggleTheme = () => {
+    if (typeof window !== "undefined") {
+      const isLight = document.documentElement.classList.toggle("light");
+      setIsLightTheme(isLight);
+      localStorage.setItem("agncypay_theme", isLight ? "light" : "dark");
+    }
+  };
+
   const [invoices, setInvoices] = useState<InvoiceMock[]>([]);
   const [selectedTerm, setSelectedTerm] = useState<"Net-30" | "Net-60" | "Net-90">("Net-30");
   const [instantPayoutEnabled, setInstantPayoutEnabled] = useState<boolean>(true);
@@ -90,9 +109,59 @@ export default function InvoiceDetailPage() {
   const activeInvoice = invoices.find(inv => inv.id === invoiceId) || invoices[0] || null;
 
   React.useEffect(() => {
-    // No more localStorage fallback — invoices come from Firestore
-    setInvoices([]);
-  }, [state.user]);
+    const userEmail = state.user?.email;
+    if (!userEmail) {
+      setInvoices([]);
+      return;
+    }
+
+    const handleInvoicesUpdate = (invoicesList: any[]) => {
+      const mappedList: InvoiceMock[] = invoicesList.map((inv) => {
+        let uiStatus: "awaiting_approval" | "settled" | "talent_disbursed" = "awaiting_approval";
+        if (inv.status === "paid") {
+          uiStatus = inv.talentPayoutStatus === "disbursed" ? "talent_disbursed" : "settled";
+        }
+        
+        return {
+          id: inv.id,
+          campaignName: inv.campaign,
+          brandName: inv.brandName || "Adidas Corporate",
+          createdDate: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+          dueDate: inv.due,
+          amount: inv.amount,
+          location: "Escrow Wallet Active",
+          costCenter: "Marketing (Campaign Pool)",
+          initials: [inv.agency?.charAt(0).toUpperCase() || "A"],
+          defaultTerm: "Net-30",
+          status: uiStatus,
+          vendorFee: {
+            name: "Processing Fee",
+            role: "Vendor",
+            amount: inv.amount * 0.1,
+            walletId: "@agncypay",
+            avatar: "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=80&auto=format&fit=crop&q=80"
+          },
+          splitPool: {
+            total: inv.amount * 0.9,
+            splits: [
+              { name: inv.talent, role: "Talent", percentage: 85, amount: inv.amount * 0.9 * 0.85, walletId: "@talent", avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&auto=format&fit=crop&q=80" },
+              { name: inv.agency, role: "Agency", percentage: 15, amount: inv.amount * 0.9 * 0.15, walletId: "@agency", avatar: "https://images.unsplash.com/photo-1542204165-65bf26472b9b?w=80&auto=format&fit=crop&q=80" }
+            ]
+          }
+        };
+      });
+      setInvoices(mappedList);
+    };
+
+    let unsubscribe = () => {};
+    if (workspaceType === "brand") {
+      unsubscribe = subscribeInvoicesByBrand(userEmail, handleInvoicesUpdate);
+    } else {
+      unsubscribe = subscribeInvoicesByAgency(userEmail, handleInvoicesUpdate);
+    }
+
+    return () => unsubscribe();
+  }, [state.user, workspaceType]);
 
   React.useEffect(() => {
     if (activeInvoice) {
@@ -147,16 +216,24 @@ export default function InvoiceDetailPage() {
     router.push("/auth/login");
   };
 
+  if (!activeInvoice) {
+    return (
+      <div className="min-h-screen bg-background text-foreground flex items-center justify-center font-sans">
+        <div className="animate-spin h-6 w-6 border-2 border-white border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
   return (
-    <main className="min-h-screen bg-[#000000] text-white flex flex-col font-sans antialiased selection:bg-white selection:text-black relative pb-12">
+    <main className="min-h-screen bg-background text-foreground flex flex-col font-sans antialiased relative pb-12 transition-colors duration-200">
       <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-white/[0.01] rounded-full blur-[100px] pointer-events-none" />
 
       {/* Header */}
-      <header className="border-b border-white/20 bg-black/90 sticky top-0 z-50 shadow-sm backdrop-blur">
+      <header className="border-b border-border-custom bg-background/90 sticky top-0 z-50 shadow-sm backdrop-blur">
         <div className="max-w-[1520px] mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-6">
             <div className="relative flex items-center mr-12">
-              <Link href="/branddashboard" className="flex items-center">
+              <Link href="/branddashboard" className="flex items-center cursor-pointer z-50 hover:opacity-80 transition-opacity">
                 <img
                   src="/agncypaybrand.png"
                   alt="AgncyPay"
@@ -189,10 +266,16 @@ export default function InvoiceDetailPage() {
             >
               {workspaceType === "brand" ? "Invoice Queue" : "Sent Invoices"}
             </button>
-            <button className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#8f8f8f] hover:text-white transition-all">
+            <button 
+              onClick={() => router.push("/branddashboard/nodes")}
+              className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#8f8f8f] hover:text-white transition-all cursor-pointer"
+            >
               {workspaceType === "brand" ? "Settlement Nodes" : "Payout Split Nodes"}
             </button>
-            <button className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#8f8f8f] hover:text-white transition-all">
+            <button 
+              onClick={() => router.push("/branddashboard/analytics")}
+              className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#8f8f8f] hover:text-white transition-all cursor-pointer"
+            >
               {workspaceType === "brand" ? "Analytics" : "Agency Earnings"}
             </button>
           </nav>
@@ -218,6 +301,14 @@ export default function InvoiceDetailPage() {
                 {state.workspaces.find(w => w.id === state.activeWorkspaceId)?.name || state.user?.fullName || "Adidas Corporate"}
               </span>
             </div>
+            <button
+              onClick={toggleTheme}
+              className="p-2 text-neutral-400 hover:text-white transition-colors cursor-pointer mr-1"
+              title="Toggle Theme"
+            >
+              {isLightTheme ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+            </button>
+
             <button
               onClick={handleLogout}
               className="p-2 text-neutral-400 hover:text-white transition-colors"

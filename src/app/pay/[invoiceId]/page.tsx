@@ -282,15 +282,18 @@ export default function PayRequestPage() {
         const inv = await fetchSingleInvoice(mappedId);
         if (inv) {
           const amt = inv.amount;
-          const savedVolume = localStorage.getItem("brand_stats_paid_volume");
+          const brandEmail = inv.brandEmail;
+          const agencyEmail = inv.agencyEmail;
+          
+          const savedVolume = localStorage.getItem(`brand_stats_paid_volume_${brandEmail}`);
           const v = savedVolume ? parseFloat(savedVolume) : 424500.00;
-          localStorage.setItem("brand_stats_paid_volume", (v + amt).toString());
+          localStorage.setItem(`brand_stats_paid_volume_${brandEmail}`, (v + amt).toString());
 
-          const savedSavings = localStorage.getItem("brand_stats_autosplit_savings");
+          const savedSavings = localStorage.getItem(`brand_stats_autosplit_savings_${brandEmail}`);
           const s = savedSavings ? parseFloat(savedSavings) : 4250.00;
-          localStorage.setItem("brand_stats_autosplit_savings", (s + amt * 0.015).toString());
+          localStorage.setItem(`brand_stats_autosplit_savings_${brandEmail}`, (s + amt * 0.015).toString());
 
-          const localNotifs = localStorage.getItem("agency_notifications");
+          const localNotifs = localStorage.getItem(`agency_notifications_${agencyEmail}`);
           const notifs = localNotifs ? JSON.parse(localNotifs) : [];
           const newNotif = {
             id: `notif-${Date.now()}`,
@@ -298,7 +301,7 @@ export default function PayRequestPage() {
             timestamp: "Just now",
             unread: true,
           };
-          localStorage.setItem("agency_notifications", JSON.stringify([newNotif, ...notifs]));
+          localStorage.setItem(`agency_notifications_${agencyEmail}`, JSON.stringify([newNotif, ...notifs]));
         }
       } catch (error) {
         console.error("Error finalizing checkout payment in Firestore:", error);
@@ -358,15 +361,15 @@ export default function PayRequestPage() {
 
   if (loadingDb) {
     return (
-      <div className="min-h-screen bg-black text-white flex items-center justify-center font-sans">
+      <div className="min-h-screen bg-background text-foreground flex items-center justify-center font-sans transition-colors duration-200">
         <div className="animate-spin h-6 w-6 border-2 border-white border-t-transparent rounded-full" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-black text-white">
-      <header className="sticky top-0 z-30 border-b border-[#111] bg-black/95 backdrop-blur">
+    <div className="min-h-screen bg-background text-foreground transition-colors duration-200">
+      <header className="sticky top-0 z-30 border-b border-border-custom bg-background/95 backdrop-blur">
         <div className="mx-auto flex h-[76px] max-w-[1480px] items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
           <Link href={returnHref} className="inline-flex h-10 items-center gap-2 rounded-[7px] border border-[#252525] bg-[#050505] px-3 text-[13px] font-semibold text-white hover:border-[#555]">
             <ArrowLeft className="h-4 w-4" />

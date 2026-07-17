@@ -22,6 +22,8 @@ import {
   Wallet,
   Lock,
   LogOut,
+  Sun,
+  Moon
 } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { mainboardInvoices, formatMainboardMoney, type MainboardInvoice } from "../../lib/mainboard";
@@ -762,6 +764,22 @@ export default function DashboardHomePage() {
   const activeWorkspace = state.workspaces.find((w) => w.id === state.activeWorkspaceId);
   const workspaceType = activeWorkspace?.type || state.user?.accountType || "brand";
 
+  const [isLightTheme, setIsLightTheme] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setIsLightTheme(document.documentElement.classList.contains("light"));
+    }
+  }, []);
+
+  const toggleTheme = () => {
+    if (typeof window !== "undefined") {
+      const isLight = document.documentElement.classList.toggle("light");
+      setIsLightTheme(isLight);
+      localStorage.setItem("agncypay_theme", isLight ? "light" : "dark");
+    }
+  };
+
   const handleLogout = () => {
     resetState();
     router.push("/auth/login");
@@ -816,15 +834,31 @@ export default function DashboardHomePage() {
 
   useEffect(() => {
     const userEmail = state.user?.email || "guest";
-    const myInvoices = widgetInvoices.filter(i => i.talentEmail === userEmail);
+    const normalizedEmail = userEmail.trim().toLowerCase();
 
-    const dynamicCrystallised = myInvoices
-      .filter(i => i.status === "paid" && i.talentPayoutStatus === "pending")
-      .reduce((sum, i) => sum + i.amount * 0.85, 0);
+    const dynamicCrystallised = widgetInvoices.reduce((sum, i) => {
+      if (i.splits && i.splits.length > 0) {
+        const mySplit = i.splits.find((s: any) => s.talentEmail.trim().toLowerCase() === normalizedEmail);
+        if (mySplit && i.status === "paid" && mySplit.status === "pending") {
+          return sum + mySplit.amount;
+        }
+      } else if (i.talentEmail.trim().toLowerCase() === normalizedEmail && i.status === "paid" && i.talentPayoutStatus === "pending") {
+        return sum + i.amount * 0.85;
+      }
+      return sum;
+    }, 0);
 
-    const dynamicLiquidity = myInvoices
-      .filter(i => i.talentPayoutStatus === "disbursed")
-      .reduce((sum, i) => sum + i.amount * 0.85, 0);
+    const dynamicLiquidity = widgetInvoices.reduce((sum, i) => {
+      if (i.splits && i.splits.length > 0) {
+        const mySplit = i.splits.find((s: any) => s.talentEmail.trim().toLowerCase() === normalizedEmail);
+        if (mySplit && mySplit.status === "disbursed") {
+          return sum + mySplit.amount;
+        }
+      } else if (i.talentEmail.trim().toLowerCase() === normalizedEmail && i.talentPayoutStatus === "disbursed") {
+        return sum + i.amount * 0.85;
+      }
+      return sum;
+    }, 0);
 
     // Start at $0 — balances build from real Firestore data
     const defaultLiq = 0;
@@ -1003,7 +1037,7 @@ export default function DashboardHomePage() {
   if (!mounted) return null;
 
   return (
-    <main className="min-h-screen bg-black text-white">
+    <main className="min-h-screen bg-background text-foreground transition-colors duration-200">
       <div className="mx-auto max-w-[1520px] px-4 py-4 sm:px-6 lg:px-8">
         <div className="flex flex-nowrap items-center justify-between gap-4 pb-4">
           <div className="relative flex items-center">
@@ -1016,6 +1050,14 @@ export default function DashboardHomePage() {
             <span className="text-xs font-bold text-[#E5E5EA] hidden sm:inline">
               {state.user?.fullName || "Talent"}
             </span>
+            <button
+              onClick={toggleTheme}
+              className="p-2 text-neutral-400 hover:text-white transition-colors cursor-pointer"
+              title="Toggle Theme"
+            >
+              {isLightTheme ? <Moon className="h-4 w-4 text-neutral-400 hover:text-white" /> : <Sun className="h-4 w-4 text-neutral-400 hover:text-white" />}
+            </button>
+
             <button
               onClick={handleLogout}
               className="p-2 text-neutral-400 hover:text-white transition-colors"
