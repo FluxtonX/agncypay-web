@@ -500,8 +500,8 @@ export default function BrandDashboardPage() {
 
             const targetInvoice = prev.find((inv) => inv.id === id);
             if (targetInvoice) {
-              const talentSplit = targetInvoice.splitPool.splits.find((s) => s.role === "Talent");
-              const agencySplit = targetInvoice.splitPool.splits.find((s) => s.role === "Agency");
+              const talentSplit = targetInvoice.splitPool.splits.find((s: { role: string; }) => s.role === "Talent");
+              const agencySplit = targetInvoice.splitPool.splits.find((s: { role: string; }) => s.role === "Agency");
               
               if (talentSplit && agencySplit) {
                 const newNotif = {
