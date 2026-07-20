@@ -33,6 +33,7 @@ import {
   Users
 } from "lucide-react";
 import { useApp } from "../../../../context/AppContext";
+import { subscribeInvoicesByBrand, subscribeInvoicesByAgency, updateInvoiceStatus } from "../../../../lib/firebaseInvoices";
 
 // Using real Firebase data - no mock interfaces needed
 
@@ -53,9 +54,90 @@ export default function InvoiceDetailPage() {
   const activeInvoice = invoices.find(inv => inv.id === invoiceId) || invoices[0] || null;
 
   React.useEffect(() => {
-    // No more localStorage fallback — invoices come from Firestore
-    setInvoices([]);
-  }, [state.user]);
+    const userEmail = state.user?.email || "";
+    if (!userEmail) {
+      setInvoices([]);
+      return;
+    }
+
+    const handleInvoicesUpdate = (invoicesList: any[]) => {
+      const mapped = invoicesList.map((inv) => {
+        let uiStatus = "awaiting_approval";
+        if (inv.status === "paid") {
+          uiStatus = inv.talentPayoutStatus === "disbursed" ? "talent_disbursed" : "settled";
+        }
+
+        const initials = [];
+        if (inv.brandName) initials.push(inv.brandName.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2));
+        if (inv.agency) initials.push(inv.agency.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2));
+        if (inv.talent) initials.push(inv.talent.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2));
+        if (initials.length === 0) initials.push("AP");
+
+        const talentName = inv.talent || "No talent assigned";
+        const talentWalletId = `@${talentName.toLowerCase().replace(/\s+/g, '')}`;
+
+        const agencyName = inv.agency || "Agency";
+        const agencyWalletId = `@${agencyName.toLowerCase().replace(/\s+/g, '')}`;
+
+        return {
+          id: inv.id,
+          campaignName: inv.campaign || "",
+          brandName: inv.brandName || "",
+          brandEmail: inv.brandEmail || "",
+          agency: inv.agency || "",
+          agencyEmail: inv.agencyEmail || "",
+          talent: inv.talent || "",
+          talentEmail: inv.talentEmail || "",
+          createdDate: inv.createdDate || "",
+          dueDate: inv.due || "",
+          amount: inv.amount || 0,
+          status: uiStatus,
+          location: inv.payerAddress?.[2] || "New York, NY",
+          costCenter: inv.payerId || "CC-9080",
+          initials,
+          defaultTerm: "Net-30",
+          vendorFee: {
+            name: "Processing Fee",
+            role: "Vendor",
+            amount: (inv.amount || 0) * 0.015,
+            walletId: "@agncypay",
+            avatar: ""
+          },
+          splitPool: {
+            total: (inv.amount || 0) * 0.985,
+            splits: [
+              { 
+                name: talentName, 
+                role: "Talent", 
+                percentage: 85, 
+                amount: (inv.amount || 0) * 0.985 * 0.85, 
+                walletId: talentWalletId, 
+                avatar: "" 
+              },
+              { 
+                name: agencyName, 
+                role: "Agency", 
+                percentage: 15, 
+                amount: (inv.amount || 0) * 0.985 * 0.15, 
+                walletId: agencyWalletId, 
+                avatar: "" 
+              }
+            ]
+          }
+        };
+      });
+      setInvoices(mapped);
+    };
+
+    let unsubscribe = () => {};
+    if (workspaceType === "brand") {
+      unsubscribe = subscribeInvoicesByBrand(userEmail, handleInvoicesUpdate);
+    } else {
+      unsubscribe = subscribeInvoicesByAgency(userEmail, handleInvoicesUpdate);
+    }
+
+    return () => unsubscribe();
+  }, [state.user, workspaceType]);
 
   React.useEffect(() => {
     if (activeInvoice) {
@@ -64,7 +146,7 @@ export default function InvoiceDetailPage() {
   }, [activeInvoice]);
 
   const handleApproveAndPay = () => {
-    if (activeInvoice.status !== "awaiting_approval") return;
+    if (!activeInvoice || activeInvoice.status !== "awaiting_approval") return;
     
     const userEmail = state.user?.email || "guest";
     const queueKey = `brand_queue_invoices_${userEmail}`;
@@ -78,7 +160,13 @@ export default function InvoiceDetailPage() {
       setTimeout(() => {
         setProcessingStage("success");
         
-        setTimeout(() => {
+        setTimeout(async () => {
+          try {
+            await updateInvoiceStatus(activeInvoice.id, "paid", "pending");
+          } catch (err) {
+            console.error("Error updating invoice status in Firestore:", err);
+          }
+
           setInvoices(prev => {
             const next = prev.map(inv => 
               inv.id === activeInvoice.id ? { ...inv, status: "settled" as const } : inv
@@ -199,17 +287,25 @@ export default function InvoiceDetailPage() {
       </header>
 
       {/* Main Workspace (Strictly Styled after the Bilt layout) */}
-      <div className="max-w-[1520px] w-full mx-auto px-6 mt-8 flex-1 flex flex-col gap-6">
-        
-        {/* Dynamic Navigation Row (Like Bilt Address & Home Selector) */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      {!activeInvoice ? (
+        <div className="flex-1 flex items-center justify-center min-h-[300px]">
+          <div className="flex flex-col items-center gap-3">
+            <RefreshCw className="h-6 w-6 animate-spin text-[#4B6BFB]" />
+            <p className="text-xs text-neutral-400 font-medium">Loading invoice details...</p>
+          </div>
+        </div>
+      ) : (
+        <div className="max-w-[1520px] w-full mx-auto px-6 mt-8 flex-1 flex flex-col gap-6">
           
-          {/* Top Address & Cost Center (e.g. 829 Baker Street, #4B) */}
-          <div className="flex flex-wrap items-baseline gap-2 text-white">
-            <Link href="/branddashboard/invoices" className="hover:opacity-80 transition-opacity">
-              <ArrowLeft className="h-5 w-5 inline-block mr-2 -mt-1 text-[#8f8f8f]" />
-            </Link>
-            <h2 className="text-xl font-bold tracking-tight text-white">{activeInvoice.location},</h2>
+          {/* Dynamic Navigation Row (Like Bilt Address & Home Selector) */}
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            
+            {/* Top Address & Cost Center (e.g. 829 Baker Street, #4B) */}
+            <div className="flex flex-wrap items-baseline gap-2 text-white">
+              <Link href="/branddashboard/invoices" className="hover:opacity-80 transition-opacity">
+                <ArrowLeft className="h-5 w-5 inline-block mr-2 -mt-1 text-[#8f8f8f]" />
+              </Link>
+              <h2 className="text-xl font-bold tracking-tight text-white">{activeInvoice.location},</h2>
             <span className="text-xl font-extrabold text-[#4B6BFB]">{activeInvoice.costCenter}</span>
             <span className="text-xs font-bold uppercase tracking-wider text-[#8f8f8f]/60 ml-2">
               {activeInvoice.brandName}
@@ -583,8 +679,8 @@ export default function InvoiceDetailPage() {
 
           </div>
         </div>
-
       </div>
+      )}
     </main>
   );
 }

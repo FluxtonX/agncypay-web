@@ -11,6 +11,7 @@ import {
   LogOut
 } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
+import { subscribeInvoicesByBrand } from "../../../lib/firebaseInvoices";
 
 // Using real Firebase data - no mock interfaces needed
 
@@ -24,8 +25,47 @@ export default function InvoicesQueuePage() {
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
-    // No more localStorage fallback to static data — invoices come from Firestore
-    setInvoices([]);
+    const userEmail = state.user?.email || "";
+    if (!userEmail) {
+      setInvoices([]);
+      return;
+    }
+
+    const unsubscribe = subscribeInvoicesByBrand(userEmail, (invoicesList) => {
+      const mapped = invoicesList.map((inv) => {
+        let uiStatus = "awaiting_approval";
+        if (inv.status === "paid") {
+          uiStatus = inv.talentPayoutStatus === "disbursed" ? "talent_disbursed" : "settled";
+        }
+
+        const initials = [];
+        if (inv.brandName) initials.push(inv.brandName.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2));
+        if (inv.agency) initials.push(inv.agency.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2));
+        if (inv.talent) initials.push(inv.talent.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2));
+        if (initials.length === 0) initials.push("AP");
+
+        return {
+          id: inv.id,
+          campaignName: inv.campaign || "",
+          brandName: inv.brandName || "",
+          brandEmail: inv.brandEmail || "",
+          agency: inv.agency || "",
+          agencyEmail: inv.agencyEmail || "",
+          talent: inv.talent || "",
+          talentEmail: inv.talentEmail || "",
+          createdDate: inv.createdDate || "",
+          dueDate: inv.due || "",
+          amount: inv.amount || 0,
+          status: uiStatus,
+          location: inv.payerAddress?.[2] || "New York, NY",
+          costCenter: inv.payerId || "CC-9080",
+          initials
+        };
+      });
+      setInvoices(mapped);
+    });
+
+    return () => unsubscribe();
   }, [state.user]);
 
   const handleLogout = () => {
