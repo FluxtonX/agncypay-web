@@ -21,6 +21,7 @@ import {
   Check,
   Wallet,
   Lock,
+  Clock,
   LogOut,
   Sun,
   Moon
@@ -676,11 +677,13 @@ function WalletContactsOverlay({
 function CreativeBankingPanel({
   liquidity,
   crystallised,
+  pending,
   onWithdraw,
   onNet0,
 }: {
   liquidity: number;
   crystallised: number;
+  pending: number;
   onWithdraw: () => void;
   onNet0: () => void;
 }) {
@@ -692,6 +695,25 @@ function CreativeBankingPanel({
       </div>
 
       <div className="mt-5 space-y-4">
+        {/* Pending Balance Row */}
+        <div className="p-5 bg-[#050505] border border-white/10 rounded-xl flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#261a03] text-amber-500 border border-amber-500/20">
+              <Clock className="h-5 w-5" />
+            </div>
+            <div>
+              <span className="text-[12px] font-semibold text-neutral-400">Pending Balance</span>
+              <p className="mt-1 text-[26px] font-black text-white tracking-tight leading-none">
+                ${pending.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </p>
+              <p className="text-[11px] text-[#8E8E93] mt-1.5">Invoiced but awaiting brand payment.</p>
+            </div>
+          </div>
+          <span className={`text-[11px] font-semibold px-3 py-1.5 rounded-lg shrink-0 ${pending > 0 ? "text-amber-400 bg-amber-500/10 border border-amber-500/20" : "text-neutral-600 bg-white/[0.02] border border-white/[0.06]"}`}>
+            {pending > 0 ? "Awaiting" : "None"}
+          </span>
+        </div>
+
         {/* Liquidity Balance Row */}
         <div className="p-5 bg-[#050505] border border-white/10 rounded-xl flex items-center justify-between gap-4">
           <div className="flex items-center gap-4">
@@ -831,6 +853,7 @@ export default function DashboardHomePage() {
 
   const [liquidityBalance, setLiquidityBalance] = useState(0);
   const [crystallisedBalance, setCrystallisedBalance] = useState(0);
+  const [pendingBalance, setPendingBalance] = useState(0);
 
   useEffect(() => {
     const userEmail = state.user?.email || "guest";
@@ -860,6 +883,19 @@ export default function DashboardHomePage() {
       return sum;
     }, 0);
 
+    // Pending balance: invoices assigned to this talent where brand hasn't paid yet
+    const dynamicPending = widgetInvoices.reduce((sum, i) => {
+      if (i.status === "pending") {
+        if (i.splits && i.splits.length > 0) {
+          const mySplit = i.splits.find((s: any) => s.talentEmail.trim().toLowerCase() === normalizedEmail);
+          if (mySplit) return sum + mySplit.amount;
+        } else if (i.talentEmail.trim().toLowerCase() === normalizedEmail) {
+          return sum + i.amount * 0.85;
+        }
+      }
+      return sum;
+    }, 0);
+
     // Start at $0 — balances build from real Firestore data
     const defaultLiq = 0;
     const defaultCry = 0;
@@ -869,6 +905,7 @@ export default function DashboardHomePage() {
 
     setLiquidityBalance(finalLiq);
     setCrystallisedBalance(finalCry);
+    setPendingBalance(dynamicPending);
   }, [widgetInvoices, sessionWithdrawAmount, sessionNet0Advanced, state.user]);
 
   const [isNet0Open, setIsNet0Open] = useState(false);
@@ -1365,6 +1402,7 @@ export default function DashboardHomePage() {
             <CreativeBankingPanel
               liquidity={liquidityBalance}
               crystallised={crystallisedBalance}
+              pending={pendingBalance}
               onWithdraw={() => setIsWithdrawOpen(true)}
               onNet0={() => setIsNet0Open(true)}
             />

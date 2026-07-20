@@ -16,6 +16,9 @@ import {
   TrendingUp,
   Users,
   CheckCircle2,
+  CreditCard,
+  X,
+  Plus,
   AlertCircle,
   HelpCircle,
   FileText,
@@ -92,11 +95,44 @@ export default function BrandDashboardPage() {
   const [payingInvoiceId, setPayingInvoiceId] = useState<string | null>(null);
   const [payoutingInvoiceId, setPayoutingInvoiceId] = useState<string | null>(null);
 
+  // Embedded Checkout State
+  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
+  const [paymentRail, setPaymentRail] = useState("ACH");
+  const [paymentTerm, setPaymentTerm] = useState("Pay Now");
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const handleProcessPayment = async () => {
+    setIsProcessing(true);
+    try {
+      const selectedInvoicesList = widgetInvoices.filter(i => selectedIds.includes(i.id));
+      for (const inv of selectedInvoicesList) {
+        if (inv.status === "pending") {
+          await updateInvoiceStatus(inv.id, "paid", "pending");
+        }
+      }
+      setIsProcessing(false);
+      setIsSuccess(true);
+      setTimeout(() => {
+        setIsCheckoutOpen(false);
+        setIsSuccess(false);
+        setSelectedIds([]);
+        window.dispatchEvent(new Event("syncBrandDashboard"));
+      }, 2000);
+    } catch (e) {
+      console.error(e);
+      setIsProcessing(false);
+    }
+  };
+
+
   const [mounted, setMounted] = useState(false);
   const [registeredBrands, setRegisteredBrands] = useState<FirestoreUser[]>([]);
   const [registeredTalents, setRegisteredTalents] = useState<FirestoreUser[]>([]);
   const [selectedBrandEmail, setSelectedBrandEmail] = useState("");
   const [selectedTalentEmail, setSelectedTalentEmail] = useState("");
+
+
 
   useEffect(() => {
     setMounted(true);
@@ -122,6 +158,8 @@ export default function BrandDashboardPage() {
 
   const [isLightTheme, setIsLightTheme] = useState(false);
 
+
+
   useEffect(() => {
     if (typeof window !== "undefined") {
       setIsLightTheme(document.documentElement.classList.contains("light"));
@@ -146,6 +184,8 @@ export default function BrandDashboardPage() {
   const [newSplits, setNewSplits] = useState<{ talentName: string; talentEmail: string; amount: number; status: "pending" | "disbursed" }[]>([]);
   const [splitTalentEmail, setSplitTalentEmail] = useState("");
   const [splitAmount, setSplitAmount] = useState("");
+
+
 
   useEffect(() => {
     const userEmail = state.user?.email || "";
@@ -483,6 +523,8 @@ export default function BrandDashboardPage() {
   const activeInvoice = allInvoices.find(inv => inv.id === selectedInvoiceId) || queueInvoices[0] || allInvoices[0] || null;
 
   // Set default term when active invoice changes
+
+
   useEffect(() => {
     if (activeInvoice) {
       setSelectedTerm(activeInvoice.defaultTerm);
@@ -821,9 +863,8 @@ export default function BrandDashboardPage() {
             })()}
           </div>
 
-          {/* CRM Invoices Widget */}
+          {/* Embedded Invoices Table */}
           <div className="bg-[#050505] rounded-2xl border border-white/20 shadow-sm overflow-hidden mt-6">
-            {/* Header */}
             <div className="p-6 border-b border-white/20 bg-white/[0.01] flex justify-between items-center">
               <div className="flex items-center gap-2">
                 <span className="font-bold text-white tracking-tight">agncypay</span>
@@ -832,774 +873,188 @@ export default function BrandDashboardPage() {
                   {workspaceType === "brand" ? "Invoices for your brand" : "Invoices sent to brand"}
                 </span>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-white bg-white/10 px-2.5 py-0.5 rounded border border-white/20">
-                  CRM Widget
-                </span>
+            </div>
+            
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b border-white/20 bg-white/[0.02] text-xs font-semibold uppercase tracking-wider text-[#8f8f8f]">
+                    <th className="p-4">
+                      {workspaceType === "brand" && (
+                        <input 
+                          type="checkbox" 
+                          className="h-4 w-4 accent-white rounded border-white/20 bg-transparent"
+                          onChange={(e) => {
+                            const pendingInvs = widgetInvoices.filter(i => i.status === "pending");
+                            setSelectedIds(e.target.checked ? pendingInvs.map(i => i.id) : []);
+                          }}
+                          checked={selectedIds.length > 0 && selectedIds.length === widgetInvoices.filter(i => i.status === "pending").length}
+                        />
+                      )}
+                    </th>
+                    <th className="py-4 font-semibold">Invoice</th>
+                    <th className="py-4 font-semibold">Payee</th>
+                    <th className="py-4 font-semibold">Job</th>
+                    <th className="py-4 font-semibold">Total</th>
+                    <th className="py-4 pr-4 font-semibold">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/10">
+                  {widgetInvoices.map((inv) => {
+                    const isSelected = selectedIds.includes(inv.id);
+                    return (
+                      <tr key={inv.id} className={`transition-colors hover:bg-white/[0.02] ${isSelected ? "bg-white/[0.05]" : ""}`}>
+                        <td className="p-4">
+                          {workspaceType === "brand" && inv.status === "pending" && (
+                            <input 
+                              type="checkbox" 
+                              className="h-4 w-4 accent-white rounded border-white/20 bg-transparent"
+                              checked={isSelected}
+                              onChange={(e) => {
+                                setSelectedIds(curr => 
+                                  curr.includes(inv.id) ? curr.filter(id => id !== inv.id) : [...curr, inv.id]
+                                );
+                              }}
+                            />
+                          )}
+                        </td>
+                        <td className="py-4 text-xs font-mono text-[#8f8f8f]">{inv.id.substring(0,8).toUpperCase()}</td>
+                        <td className="py-4">
+                          <p className="font-bold text-white">{inv.agency}</p>
+                        </td>
+                        <td className="py-4">
+                          <p className="text-white font-medium">{inv.campaign}</p>
+                          <p className="text-[10px] text-[#8f8f8f]">Due {inv.dueDate}</p>
+                        </td>
+                        <td className="py-4 font-bold text-white">
+                          ${(inv.amount * (workspaceType === "brand" ? 1.015 : 1)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </td>
+                        <td className="py-4 pr-4">
+                          {inv.status === "pending" ? (
+                            <span className="text-[10px] font-bold px-2.5 py-1 rounded-md bg-[#261603] text-[#ff8a00] border border-[#ff8a00]/20">Awaiting</span>
+                          ) : (
+                            <span className="text-[10px] font-bold px-2.5 py-1 rounded-md bg-[#082315] text-[#10b95f] border border-[#10b95f]/20">Paid</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            
+            {workspaceType === "brand" && selectedIds.length > 0 && (
+              <div className="p-4 bg-[#111] border-t border-white/20 flex justify-between items-center">
+                <div>
+                  <p className="text-sm font-bold text-white">{selectedIds.length} invoice(s) selected</p>
+                  <p className="text-[11px] text-[#8f8f8f]">Ready for batch payment.</p>
+                </div>
+                <div className="flex gap-3">
+                  <button onClick={() => setSelectedIds([])} className="px-4 py-2 text-xs font-bold text-white hover:bg-white/10 rounded-lg transition-colors">Clear</button>
+                  <button onClick={() => setIsCheckoutOpen(true)} className="px-4 py-2 text-xs font-bold bg-white text-black hover:bg-neutral-200 rounded-lg flex items-center gap-2 transition-colors">
+                    <ShieldCheck className="w-4 h-4" /> Batch Pay
+                  </button>
+                </div>
               </div>
-            </div>
-
-            {/* Total Outstanding & Pay Button */}
-            {(() => {
-              const isBrand = workspaceType === "brand";
-              const activeWidgetInvoices = isBrand
-                ? widgetInvoices.filter(i => i.status === "pending")
-                : widgetInvoices.filter(i => i.status === "paid" && i.talentPayoutStatus !== "disbursed");
-
-              const outstandingSum = activeWidgetInvoices.reduce((sum, i) => sum + i.amount, 0);
-              const platformFee = outstandingSum * 0.015;
-              const totalWithFee = outstandingSum + platformFee;
-
-              return (
-                <>
-                  <div className="p-6 md:p-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 border-b border-white/20">
-                    <div>
-                      <span className="text-xs font-semibold text-[#8f8f8f] uppercase tracking-wider">
-                        {isBrand ? "Total outstanding" : "Ready for talent payout"}
-                      </span>
-                      <div className="mt-1 flex items-baseline gap-1.5">
-                        <span className="text-3xl font-black text-white tracking-tight">
-                          ${outstandingSum.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </span>
-                      </div>
-                      {outstandingSum > 0 && isBrand && (
-                        <p className="text-[11px] text-[#8f8f8f] mt-1 font-semibold">
-                          + ${platformFee.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} platform fee = <span className="text-white font-bold">${totalWithFee.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} total</span>
-                        </p>
-                      )}
-                      {outstandingSum > 0 && !isBrand && (
-                        <p className="text-[11px] text-neutral-400 mt-1 font-semibold">
-                          {activeWidgetInvoices.length} invoices paid by Brand, awaiting split routing.
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="flex items-center gap-3 w-full md:w-auto">
-                      {workspaceType === "brand" ? (
-                        outstandingSum > 0 ? (
-                          <button
-                            onClick={handlePayAll}
-                            disabled={isPayingAll || payingInvoiceId !== null}
-                            className="w-full md:w-auto h-11 px-6 rounded-xl bg-white text-black text-xs font-bold hover:bg-neutral-200 transition-colors flex items-center justify-center gap-2 cursor-pointer"
-                          >
-                            {isPayingAll ? (
-                              <>
-                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                Processing Payment...
-                              </>
-                            ) : (
-                              <>
-                                <Sparkles className="h-3.5 w-3.5" />
-                                Pay all {activeWidgetInvoices.length} invoices · ${totalWithFee.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                              </>
-                            )}
-                          </button>
-                        ) : (
-                          <span className="text-xs font-semibold text-[#10b95f] bg-[#082315] border border-[#10b95f]/20 px-3 py-1.5 rounded-lg flex items-center gap-1.5">
-                            <Check className="h-3.5 w-3.5" />
-                            All invoices paid
-                          </span>
-                        )
-                      ) : (
-                        <span className="text-xs font-semibold text-[#8f8f8f] bg-white/[0.02] border border-white/20 px-3 py-1.5 rounded-lg">
-                          {activeWidgetInvoices.length} invoices awaiting payout
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Invoices List */}
-                  <div className="divide-y divide-white/15">
-                    {widgetInvoices.map((inv) => {
-                      const isPaid = inv.status === "paid";
-                      const isDisbursed = inv.talentPayoutStatus === "disbursed";
-                      const isPayingThis = payingInvoiceId === inv.id;
-                      const isPayoutingThis = payoutingInvoiceId === inv.id;
-                      const initial = inv.agency.charAt(0).toUpperCase();
-
-                      return (
-                        <div key={inv.id} className="p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:bg-white/[0.01] transition-all">
-                          <div className="flex items-center gap-4 min-w-0">
-                            <div className="h-10 w-10 rounded-xl bg-[#111] border border-white/20 flex items-center justify-center font-bold text-sm text-neutral-400 shrink-0">
-                              {initial}
-                            </div>
-                            <div className="min-w-0 text-left">
-                              <p className="text-xs font-bold text-white truncate">{inv.agency}</p>
-                              <p className="text-[10px] text-neutral-400 font-semibold mt-0.5">{inv.campaign}</p>
-                              <p className="text-[9px] text-[#8f8f8f] mt-1">
-                                Talent: <span className="text-[#c1c1c7] font-semibold">{inv.talent}</span> • Due {inv.dueDate}
-                              </p>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-end shrink-0">
-                            <span className="text-sm font-bold text-white">
-                              ${inv.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            </span>
-
-                            {workspaceType === "brand" ? (
-                              isPaid ? (
-                                <span className="text-[10px] font-bold text-[#10b95f] bg-[#082315] border border-[#10b95f]/20 px-3 py-1.5 rounded-lg flex items-center gap-1">
-                                  <Check className="h-3 w-3" />
-                                  Paid
-                                </span>
-                              ) : (
-                                <button
-                                  onClick={() => {
-                                    router.push(`/pay/${inv.id}?mode=logged_in&returnTo=dashboard`);
-                                  }}
-                                  className="h-8 px-4 rounded-lg bg-white/5 border border-white/20 text-[11px] font-bold text-white hover:bg-white/15 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-                                >
-                                  Pay now
-                                </button>
-                              )
-                            ) : (
-                              <div className="flex items-center gap-2">
-                                {isPaid ? (
-                                   <span className="text-[10px] font-bold px-3 py-1.5 rounded-lg text-[#10b95f] bg-[#082315] border border-[#10b95f]/20">
-                                     Paid
-                                   </span>
-                                 ) : (
-                                   <span
-                                      className="text-[10px] font-bold px-3 py-1.5 rounded-lg text-[#ff8a00] bg-[#261603] border border-[#ff8a00]/20 cursor-default"
-                                      title="Awaiting client payment settlement"
-                                    >
-                                      Pending Payer
-                                    </span>
-                                 )}
-                                
-                                {isPaid && (
-                                   isDisbursed ? (
-                                     <span className="text-[10px] font-bold text-white bg-white/10 border border-white/20 px-3 py-1.5 rounded-lg flex items-center gap-1">
-                                       <Check className="h-3 w-3" />
-                                       Talent Paid
-                                     </span>
-                                   ) : (
-                                     <button
-                                       onClick={() => router.push(`/payout/${inv.id}?returnTo=dashboard`)}
-                                       className="h-8 px-4 rounded-lg bg-white hover:bg-neutral-200 text-black text-[11px] font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-                                     >
-                                       Payout Talent (85%)
-                                     </button>
-                                   )
-                                 )}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </>
-              );
-            })()}
-
-            {/* Footer */}
-            <div className="p-4 border-t border-white/20 bg-white/[0.01] flex justify-between items-center text-[10px] text-neutral-500">
-              <span>Powered by agncypay • Secure payment processing</span>
-              <span>1.5% platform fee</span>
-            </div>
+            )}
           </div>
-
-          {/* Agency Notifications Banners */}
-          {workspaceType === "agency" && notifications.length > 0 && (
-            <div className="bg-[#050505] rounded-2xl border border-white/20 p-5 shadow-sm mt-6">
-              <h4 className="text-[11px] font-bold text-[#8f8f8f] uppercase tracking-wider flex items-center gap-1.5 mb-4">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                Live Agency Payout Notifications
-              </h4>
-              <div className="max-h-[180px] overflow-y-auto space-y-2 pr-1">
-                {notifications.map((n) => (
-                  <div 
-                    key={n.id} 
-                    className="p-3 bg-[#082315]/40 border border-[#10b95f]/20 rounded-xl flex items-center justify-between gap-4 text-[11px] shadow-sm hover:border-[#10b95f]/30 transition-all"
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="h-5 w-5 rounded-full bg-[#082315] border border-[#10b95f]/30 flex items-center justify-center shrink-0">
-                        <Check className="h-2.5 w-2.5 text-[#70ff9e]" />
-                      </div>
-                      <span className="text-[#e1e1e6] font-medium truncate">{n.message}</span>
-                    </div>
-                    <span className="text-[9px] text-neutral-500 shrink-0 font-semibold">{n.timestamp}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Empty State for Agency */}
-          {workspaceType === "agency" && !activeInvoice && (
-            <div className="bg-[#050505] rounded-2xl border border-white/20 p-8 text-center shadow-sm mt-6">
-              <CheckCircle2 className="h-8 w-8 text-[#10b95f] mx-auto mb-3 animate-pulse" />
-              <h3 className="text-sm font-bold text-white">No Invoices Found</h3>
-              <p className="text-xs text-neutral-400 mt-1.5 max-w-xs mx-auto leading-relaxed">
-                You haven't created any invoices yet. Click the "+ New Invoice" button to issue your first split campaign invoice.
-              </p>
-            </div>
-          )}
-
-          {/* Balance Hero Card & Split View */}
-          {workspaceType === "agency" && activeInvoice && (
-            <div className="bg-[#050505] rounded-2xl border border-white/20 shadow-sm overflow-hidden mt-6">
-              
-              {/* Header portion */}
-              <div className="p-6 border-b border-white/20 bg-white/[0.01] flex justify-between items-center">
-                <div>
-                  <span className="text-xs font-bold text-[#8f8f8f] uppercase tracking-wider">Awaiting Settlement</span>
-                  <h3 className="text-base font-bold text-white mt-0.5">{activeInvoice.campaignName}</h3>
-                </div>
-                <span className="text-xs font-mono bg-white/[0.03] px-2 py-1 rounded text-[#8f8f8f] font-semibold border border-white/20">
-                  {activeInvoice.id}
-                </span>
-              </div>
-
-              {/* Core Balance Card Info */}
-              <div className="p-6 md:p-8 grid grid-cols-1 md:grid-cols-2 gap-8 border-b border-white/20">
-                
-                {/* Left pane - Amount and Action */}
-                <div className="flex flex-col justify-between">
-                  <div>
-                    <span className="text-xs font-bold text-[#8f8f8f] uppercase tracking-wider">Balance due</span>
-                    <div className="mt-1 flex items-baseline">
-                      <span className="text-[38px] font-black text-white tracking-tight">
-                        ${activeInvoice.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </span>
-                    </div>
-                    <div className="mt-3 flex items-center gap-4 text-xs text-[#8f8f8f] font-medium">
-                      <div className="flex items-center gap-1">
-                        <Calendar className="h-3.5 w-3.5 text-neutral-400" />
-                        <span>Ingested: {activeInvoice.createdDate}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                   {/* Approve and Pay Button */}
-                   <div className="mt-8">
-                     <AnimatePresence mode="wait">
-                       {processingStage === "idle" && (
-                          <button
-                            onClick={() => {
-                              if (activeInvoice.status === "settled") {
-                                router.push(`/payout/${activeInvoice.id}?returnTo=dashboard`);
-                              }
-                            }}
-                            disabled={activeInvoice.status !== "settled"}
-                            className={`w-full h-12 rounded-xl text-sm font-bold shadow-sm flex items-center justify-center gap-2 transition-all ${
-                              activeInvoice.status === "awaiting_approval"
-                                ? "bg-white/[0.02] border border-white/20 text-neutral-500 cursor-default"
-                                : activeInvoice.status === "settled"
-                                ? "bg-[#4B6BFB] hover:bg-[#5b7bfb] text-white cursor-pointer"
-                                : "bg-[#4B6BFB]/10 border border-[#4B6BFB]/20 text-[#4B6BFB] cursor-default"
-                            }`}
-                          >
-                            {activeInvoice.status === "awaiting_approval" && (
-                              <>
-                                <Clock className="h-4.5 w-4.5 text-neutral-500 animate-pulse" />
-                                Awaiting Payer Approval
-                              </>
-                            )}
-                            {activeInvoice.status === "settled" && (
-                              <>
-                                <Sparkles className="h-4.5 w-4.5 text-white" />
-                                Payout Talent (Split)
-                              </>
-                            )}
-                            {activeInvoice.status === "talent_disbursed" && (
-                              <>
-                                <CheckCircle2 className="h-4.5 w-4.5 text-[#4B6BFB]" />
-                                Talent Disbursed
-                              </>
-                            )}
-                          </button>
-                       )}
-
-                       {processingStage !== "idle" && (
-                         <div className="w-full h-12 rounded-xl border border-white/20 bg-[#0A0A0A] text-xs font-bold text-[#8f8f8f] flex items-center justify-center gap-3 shadow-inner">
-                           <RefreshCw className="h-4 w-4 animate-spin text-[#4B6BFB]" />
-                           {processingStage === "verifying" && "Verifying corporate treasury clearance..."}
-                           {processingStage === "routing" && "Auto-routing splits to Wallet IDs..."}
-                           {processingStage === "success" && "Settlement complete!"}
-                         </div>
-                       )}
-                     </AnimatePresence>
-                     
-                     {activeInvoice.status === "awaiting_approval" && (
-                       <p className="text-[10px] text-center text-neutral-400 mt-2">
-                         Approving dispatches corporate funds immediately. Backed by AgncyPay's settlement guarantee.
-                       </p>
-                     )}
-                   </div>
-                </div>
-
-                {/* Right pane - Payout Terms selector */}
-                <div className="rounded-xl border border-white/20 bg-white/[0.01] p-5 flex flex-col justify-between">
-                  <div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs font-bold text-white">Your Corporate Payout Terms</span>
-                      <HelpCircle className="h-3.5 w-3.5 text-neutral-400" />
-                    </div>
-                    <p className="text-[11px] text-[#8f8f8f] mt-1 leading-relaxed">
-                      Set your treasury disbursement timeline. Invoices will automatically clear according to this date.
-                    </p>
-
-                    {/* Term Buttons */}
-                    <div className="mt-4 grid grid-cols-3 gap-2 bg-black p-1 rounded-lg border border-white/20">
-                      {(["Net-30", "Net-60", "Net-90"] as const).map(term => (
-                        <button
-                          key={term}
-                          onClick={() => setSelectedTerm(term)}
-                          className={`py-2 rounded-md text-xs font-semibold tracking-tight transition-all cursor-pointer ${
-                            selectedTerm === term
-                              ? "bg-white text-black shadow-sm font-bold"
-                              : "text-[#8f8f8f] hover:text-white"
-                          }`}
-                        >
-                          {term}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Toggle for Instant Payout for recipient */}
-                  <div className="mt-6 pt-4 border-t border-white/20 flex items-start justify-between gap-4">
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-xs font-bold text-white">Allow instant Net-0</span>
-                        <span className="text-[9px] font-bold text-emerald-400 bg-emerald-950/80 px-1.5 py-0.2 rounded-full uppercase tracking-wider">AgncyPay Liquidity</span>
-                      </div>
-                      <p className="text-[10px] text-[#8f8f8f] mt-1 leading-tight">
-                        Talent/agencies can claim funds on day 0. AgncyPay funds the advance, keeping your terms unchanged.
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => setInstantPayoutEnabled(!instantPayoutEnabled)}
-                      className={`relative inline-flex h-5 w-10 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out outline-none ${
-                        instantPayoutEnabled ? "bg-[#4B6BFB]" : "bg-white/20"
-                      }`}
-                    >
-                      <span
-                        className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                          instantPayoutEnabled ? "translate-x-5" : "translate-x-0"
-                        }`}
-                      />
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Auto-Split Breakdown Section - Refactored */}
-              <div className="p-6 md:p-8 bg-white/[0.01] space-y-6">
-                
-                {/* Direct Vendor Fee */}
-                <div>
-                  <div className="flex justify-between items-center border-b border-white/20 pb-2">
-                    <div className="flex items-center gap-2">
-                      <h4 className="text-xs font-bold text-[#8f8f8f] uppercase tracking-wider">Direct Vendor Payment</h4>
-                      <span className="text-[10px] text-[#8f8f8f]/75 font-semibold">(Direct invoice flat rate)</span>
-                    </div>
-                    <span className="text-[10px] text-[#8f8f8f] font-bold">1 Destination</span>
-                  </div>
-
-                  <div className="mt-3 max-w-sm">
-                    <div className="p-4 bg-black border border-white/20 rounded-xl shadow-sm hover:border-[#4B6BFB]/30 transition-all relative overflow-hidden">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex items-center gap-3 min-w-0">
-                          <img
-                            src={activeInvoice.vendorFee.avatar}
-                            alt={activeInvoice.vendorFee.name}
-                            className="h-10 w-10 rounded-lg object-cover border border-white/20 bg-[#111] shrink-0"
-                          />
-                          <div className="min-w-0">
-                            <p className="text-xs font-bold text-white truncate">{activeInvoice.vendorFee.name}</p>
-                            <p className="text-[10px] text-neutral-400 font-semibold">{activeInvoice.vendorFee.walletId}</p>
-                          </div>
-                        </div>
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded shrink-0 uppercase tracking-wider bg-amber-950/60 text-amber-300 border border-amber-800/30">
-                          Vendor
-                        </span>
-                      </div>
-
-                      <div className="mt-4 flex justify-between items-baseline">
-                        <span className="text-xs font-semibold text-neutral-400">Direct Production Fee</span>
-                        <span className="text-base font-black text-white">
-                          ${activeInvoice.vendorFee.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Agency & Talent Split Pool */}
-                {workspaceType === "agency" && (
-                  <div>
-                    <div className="flex justify-between items-center border-b border-white/20 pb-2">
-                      <div className="flex items-center gap-2">
-                        <h4 className="text-xs font-bold text-[#8f8f8f] uppercase tracking-wider">Agency & Talent Payout Split</h4>
-                        <span className="text-[10px] text-[#8f8f8f]/75 font-semibold">
-                          (Split Pool: ${activeInvoice.splitPool.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
-                        </span>
-                      </div>
-                      <span className="text-[10px] text-[#8f8f8f] font-bold">2 Destinations</span>
-                    </div>
-
-                    <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {activeInvoice.splitPool.splits.map((split) => (
-                        <div
-                          key={split.name}
-                          className="p-4 bg-black border border-white/20 rounded-xl shadow-sm hover:border-white/30 hover:shadow-md transition-all relative overflow-hidden group"
-                        >
-                          {/* Tiny visual progress bar back */}
-                          <div className="absolute bottom-0 left-0 h-1 bg-white/5 w-full" />
-                          {/* Tiny visual progress bar front */}
-                          <div 
-                            className="absolute bottom-0 left-0 h-1 bg-white transition-all duration-500"
-                            style={{ width: activeInvoice.status === "settled" ? `${split.percentage}%` : "0%" }}
-                          />
-
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="flex items-center gap-3 min-w-0">
-                              <img
-                                src={split.avatar}
-                                alt={split.name}
-                                className="h-10 w-10 rounded-lg object-cover border border-white/20 bg-[#111] shrink-0"
-                              />
-                              <div className="min-w-0">
-                                <p className="text-xs font-bold text-white truncate">{split.name}</p>
-                                <p className="text-[10px] text-neutral-400 font-semibold">{split.walletId}</p>
-                              </div>
-                            </div>
-                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded shrink-0 uppercase tracking-wider ${
-                              split.role === "Talent" 
-                                ? "bg-white/10 text-white border border-white/20" 
-                                : "bg-neutral-800 text-neutral-300 border border-neutral-700"
-                            }`}>
-                              {split.role}
-                            </span>
-                          </div>
-
-                          <div className="mt-4 flex justify-between items-baseline">
-                            <span className="text-xs font-semibold text-neutral-400">
-                              {split.percentage}% Pool Share
-                            </span>
-                            <span className="text-base font-black text-white">
-                              ${split.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            </span>
-                          </div>
-
-                          {/* Node status indicators */}
-                          <div className="mt-2.5 pt-2.5 border-t border-white/20 flex items-center justify-between text-[10px] text-neutral-400">
-                            <span>Node Status:</span>
-                            <span className="flex items-center gap-1 font-bold text-[#E5E5EA]">
-                              {activeInvoice.status === "settled" ? (
-                                <>
-                                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                                  Routed & Disbursed
-                                </>
-                              ) : (
-                                <>
-                                  <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
-                                  Queue Verified
-                                </>
-                              )}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-              </div>
-            </div>
-          )}
-
-          {/* Payment Status Timeline */}
-          {workspaceType === "agency" && activeInvoice && (
-            <div className="bg-[#050505] rounded-2xl border border-white/20 p-5 shadow-sm">
-              <h4 className="text-xs font-bold text-[#8f8f8f] uppercase tracking-wider mb-4">
-                Real-Time Settlement Logs
-              </h4>
-
-              {/* Timeline Row */}
-              <div className="relative flex flex-col md:flex-row justify-between items-start md:items-center gap-6 md:gap-4 md:px-4">
-                {/* Connector line behind */}
-                <div className="absolute top-4 left-4 bottom-4 md:bottom-auto md:left-0 md:top-1/2 md:h-[2px] w-[2px] md:w-full bg-white/[0.08] -translate-y-1/2 -z-10" />
-
-                {[
-                  { label: "Invoice Ingested", desc: "Ingested via Brand ERP", date: activeInvoice.createdDate, completed: true },
-                  { 
-                    label: "Brand Approved", 
-                    desc: activeInvoice.status === "settled" ? "Authorized successfully" : "Awaiting signature", 
-                    date: activeInvoice.status === "settled" ? "Just now" : "Pending", 
-                    completed: activeInvoice.status === "settled" 
-                  },
-                  { 
-                    label: "Funds Clearing", 
-                    desc: activeInvoice.status === "settled" ? "Settled on AgncyPay" : "Pending Approval", 
-                    date: activeInvoice.status === "settled" ? "Just now" : "Pending", 
-                    completed: activeInvoice.status === "settled"
-                  },
-                  { 
-                    label: "Disbursed to Wallets", 
-                    desc: activeInvoice.status === "settled" ? "Split routed immediately" : "Locked", 
-                    date: activeInvoice.status === "settled" ? "Instant (Net-0)" : "Pending", 
-                    completed: activeInvoice.status === "settled"
-                  }
-                ].map((step, idx) => (
-                  <div key={idx} className="flex md:flex-col items-start md:items-center text-left md:text-center gap-4 md:gap-2 flex-1 relative bg-[#050505]">
-                    {/* Dot */}
-                    <div className={`h-8 w-8 rounded-full border-2 flex items-center justify-center shrink-0 shadow-sm ${
-                      step.completed 
-                        ? "bg-emerald-950/40 border-emerald-500 text-emerald-400" 
-                        : "bg-black border-white/20 text-[#8f8f8f]"
-                    }`}>
-                      {step.completed ? (
-                        <CheckCircle2 className="h-4.5 w-4.5" />
-                      ) : (
-                        <span className="text-xs font-bold">{idx + 1}</span>
-                      )}
-                    </div>
-                    {/* Text details */}
-                    <div className="min-w-0">
-                      <p className="text-xs font-bold text-white">{step.label}</p>
-                      <p className="text-[10px] text-[#8f8f8f] leading-tight mt-0.5">{step.desc}</p>
-                      <p className="text-[10px] font-bold text-[#4B6BFB] mt-1">{step.date}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
+</div>
 
         {/* Right Column - Queue and History Ledger (Narrower) */}
         <div id="approval-queue-section" className="lg:col-span-4 space-y-6">
           
-          {/* Invoice Approval Queue */}
-          <div className="bg-[#050505] rounded-2xl border border-white/20 p-5 shadow-sm">
-            <div className="flex justify-between items-center pb-3 border-b border-white/20">
-              <h3 className="text-xs font-black uppercase tracking-wider text-[#8f8f8f]">Approval Queue</h3>
-              <span className="text-[10px] font-bold text-white bg-white/10 border border-white/20 px-2 py-0.5 rounded-full">
-                {queueInvoices.length} Pending
-              </span>
-            </div>
-
-            <div className="mt-4 space-y-3">
-              {queueInvoices.length === 0 ? (
-                <div className="py-8 text-center">
-                  <CheckCircle2 className="h-6 w-6 text-emerald-500 mx-auto mb-2" />
-                  <p className="text-xs font-semibold text-neutral-500">
-                    {workspaceType === "brand" ? "No pending approvals" : "No pending talent payouts"}
-                  </p>
+          {/* Integrations Widget */}
+          <div className="bg-[#050505] rounded-xl border border-white/10 p-5 shadow-sm">
+            <h3 className="text-[15px] font-semibold text-white tracking-tight">Integrations</h3>
+            <p className="text-[12px] text-neutral-400 font-medium mt-1">Connect external systems and services to sync data automatically.</p>
+            
+            <div className="flex items-center justify-between gap-2 mt-6">
+              <div className="flex flex-col items-center gap-2">
+                <div className="w-14 h-14 rounded-xl bg-[#00d053] flex items-center justify-center cursor-pointer hover:opacity-90 transition-opacity border border-[#00d053]/50">
+                  <span className="text-white font-bold text-lg tracking-tight leading-none" style={{ fontFamily: 'Georgia, serif' }}>Sage</span>
                 </div>
-              ) : (
-                queueInvoices.map((inv) => {
-                  const isSelected = inv.id === selectedInvoiceId;
-                  const isAwaiting = inv.status === "awaiting_approval";
+                <span className="text-[11px] font-semibold text-neutral-400">Sage</span>
+              </div>
+              
+              <div className="flex flex-col items-center gap-2">
+                <div className="w-14 h-14 rounded-xl border border-dashed border-white/20 flex items-center justify-center cursor-pointer hover:bg-white/5 transition-colors group">
+                  <Plus className="w-5 h-5 text-neutral-500 group-hover:text-white transition-colors" />
+                </div>
+                <span className="text-[11px] font-semibold text-neutral-400">Connect</span>
+              </div>
+              
+              <div className="flex flex-col items-center gap-2">
+                <div className="w-14 h-14 rounded-xl border border-white/10 bg-white/[0.02] flex items-center justify-center cursor-default">
+                  <span className="text-[10px] font-bold text-neutral-600">N/A</span>
+                </div>
+                <span className="text-[11px] font-semibold text-neutral-600">N/A</span>
+              </div>
 
-                  return (
-                    <button
-                      key={inv.id}
-                      onClick={() => setSelectedInvoiceId(inv.id)}
-                      className={`w-full text-left p-3.5 rounded-xl border transition-all flex justify-between items-center cursor-pointer group ${
-                        isSelected
-                          ? "border-white bg-white/[0.04] shadow-sm"
-                          : "border-white/20 hover:border-white/[0.2] hover:bg-white/[0.02]"
-                      }`}
-                    >
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-[10px] font-bold text-neutral-400 uppercase font-mono">{inv.id}</span>
-                          <span className={`h-1.5 w-1.5 rounded-full ${
-                            isAwaiting ? "bg-amber-400 animate-pulse" : "bg-emerald-500"
-                          }`} />
-                        </div>
-                        <h4 className="text-xs font-bold text-white mt-1 truncate group-hover:text-white">{inv.campaignName}</h4>
-                        <p className="text-[10px] text-[#8f8f8f] mt-0.5">Ingested: {inv.createdDate}</p>
-                      </div>
+              <div className="flex flex-col items-center gap-2">
+                <div className="w-14 h-14 rounded-xl border border-white/10 bg-white/[0.02] flex items-center justify-center cursor-default">
+                  <span className="text-[10px] font-bold text-neutral-600">N/A</span>
+                </div>
+                <span className="text-[11px] font-semibold text-neutral-600">N/A</span>
+              </div>
 
-                      <div className="text-right shrink-0">
-                        <p className="text-xs font-black text-white">
-                          ${inv.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </p>
-                        <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded-full uppercase block mt-1 tracking-wider text-center ${
-                          isAwaiting ? "bg-amber-950/80 text-amber-300" : "bg-emerald-950/80 text-emerald-300"
-                        }`}>
-                          {isAwaiting ? "Awaiting" : "Settled"}
-                        </span>
-                      </div>
-                    </button>
-                  );
-                })
-              )}
+              <div className="flex flex-col items-center gap-2">
+                <div className="w-14 h-14 rounded-xl border border-white/10 bg-white/[0.02] flex items-center justify-center cursor-default">
+                  <span className="text-[10px] font-bold text-neutral-600">N/A</span>
+                </div>
+                <span className="text-[11px] font-semibold text-neutral-600">N/A</span>
               </div>
             </div>
-
-            {/* Node Map Panel */}
-            {workspaceType !== "brand" && (
-              <div className="bg-[#050505] rounded-2xl border border-white/20 p-5 shadow-sm">
-                <h3 className="text-xs font-black uppercase tracking-wider text-[#8f8f8f] pb-3 border-b border-white/20">
-                  Creative Node Network
-                </h3>
-
-                {/* Map representation */}
-                <div className="mt-4 h-48 rounded-xl border border-white/20 bg-black relative overflow-hidden flex flex-col justify-end p-4 shadow-inner">
-                  {/* Dot grid back */}
-                  <div className="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.05)_1px,transparent_1px)] [background-size:16px_16px] opacity-70" />
-
-                  {/* Glowing active node lines */}
-                  <svg className="absolute inset-0 h-full w-full pointer-events-none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M 50 50 L 150 100 L 250 60" fill="none" stroke="#ffffff" strokeWidth="1.5" strokeDasharray="4 4" className="animate-[dash_10s_linear_infinite]" />
-                    <path d="M 150 100 L 80 150" fill="none" stroke="#ffffff" strokeWidth="1.5" strokeDasharray="4 4" className="animate-[dash_8s_linear_infinite]" />
-                  </svg>
-
-                  {/* Nodes */}
-                  <div className="absolute top-10 left-12 flex flex-col items-center">
-                    <div className="h-6 w-6 rounded-full bg-neutral-800 border-2 border-white flex items-center justify-center text-[8px] font-black text-white shadow">
-                      NY
-                    </div>
-                    <span className="text-[8px] font-bold text-[#8f8f8f] mt-1">Brand Node</span>
-                  </div>
-
-                  <div className="absolute top-20 right-16 flex flex-col items-center">
-                    <div className="h-6 w-6 rounded-full bg-neutral-800 border-2 border-white flex items-center justify-center text-[8px] font-black text-white shadow">
-                      LDN
-                    </div>
-                    <span className="text-[8px] font-bold text-[#8f8f8f] mt-1">Talent Node</span>
-                  </div>
-
-                  <div className="absolute bottom-10 left-16 flex flex-col items-center">
-                    <div className="h-6 w-6 rounded-full bg-neutral-800 border-2 border-white flex items-center justify-center text-[8px] font-black text-white shadow">
-                      PAR
-                    </div>
-                    <span className="text-[8px] font-bold text-[#8f8f8f] mt-1">Agency Node</span>
-                  </div>
-
-                  {/* Map Button indicator */}
-                  <div className="relative z-10 bg-[#0A0A0A] border border-white/20 rounded-lg p-2.5 shadow-sm text-[11px]">
-                    <div className="flex justify-between items-center">
-                      <span className="font-bold text-white flex items-center gap-1.5">
-                        <MapPin className="h-3.5 w-3.5 text-white" />
-                        3 Active Nodes Connected
-                      </span>
-                      <ArrowUpRight className="h-3.5 w-3.5 text-neutral-400" />
-                    </div>
-                  </div>
-                </div>
-
-                {/* General Info list */}
-                <div className="mt-4 space-y-2 text-xs">
-                  <div className="flex justify-between items-center py-2 border-b border-white/20">
-                    <span className="text-[#8f8f8f] font-semibold">Active Campaign</span>
-                    <span className="font-bold text-white">Adidas Originals Q3</span>
-                  </div>
-                  <div className="flex justify-between items-center py-2 border-b border-white/20">
-                    <span className="text-[#8f8f8f] font-semibold">Settlement Period</span>
-                    <span className="font-bold text-white">Jul 1 - Sep 30, 2026</span>
-                  </div>
-                  <div className="flex justify-between items-center py-2">
-                    <span className="text-[#8f8f8f] font-semibold">Tax Documentation</span>
-                    <span className="font-bold text-emerald-400 flex items-center gap-1">
-                      <CheckCircle2 className="h-3.5 w-3.5" />
-                      All Nodes W-9 Active
-                    </span>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Recent Transactions Ledger */}
-            <div className="bg-[#050505] rounded-2xl border border-white/20 p-5 shadow-sm">
-              <h3 className="text-xs font-black uppercase tracking-wider text-[#8f8f8f] pb-3 border-b border-white/20">
-                Recent Transactions
-              </h3>
-
-              <div className="mt-4 space-y-4">
-                {(() => {
-                  const realTxs = widgetInvoices.filter(inv =>
-                    workspaceType === "brand" ? inv.status === "paid" : inv.talentPayoutStatus === "disbursed"
-                  );
-                  
-                  if (realTxs.length === 0) {
-                    return (
-                      <div className="py-6 text-center text-xs text-neutral-500 font-semibold">
-                        No recent transactions found
-                      </div>
-                    );
-                  }
-
-                  return realTxs.map((tx) => (
-                    <div key={tx.id} className="flex justify-between items-start gap-4 text-xs">
-                      <div className="min-w-0">
-                        <p className="font-bold text-white truncate leading-tight">{tx.campaign}</p>
-                        <div className="mt-1 flex items-center gap-2 text-[10px] text-[#8f8f8f] font-semibold">
-                          <span>{new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
-                          <span>•</span>
-                          <span>{workspaceType === "brand" ? "Net-30" : "Net-0 (Instant)"}</span>
-                        </div>
-                      </div>
-
-                      <div className="text-right shrink-0">
-                        <p className="font-bold text-white">${tx.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                        <span className="text-[10px] text-white font-bold block mt-0.5">{workspaceType === "brand" ? "ACH Direct" : "AgncyPay Wallet"}</span>
-                      </div>
-                    </div>
-                  ));
-                })()}
-              </div>
           </div>
+
+          {/* Connected Banking Feeds */}
+          <div className="bg-[#050505] rounded-xl border border-white/10 overflow-hidden shadow-sm flex flex-col">
+            <div className="p-5 border-b border-white/10 bg-white/[0.01]">
+              <h3 className="text-[11px] font-bold uppercase tracking-wider text-[#8f8f8f]">CONNECTED BANKING FEEDS</h3>
+            </div>
+            
+            <div className="p-5 flex flex-col gap-4 border-b border-white/10 bg-white/[0.02]">
+              {/* Card 1 */}
+              <div className="flex items-center gap-4 p-4 rounded-xl border border-white/10 bg-[#0A0A0A] cursor-pointer hover:border-white/20 transition-all">
+                <div className="w-20 h-12 rounded-md shrink-0 border border-white/10 overflow-hidden bg-black flex items-center justify-center">
+                  <img src="/cards/chase-ink-business-unlimited.png" alt="Chase" className="w-full h-full object-cover opacity-90" onError={(e) => { e.currentTarget.style.display='none'; if (e.currentTarget.parentElement) e.currentTarget.parentElement.innerHTML = '<div class="w-full h-full bg-gradient-to-br from-blue-900 to-black flex items-center justify-center"><span class="text-[10px] font-bold text-white">CHASE</span></div>'; }} />
+                </div>
+                <div>
+                  <h4 className="text-[13px] font-bold text-white">Chase Ink Business Unlimited Visa</h4>
+                  <p className="text-[11px] font-medium text-neutral-500 mt-0.5">Visa ****86</p>
+                </div>
+              </div>
+              
+              {/* Card 2 */}
+              <div className="flex items-center gap-4 p-4 rounded-xl border border-white/10 bg-[#0A0A0A] cursor-pointer hover:border-white/20 transition-all">
+                <div className="w-20 h-12 rounded-md shrink-0 border border-white/10 overflow-hidden bg-black flex items-center justify-center">
+                  <img src="/cards/mercury-io.png" alt="Mercury" className="w-full h-full object-cover opacity-90" onError={(e) => { e.currentTarget.style.display='none'; if (e.currentTarget.parentElement) e.currentTarget.parentElement.innerHTML = '<div class="w-full h-full bg-gradient-to-br from-indigo-900 to-purple-900 flex items-center justify-center"><span class="text-[10px] font-bold text-white">MERCURY</span></div>'; }} />
+                </div>
+                <div>
+                  <h4 className="text-[13px] font-bold text-white">Mercury Business IO Mastercard</h4>
+                  <p className="text-[11px] font-medium text-neutral-500 mt-0.5">Mastercard ****57</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-5 bg-white/[0.01] flex justify-between items-center">
+              <span className="text-[13px] font-semibold text-neutral-400">Plaid Available Float</span>
+              <span className="text-[14px] font-bold text-white">$250,000.00</span>
+            </div>
+          </div>
+
+          {/* Action Center */}
+          <div className="bg-[#050505] rounded-xl border border-white/10 overflow-hidden shadow-sm min-h-[200px] flex flex-col">
+            <div className="p-5 border-b border-white/10 bg-white/[0.01]">
+              <h3 className="text-[11px] font-bold uppercase tracking-wider text-[#8f8f8f]">ACTION CENTER</h3>
+            </div>
+            <div className="flex-1 flex items-center justify-center p-8 bg-white/[0.02]">
+              <p className="text-[13px] font-medium text-neutral-500">No pending alerts. You are all caught up!</p>
+            </div>
+          </div>
+
         </div>
+
       </div>
-
-      {/* Footer */}
-      <footer className="border-t border-white/20 bg-black py-8 text-xs text-neutral-400 mt-12">
-        <div className="max-w-[1520px] mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-4">
-          <div className="flex items-center gap-3">
-            <img src="/agncypaybrand.png" alt="AgncyPay" className="h-8 w-auto filter contrast-125" />
-            <p>© 2026 AgncyPay. All rights reserved.</p>
-          </div>
-          <div className="flex gap-6 font-semibold">
-            <a href="#" className="hover:text-white transition-colors">Integration Help</a>
-            <a href="#" className="hover:text-white transition-colors">ERP Integration API</a>
-            <a href="#" className="hover:text-white transition-colors">Security Rules</a>
-          </div>
-        </div>
-      </footer>
-
-      {/* Page-level payment processing loader overlay */}
-      {isPayingAll && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 px-4 backdrop-blur-[2px]">
-          <section className="w-full max-w-[300px] rounded-[10px] border border-[#2f2f2f] bg-[#202020] p-6 text-center shadow-2xl">
-            {(processingStage === "idle" || processingStage === "verifying") && (
-              <>
-                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-[#555] bg-[#151515]">
-                  <Lock className="h-7 w-7 animate-pulse text-white" />
-                </div>
-                <h2 className="mt-5 text-[23px] font-bold tracking-[-0.03em] text-white">verifying</h2>
-                <p className="mt-2 text-[11px] leading-5 text-[#bdbdbd]">Securing the payment session.</p>
-              </>
-            )}
-            {processingStage === "routing" && (
-              <>
-                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-[#555] bg-[#151515]">
-                  <Loader2 className="h-7 w-7 animate-spin text-white" />
-                </div>
-                <h2 className="mt-5 text-[23px] font-bold tracking-[-0.03em] text-white">processing</h2>
-                <p className="mt-2 text-[11px] leading-5 text-[#bdbdbd]">Routing funds to nodes.</p>
-              </>
-            )}
-            {processingStage === "success" && (
-              <>
-                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#16c95f] text-white shadow-[0_0_28px_rgba(22,201,95,0.3)]">
-                  <CheckCircle2 className="h-9 w-9" />
-                </div>
-                <h2 className="mt-5 text-[23px] font-bold tracking-[-0.03em] text-[#69f39b]">Success</h2>
-                <p className="mt-2 text-[11px] leading-5 text-[#c8f5d5]">Invoices successfully paid.</p>
-              </>
-            )}
-          </section>
-        </div>
-      )}
 
       {/* New Invoice Modal */}
       <AnimatePresence>
@@ -1853,6 +1308,78 @@ export default function BrandDashboardPage() {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Embedded Checkout Modal */}
+      {isCheckoutOpen && (
+        <div className="fixed inset-0 z-[100] flex justify-end text-black">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => !isProcessing && setIsCheckoutOpen(false)}></div>
+          <div className="relative w-full md:w-[500px] h-full bg-[#F8FAFC] shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
+            <div className="h-20 border-b border-black/5 flex items-center justify-between px-8 bg-white shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-[#0F172A] flex items-center justify-center shadow-md">
+                  <ShieldCheck className="w-5 h-5 text-[#38BDF8]" />
+                </div>
+                <div>
+                  <h2 className="text-[16px] font-bold text-[#0F172A] leading-tight">AGNCYPay Checkout</h2>
+                  <p className="text-[12px] text-[#64748B] font-medium">Secure embedded payment</p>
+                </div>
+              </div>
+              <button disabled={isProcessing} onClick={() => setIsCheckoutOpen(false)} className="p-2 text-[#64748B] hover:text-[#0F172A] hover:bg-black/5 rounded-full">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-8">
+              <div className="mb-8">
+                <h3 className="text-[13px] font-bold uppercase tracking-wider text-[#64748B] mb-4">Payment Summary</h3>
+                <div className="bg-white rounded-2xl border border-black/5 p-5 shadow-sm">
+                  {widgetInvoices.filter(i => selectedIds.includes(i.id)).map(inv => (
+                    <div key={inv.id} className="flex justify-between items-center text-sm mb-3">
+                      <div className="flex flex-col">
+                        <span className="font-semibold">{inv.agency}</span>
+                        <span className="text-[#64748B] text-xs font-mono">{inv.id.substring(0,8)}</span>
+                      </div>
+                      <span className="font-semibold">${(inv.amount * 1.015).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                    </div>
+                  ))}
+                  <div className="pt-4 border-t border-black/5 flex justify-between items-center">
+                    <span className="font-bold">Total to Pay</span>
+                    <span className="text-xl font-black">${widgetInvoices.filter(i => selectedIds.includes(i.id)).reduce((sum, inv) => sum + (inv.amount * 1.015), 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="mb-8">
+                <h3 className="text-[13px] font-bold uppercase tracking-wider text-[#64748B] mb-4">Payment Method</h3>
+                <div className="grid grid-cols-2 gap-3">
+                  {["ACH", "Wire", "RTP", "USDC"].map(rail => (
+                    <button key={rail} onClick={() => setPaymentRail(rail)} className={`p-4 rounded-xl border text-left transition-all ${paymentRail === rail ? "border-[#0F172A] bg-white shadow-md ring-1 ring-[#0F172A]" : "border-black/10 hover:bg-white"}`}>
+                      <div className="font-bold text-sm text-[#0F172A]">{rail}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              
+              <div className="mb-8">
+                <h3 className="text-[13px] font-bold uppercase tracking-wider text-[#64748B] mb-4">Payment Terms</h3>
+                <div className="bg-white p-1 rounded-xl border border-black/5 flex shadow-sm">
+                  {["Pay Now", "Net-30", "Net-60", "Installments"].map(term => (
+                    <button key={term} onClick={() => setPaymentTerm(term)} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${paymentTerm === term ? "bg-[#0F172A] text-white shadow-md" : "text-[#64748B] hover:text-[#0F172A]"}`}>
+                      {term}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+            
+            <div className="p-8 bg-white border-t border-black/5 shrink-0">
+              <button onClick={handleProcessPayment} disabled={isProcessing || isSuccess} className={`w-full h-14 rounded-xl font-bold text-[15px] flex items-center justify-center gap-2 transition-all shadow-lg ${isSuccess ? "bg-emerald-500 text-white" : "bg-[#0F172A] text-white hover:-translate-y-0.5"}`}>
+                {isProcessing ? <><Loader2 className="w-5 h-5 animate-spin" /> Processing...</> : isSuccess ? <><Check className="w-5 h-5" /> Successful</> : <>Authorize Payment</>}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
+
   );
 }
