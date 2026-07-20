@@ -573,13 +573,13 @@ export default function BrandDashboardPage() {
               Invoice Queue
             </button>
             <button 
-              onClick={() => router.push("/branddashboard")}
+              onClick={() => router.push("/branddashboard/settlement")}
               className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#8f8f8f] hover:text-white transition-all cursor-pointer"
             >
               Settlement Nodes
             </button>
             <button 
-              onClick={() => router.push("/branddashboard")}
+              onClick={() => router.push("/branddashboard/analytics")}
               className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#8f8f8f] hover:text-white transition-all cursor-pointer"
             >
               Analytics
