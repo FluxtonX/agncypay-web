@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { ChevronRight, EllipsisVertical, Search, UploadCloud, X, ArrowUpRight, FileText, Inbox } from "lucide-react";
 import { cn } from "../../lib/utils";
+import { useApp } from "../../context/AppContext";
+import { subscribeInvoicesByTalent } from "../../lib/firebaseInvoices";
 
 const getFavicon = (domain: string) => `https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://${domain}&size=128`;
 
@@ -143,26 +145,86 @@ function Panel({ children, className }: { children: React.ReactNode; className?:
 }
 
 export function useDynamicIncomes() {
+  const { state } = useApp();
   const [dynamicIncomes, setDynamicIncomes] = useState<any[]>([]);
 
   useEffect(() => {
-    const loadIncomes = () => {
+    const userEmail = state.user?.email;
+    if (!userEmail) {
+      setDynamicIncomes([]);
+      return;
+    }
+
+    // Subscribe to real Firestore invoices where this user is the talent
+    const unsubscribe = subscribeInvoicesByTalent(userEmail, (invoices) => {
+      const getFaviconUrl = (domain: string) =>
+        `https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://${domain}&size=128`;
+
+      // Map Firestore invoices into the income item display format
+      const mapped = invoices
+        .sort((a, b) => {
+          const aTime = a.createdAt?.seconds || 0;
+          const bTime = b.createdAt?.seconds || 0;
+          return bTime - aTime; // newest first
+        })
+        .map((inv) => {
+          const brandDomain = (inv.brandEmail || "")
+            .split("@")[1]
+            ?.replace(/^www\./, "") || "";
+          return {
+            slug: inv.id,
+            name: inv.brandName || inv.agency || "Payment",
+            detail: inv.campaign || "Campaign payment",
+            date: inv.createdDate || "Recent",
+            amount: `$${Number(inv.amount).toLocaleString(undefined, {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })}`,
+            src: brandDomain ? getFaviconUrl(brandDomain) : "",
+            fallback: (inv.brandName || "BR").substring(0, 2).toUpperCase(),
+            className: "bg-[#111]",
+            imageClassName: "scale-[1]",
+            status: inv.status,
+            talentPayoutStatus: inv.talentPayoutStatus,
+          };
+        });
+
+      // Also merge any manual entries saved to localStorage (from CSV uploads / withdrawals)
       try {
-        const stored = localStorage.getItem("uploadedIncomes");
-        if (stored) {
-          setDynamicIncomes(JSON.parse(stored));
-        }
-      } catch (e) {
+        const storedKey = `uploadedIncomes_${userEmail}`;
+        const stored = localStorage.getItem(storedKey);
+        const manual = stored ? JSON.parse(stored) : [];
+        setDynamicIncomes([...manual, ...mapped]);
+      } catch {
+        setDynamicIncomes(mapped);
+      }
+    });
+
+    // Also re-load when manual entries are added via the "incomesUpdated" event
+    const handleManualUpdate = () => {
+      try {
+        const stored = localStorage.getItem(`uploadedIncomes_${userEmail}`);
+        const manual = stored ? JSON.parse(stored) : [];
+        setDynamicIncomes((prev) => {
+          // Keep Firestore entries, replace manual ones at top
+          const firestoreEntries = prev.filter((i) => i.status !== undefined);
+          return [...manual, ...firestoreEntries];
+        });
+      } catch {
         // ignore
       }
     };
-    loadIncomes();
-    window.addEventListener("incomesUpdated", loadIncomes);
-    return () => window.removeEventListener("incomesUpdated", loadIncomes);
-  }, []);
+    window.addEventListener("incomesUpdated", handleManualUpdate);
+
+    return () => {
+      unsubscribe();
+      window.removeEventListener("incomesUpdated", handleManualUpdate);
+    };
+  }, [state.user]);
 
   return dynamicIncomes;
 }
+
 
 export function ModelIncomeList({ invoices = [] }: { invoices?: any[] }) {
   const dynamicIncomes = useDynamicIncomes();

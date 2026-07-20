@@ -603,8 +603,8 @@ function WalletContactsOverlay({
   const normalized = query.trim().toLowerCase();
   const filteredContacts = normalized
     ? walletContacts.filter((contact) =>
-        [contact.name, contact.handle].join(" ").toLowerCase().includes(normalized)
-      )
+      [contact.name, contact.handle].join(" ").toLowerCase().includes(normalized)
+    )
     : walletContacts;
 
   return (
@@ -864,7 +864,7 @@ export default function DashboardHomePage() {
         setNet0Stage("crediting");
         setTimeout(() => {
           setNet0Stage("success");
-          
+
           const advAmt = crystallisedBalance;
           const fee = advAmt * 0.015;
           const netCredit = advAmt - fee;
@@ -1410,12 +1410,12 @@ export default function DashboardHomePage() {
         />
       )}
       {isAutosplitNoticeOpen && <AutoSplitNotice onClose={() => setIsAutosplitNoticeOpen(false)} />}
-      
+
       {/* Net-0 Early Payout Modal */}
       {isNet0Open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 px-4 backdrop-blur-[2px]">
           <div className="w-full max-w-[460px] rounded-2xl border border-white/20 bg-[#0A0A0A] p-6 text-white shadow-2xl relative overflow-hidden">
-            
+
             {net0Stage === "idle" && (
               <>
                 <div className="flex justify-between items-start mb-6">
@@ -1515,7 +1515,7 @@ export default function DashboardHomePage() {
       {isWithdrawOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 px-4 backdrop-blur-[2px]">
           <div className="w-full max-w-[440px] rounded-2xl border border-white/20 bg-[#0A0A0A] p-6 text-white shadow-2xl relative overflow-hidden">
-            
+
             {withdrawStage === "idle" && (
               <form onSubmit={handleProcessWithdrawal}>
                 <div className="flex justify-between items-start mb-6">

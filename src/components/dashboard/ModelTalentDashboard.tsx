@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { ChevronRight, EllipsisVertical, Search, UploadCloud, X, ArrowUpRight } from "lucide-react";
 import { cn } from "../../lib/utils";
+import { useDynamicIncomes } from "./ModelAgencyDashboard";
 
 const modelIncomeItems = [
   {
@@ -139,6 +140,9 @@ function Panel({ children, className }: { children: React.ReactNode; className?:
 
 export function ModelTalentDashboard() {
   const [isUploading, setIsUploading] = useState(false);
+  const dynamicIncomes = useDynamicIncomes();
+  const allIncomes = dynamicIncomes.length > 0 ? dynamicIncomes : modelIncomeItems;
+  const displayedIncomes = allIncomes.slice(0, 5);
   
   return (
     <div className="w-full max-w-[1520px]">
@@ -150,7 +154,7 @@ export function ModelTalentDashboard() {
           </p>
         </div>
       </div>
-
+ 
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(360px,0.85fr)]">
         <div className="space-y-5">
           {/* Recent Income Panel */}
@@ -169,7 +173,7 @@ export function ModelTalentDashboard() {
               </Link>
             </div>
             <div className="mt-4 space-y-2">
-              {modelIncomeItems.map((item) => (
+              {displayedIncomes.map((item) => (
                 <div
                   key={`${item.name}-${item.date}`}
                   className="flex items-center gap-3 rounded-[8px] border border-[#333] bg-black px-3 py-2 transition-colors hover:border-[#555] hover:bg-white/[0.04]"

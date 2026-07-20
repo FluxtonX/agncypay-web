@@ -366,8 +366,8 @@ export default function NodesDashboardPage() {
                             ) : (
                               <span
                                 className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-md border ${isDisbursed
-                                    ? "text-white bg-white/10 border-white/25"
-                                    : "text-neutral-400 bg-white/[0.02] border-white/10"
+                                  ? "text-white bg-white/10 border-white/25"
+                                  : "text-neutral-400 bg-white/[0.02] border-white/10"
                                   }`}
                               >
                                 {isDisbursed ? "Fully Routed" : "Escrow Lock"}
