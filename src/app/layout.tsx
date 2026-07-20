@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Plus_Jakarta_Sans, Outfit } from "next/font/google";
 import "./globals.css";
 import { AppProvider } from "@/context/AppContext";
+import { AccountingProvider } from "@/modules/accounting/store/AccountingContext";
 
 const plusJakarta = Plus_Jakarta_Sans({
   variable: "--font-plus-jakarta",
@@ -50,7 +51,11 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-full flex flex-col bg-background text-foreground transition-colors duration-200">
-        <AppProvider>{children}</AppProvider>
+        <AppProvider>
+          <AccountingProvider>
+            {children}
+          </AccountingProvider>
+        </AppProvider>
       </body>
     </html>
   );

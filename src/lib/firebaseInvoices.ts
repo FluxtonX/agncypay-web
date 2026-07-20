@@ -9,7 +9,8 @@ import {
   orderBy, 
   serverTimestamp,
   getDoc,
-  where
+  where,
+  deleteDoc
 } from "firebase/firestore";
 import { db } from "./firebase";
 import { FirestoreUser } from "./firebaseAuth";
@@ -248,6 +249,28 @@ export async function updateInvoiceStatus(
     await updateDoc(docRef, updateData);
   } catch (error) {
     console.error(`Error updating invoice status for ${id}:`, error);
+    throw error;
+  }
+}
+
+// Update specific invoice due date
+export async function updateInvoiceDueDate(id: string, due: string) {
+  try {
+    const docRef = doc(db, INVOICES_COLLECTION, id);
+    await updateDoc(docRef, { due });
+  } catch (error) {
+    console.error(`Error updating invoice due date for ${id}:`, error);
+    throw error;
+  }
+}
+
+// Delete specific invoice
+export async function deleteFirestoreInvoice(id: string) {
+  try {
+    const docRef = doc(db, INVOICES_COLLECTION, id);
+    await deleteDoc(docRef);
+  } catch (error) {
+    console.error(`Error deleting invoice ${id}:`, error);
     throw error;
   }
 }

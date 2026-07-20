@@ -22,19 +22,20 @@ import {
   Users,
   UsersRound,
   WalletCards,
+  Link2,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { useApp } from "../../context/AppContext";
 import { Permission, WorkspaceType, normalizeWorkspaceType } from "../../types/workspace";
 
-type DashboardNavItem = {
+interface DashboardNavItem {
   label: string;
   path: string;
   activePath: string;
   icon: LucideIcon;
   permission?: Permission;
-};
+}
 
 const secondaryNav = [
   { label: "Settings", path: "/dashboard/settings", activePath: "/dashboard/settings", icon: Settings },
@@ -48,6 +49,7 @@ const navByWorkspace: Record<WorkspaceType, DashboardNavItem[]> = {
     { label: "Invoices", path: "/dashboard/invoices", activePath: "/dashboard/invoices", icon: FileText },
     { label: "Payments", path: "/dashboard/payments", activePath: "/dashboard/payments", icon: CreditCard, permission: "initiate_payments" },
     { label: "Agencies", path: "/dashboard/agencies", activePath: "/dashboard/agencies", icon: Users },
+    { label: "Integrations", path: "/dashboard/integrations", activePath: "/dashboard/integrations", icon: Link2 },
   ],
   agency: [
     { label: "Dashboard", path: "/dashboard", activePath: "/dashboard", icon: LayoutGrid },
@@ -57,6 +59,7 @@ const navByWorkspace: Record<WorkspaceType, DashboardNavItem[]> = {
     { label: "Splits", path: "/dashboard/splits", activePath: "/dashboard/splits", icon: Network, permission: "view_splits" },
     { label: "Payouts", path: "/dashboard/payouts", activePath: "/dashboard/payouts", icon: BadgeDollarSign, permission: "approve_payouts" },
     { label: "Clients", path: "/dashboard/clients", activePath: "/dashboard/clients", icon: BriefcaseBusiness },
+    { label: "Integrations", path: "/dashboard/integrations", activePath: "/dashboard/integrations", icon: Link2 },
   ],
   talent_independent: [
     { label: "Dashboard", path: "/dashboard", activePath: "/dashboard", icon: LayoutGrid },
@@ -65,6 +68,7 @@ const navByWorkspace: Record<WorkspaceType, DashboardNavItem[]> = {
     { label: "Payouts", path: "/dashboard/payouts", activePath: "/dashboard/payouts", icon: BadgeDollarSign },
     { label: "Payment History", path: "/dashboard/payments", activePath: "/dashboard/payments", icon: CreditCard },
     { label: "Profile", path: "/dashboard/profile", activePath: "/dashboard/profile", icon: UserRound },
+    { label: "Integrations", path: "/dashboard/integrations", activePath: "/dashboard/integrations", icon: Link2 },
   ],
   talent_agency: [
     { label: "Dashboard", path: "/dashboard", activePath: "/dashboard", icon: LayoutGrid },
@@ -73,6 +77,7 @@ const navByWorkspace: Record<WorkspaceType, DashboardNavItem[]> = {
     { label: "Payment History", path: "/dashboard/payments", activePath: "/dashboard/payments", icon: CreditCard },
     { label: "Payout Settings", path: "/dashboard/wallet", activePath: "/dashboard/wallet", icon: WalletCards },
     { label: "Profile", path: "/dashboard/profile", activePath: "/dashboard/profile", icon: UserRound },
+    { label: "Integrations", path: "/dashboard/integrations", activePath: "/dashboard/integrations", icon: Link2 },
   ],
   mother_agency: [
     { label: "Dashboard", path: "/dashboard", activePath: "/dashboard", icon: LayoutGrid },
@@ -83,6 +88,7 @@ const navByWorkspace: Record<WorkspaceType, DashboardNavItem[]> = {
     { label: "Payouts", path: "/dashboard/payouts", activePath: "/dashboard/payouts", icon: BadgeDollarSign, permission: "approve_payouts" },
     { label: "Reports", path: "/dashboard/reports", activePath: "/dashboard/reports", icon: ChartNoAxesColumnIncreasing, permission: "view_reports" },
     { label: "Team", path: "/dashboard/team", activePath: "/dashboard/team", icon: UsersRound, permission: "manage_team" },
+    { label: "Integrations", path: "/dashboard/integrations", activePath: "/dashboard/integrations", icon: Link2 },
   ],
 };
 

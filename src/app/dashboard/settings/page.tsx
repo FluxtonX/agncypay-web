@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import {
   Bell,
   Building2,
@@ -363,13 +364,12 @@ export default function SettingsPage() {
                       {integration.status}
                     </p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => toggleIntegration(integration.name)}
-                    className="h-[38px] rounded-[7px] border border-[#303030] bg-[#0c0c0c] px-[18px] text-[16px] font-semibold text-white transition-colors hover:border-[#777]"
+                  <Link
+                    href="/dashboard/integrations"
+                    className="h-[38px] flex items-center rounded-[7px] border border-[#303030] bg-[#0c0c0c] px-[18px] text-[16px] font-semibold text-white transition-colors hover:border-[#777]"
                   >
                     {integration.status === "Connected" ? "Configure" : "Connect"}
-                  </button>
+                  </Link>
                 </div>
               ))}
             </div>

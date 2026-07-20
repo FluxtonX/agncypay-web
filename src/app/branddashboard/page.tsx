@@ -37,6 +37,11 @@ import {
 import { useApp } from "../../context/AppContext";
 import { subscribeInvoicesByBrand, subscribeInvoicesByAgency, updateInvoiceStatus, createFirestoreInvoice, getRegisteredBrands, getRegisteredTalents, getRegisteredTalentsByAgency } from "../../lib/firebaseInvoices";
 import { FirestoreUser } from "../../lib/firebaseAuth";
+import { useAccounting } from "../../modules/accounting/hooks/useAccounting";
+import { ProviderType } from "../../modules/accounting/types";
+import { BanksAndCardsPanel } from "../../components/dashboard/BanksAndCardsPanel";
+import { IntegrationsPanel } from "../../components/dashboard/IntegrationsPanel";
+import { SyncedInvoicesTable } from "../../components/dashboard/SyncedInvoicesTable";
 
 // Refactored Data Models
 interface SplitItem {
@@ -79,6 +84,7 @@ const RECENT_TRANSACTIONS: any[] = [];
 export default function BrandDashboardPage() {
   const router = useRouter();
   const { state, resetState } = useApp();
+  const { connectionStatuses } = useAccounting();
   const workspaceType = state.user ? state.user.accountType : "brand";
 
   const [livePaidVolume, setLivePaidVolume] = useState(0);
@@ -1001,6 +1007,11 @@ export default function BrandDashboardPage() {
             </div>
           </div>
 
+          {/* Synced Platform Invoices (moved from right sidebar) */}
+          <div className="mt-6">
+            <SyncedInvoicesTable />
+          </div>
+
           {/* Agency Notifications Banners */}
           {workspaceType === "agency" && notifications.length > 0 && (
             <div className="bg-[#050505] rounded-2xl border border-white/20 p-5 shadow-sm mt-6">
@@ -1054,7 +1065,7 @@ export default function BrandDashboardPage() {
               </div>
 
               {/* Core Balance Card Info */}
-              <div className="p-6 md:p-8 grid grid-cols-1 md:grid-cols-2 gap-8 border-b border-white/20">
+              <div className="p-6 md:p-8 border-b border-white/20">
                 
                 {/* Left pane - Amount and Action */}
                 <div className="flex flex-col justify-between">
@@ -1129,61 +1140,6 @@ export default function BrandDashboardPage() {
                        </p>
                      )}
                    </div>
-                </div>
-
-                {/* Right pane - Payout Terms selector */}
-                <div className="rounded-xl border border-white/20 bg-white/[0.01] p-5 flex flex-col justify-between">
-                  <div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs font-bold text-white">Your Corporate Payout Terms</span>
-                      <HelpCircle className="h-3.5 w-3.5 text-neutral-400" />
-                    </div>
-                    <p className="text-[11px] text-[#8f8f8f] mt-1 leading-relaxed">
-                      Set your treasury disbursement timeline. Invoices will automatically clear according to this date.
-                    </p>
-
-                    {/* Term Buttons */}
-                    <div className="mt-4 grid grid-cols-3 gap-2 bg-black p-1 rounded-lg border border-white/20">
-                      {(["Net-30", "Net-60", "Net-90"] as const).map(term => (
-                        <button
-                          key={term}
-                          onClick={() => setSelectedTerm(term)}
-                          className={`py-2 rounded-md text-xs font-semibold tracking-tight transition-all cursor-pointer ${
-                            selectedTerm === term
-                              ? "bg-white text-black shadow-sm font-bold"
-                              : "text-[#8f8f8f] hover:text-white"
-                          }`}
-                        >
-                          {term}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Toggle for Instant Payout for recipient */}
-                  <div className="mt-6 pt-4 border-t border-white/20 flex items-start justify-between gap-4">
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-xs font-bold text-white">Allow instant Net-0</span>
-                        <span className="text-[9px] font-bold text-emerald-400 bg-emerald-950/80 px-1.5 py-0.2 rounded-full uppercase tracking-wider">AgncyPay Liquidity</span>
-                      </div>
-                      <p className="text-[10px] text-[#8f8f8f] mt-1 leading-tight">
-                        Talent/agencies can claim funds on day 0. AgncyPay funds the advance, keeping your terms unchanged.
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => setInstantPayoutEnabled(!instantPayoutEnabled)}
-                      className={`relative inline-flex h-5 w-10 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out outline-none ${
-                        instantPayoutEnabled ? "bg-[#4B6BFB]" : "bg-white/20"
-                      }`}
-                    >
-                      <span
-                        className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                          instantPayoutEnabled ? "translate-x-5" : "translate-x-0"
-                        }`}
-                      />
-                    </button>
-                  </div>
                 </div>
               </div>
 
@@ -1435,6 +1391,9 @@ export default function BrandDashboardPage() {
               </div>
             </div>
 
+            {/* Integrations Panel */}
+            <IntegrationsPanel />
+
             {/* Node Map Panel */}
             {workspaceType !== "brand" && (
               <div className="bg-[#050505] rounded-2xl border border-white/20 p-5 shadow-sm">
@@ -1548,6 +1507,10 @@ export default function BrandDashboardPage() {
                 })()}
               </div>
           </div>
+
+          {/* Banks and Cards */}
+          <BanksAndCardsPanel />
+
         </div>
       </div>
 

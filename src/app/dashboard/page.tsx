@@ -21,6 +21,7 @@ import {
   Check,
   Wallet,
   Lock,
+  Clock,
   LogOut,
   Sun,
   Moon
@@ -30,6 +31,9 @@ import { mainboardInvoices, formatMainboardMoney, type MainboardInvoice } from "
 import { useApp } from "../../context/AppContext";
 import { subscribeInvoicesByAgency, subscribeInvoicesByTalent } from "../../lib/firebaseInvoices";
 import { ModelIncomeList, ModelPayoutsList, CsvDropzonePanel } from "../../components/dashboard/ModelAgencyDashboard";
+import { IntegrationsPanel } from "../../components/dashboard/IntegrationsPanel";
+import { SyncedInvoicesTable } from "../../components/dashboard/SyncedInvoicesTable";
+import { BanksAndCardsPanel } from "../../components/dashboard/BanksAndCardsPanel";
 
 const BOFA_BUSINESS_DEBIT_VISA_IMAGE =
   "https://business.bankofamerica.com/content/dam/consumer/business/deposits/checking-accounts/debit-cards/bofa_busdbtcm_v.png";
@@ -716,24 +720,33 @@ function CreativeBankingPanel({
           </button>
         </div>
 
-        {/* Crystallised Balance Row */}
-        <div className="p-5 bg-[#050505] border border-white/10 rounded-xl flex items-center justify-between gap-4">
+        {/* Pending Payout Row - brand has paid; awaiting talent disbursement */}
+        <div className="p-5 bg-[#050505] border border-amber-800/30 rounded-xl flex items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#1A0B2E] text-[#9b51e0] border border-[#8a2be2]/20">
-              <Lock className="h-5 w-5" />
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#261a00] text-amber-400 border border-amber-700/30">
+              <Clock className="h-5 w-5" />
             </div>
             <div>
-              <span className="text-[12px] font-semibold text-neutral-400">Crystallised Balance</span>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-[12px] font-semibold text-neutral-400">Pending Payout</span>
+                {crystallised > 0 && (
+                  <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-900/50 text-amber-300 border border-amber-700/30 animate-pulse">
+                    Awaiting Disbursement
+                  </span>
+                )}
+              </div>
               <p className="mt-1 text-[26px] font-black text-white tracking-tight leading-none">
                 ${crystallised.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
-              <p className="text-[11px] text-[#8E8E93] mt-1.5">Earnings locked from completed settlements.</p>
+              <p className="text-[11px] text-[#8E8E93] mt-1.5">
+                Brand settled. Your agency is routing the 85% split to your wallet.
+              </p>
             </div>
           </div>
           <button
             onClick={onNet0}
             disabled={crystallised <= 0}
-            className="h-10 px-4 rounded-xl border border-white/20 hover:border-white/40 bg-black hover:bg-white/[0.02] text-white text-[12px] font-bold transition-all flex items-center gap-1 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+            className="h-10 px-4 rounded-xl border border-amber-700/40 hover:border-amber-500/60 bg-black hover:bg-amber-900/10 text-amber-300 text-[12px] font-bold transition-all flex items-center gap-1 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
           >
             Early Payout
             <ChevronRight className="h-4 w-4" />
@@ -763,6 +776,7 @@ export default function DashboardHomePage() {
   const { state, resetState } = useApp();
   const activeWorkspace = state.workspaces.find((w) => w.id === state.activeWorkspaceId);
   const workspaceType = activeWorkspace?.type || state.user?.accountType || "brand";
+  const isTalent = ["individual", "talent_independent", "talent_agency"].includes(workspaceType);
 
   const [isLightTheme, setIsLightTheme] = useState(false);
 
@@ -862,7 +876,9 @@ export default function DashboardHomePage() {
 
     // Start at $0 — balances build from real Firestore data
     const defaultLiq = 0;
-    const defaultCry = 0;
+    
+    // Add fallback data if the dynamic crystallised is 0, just for mock testing as requested by user
+    const defaultCry = dynamicCrystallised > 0 ? 0 : 3200;
 
     const finalCry = Math.max(0, (defaultCry + dynamicCrystallised) - sessionNet0Advanced);
     const finalLiq = Math.max(0, (defaultLiq + dynamicLiquidity) + (sessionNet0Advanced * 0.985) - sessionWithdrawAmount);
@@ -1072,138 +1088,95 @@ export default function DashboardHomePage() {
           <div className="space-y-5">
             <FinanceAppPromoCard />
 
-            <Panel className="p-4 sm:p-5">
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <h2 className="text-[18px] font-semibold text-white">Recent Income</h2>
-                  <p className="mt-1 text-[13px] text-[#8f8f8f]">Your latest account activity.</p>
-                </div>
-                <Link
-                  href="/dashboard/incomes"
-                  className="inline-flex items-center gap-2 rounded-[7px] border border-[#333] bg-[#0b0b0b] px-3 py-2 text-[12px] font-semibold text-white"
-                >
-                  View All
-                  <ChevronRight className="h-4 w-4" />
-                </Link>
-              </div>
-
-              <div className="mt-4 space-y-2">
-                {allIncomes.slice(0, 5).map((item) => (
+            {isTalent ? (
+              <SyncedInvoicesTable />
+            ) : (
+              <Panel className="p-4 sm:p-5">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <h2 className="text-[18px] font-semibold text-white">Recent Income</h2>
+                    <p className="mt-1 text-[13px] text-[#8f8f8f]">Your latest account activity.</p>
+                  </div>
                   <Link
-                    key={`${item.name}-${item.date}`}
-                    href={`/dashboard/income/${item.slug}`}
-                    className="flex items-center gap-3 rounded-[8px] border border-[#333] bg-black px-3 py-2 transition-colors hover:border-[#555] hover:bg-white/[0.04]"
+                    href="/dashboard/incomes"
+                    className="inline-flex items-center gap-2 rounded-[7px] border border-[#333] bg-[#0b0b0b] px-3 py-2 text-[12px] font-semibold text-white"
                   >
-                    <MusicIncomeLogo item={item} />
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-[13px] font-semibold text-white">{item.name}</p>
-                      <p className="truncate text-[11px] text-[#7f7f7f]">{item.detail}</p>
-                    </div>
-                    <div className="hidden text-right text-[11px] text-[#7f7f7f] sm:block">{item.date}</div>
-                    <div className="min-w-[92px] text-right text-[13px] font-semibold text-white">
-                      {item.amount}
-                    </div>
-                    <span className="flex h-8 w-8 items-center justify-center rounded-full text-[#7f7f7f]">
-                      <EllipsisVertical className="h-4 w-4" />
-                    </span>
+                    View All
+                    <ChevronRight className="h-4 w-4" />
                   </Link>
-                ))}
-              </div>
-            </Panel>
+                </div>
+
+                <div className="mt-4 space-y-2">
+                  {allIncomes.slice(0, 5).map((item) => (
+                    <Link
+                      key={`${item.name}-${item.date}`}
+                      href={`/dashboard/income/${item.slug}`}
+                      className="flex items-center gap-3 rounded-[8px] border border-[#333] bg-black px-3 py-2 transition-colors hover:border-[#555] hover:bg-white/[0.04]"
+                    >
+                      <MusicIncomeLogo item={item} />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-[13px] font-semibold text-white">{item.name}</p>
+                        <p className="truncate text-[#7f7f7f] text-[11px]">{item.detail}</p>
+                      </div>
+                      <div className="hidden text-right text-[11px] text-[#7f7f7f] sm:block">{item.date}</div>
+                      <div className="min-w-[92px] text-right text-[13px] font-semibold text-white">
+                        {item.amount}
+                      </div>
+                      <span className="flex h-8 w-8 items-center justify-center rounded-full text-[#7f7f7f]">
+                        <EllipsisVertical className="h-4 w-4" />
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+              </Panel>
+            )}
 
             {workspaceType === "agency" && (
               <ModelPayoutsList invoices={widgetInvoices} />
             )}
 
-            {/* Old invoices table preserved for reuse.
-            <Panel className="overflow-hidden">
-              <div className="flex items-center justify-between border-b border-[#333] p-4 sm:p-5">
-                <div>
-                  <h2 className="text-[18px] font-semibold text-white">Invoices</h2>
-                  <p className="mt-1 text-[13px] text-[#8f8f8f]">
-                    Autosplit, status, due, amount, client. Select an invoice to inspect or pay.
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
+            {isTalent ? (
+              <Panel className="p-4 sm:p-5">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <h2 className="text-[18px] font-semibold text-white">Recent Income</h2>
+                    <p className="mt-1 text-[13px] text-[#8f8f8f]">Your latest account activity.</p>
+                  </div>
                   <Link
-                    href="/dashboard/invoices"
+                    href="/dashboard/incomes"
                     className="inline-flex items-center gap-2 rounded-[7px] border border-[#333] bg-[#0b0b0b] px-3 py-2 text-[12px] font-semibold text-white"
                   >
-                    Open invoices
-                    <ArrowUpRight className="h-4 w-4" />
+                    View All
+                    <ChevronRight className="h-4 w-4" />
                   </Link>
                 </div>
-              </div>
 
-              <div className="overflow-x-auto">
-                <table className="min-w-[920px] w-full table-fixed text-left">
-                  <colgroup>
-                    <col className="w-[128px]" />
-                    <col className="w-[150px]" />
-                    <col className="w-[170px]" />
-                    <col className="w-[120px]" />
-                    <col className="w-[140px]" />
-                    <col className="w-[260px]" />
-                  </colgroup>
-                  <thead>
-                    <tr className="h-12 border-b border-[#333] text-[11px] font-semibold uppercase tracking-[0.12em] text-[#777]">
-                      <th className="px-4">Invoice</th>
-                      <th className="px-0">Autosplit</th>
-                      <th className="px-0">Status</th>
-                      <th className="px-0">Due</th>
-                      <th className="px-0">Amount</th>
-                      <th className="px-0">Client</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {dashboardInvoices.map((invoice) => (
-                      <tr
-                        key={invoice.id}
-                        onClick={() => router.push(`/dashboard/pay-flow/${invoice.id}`)}
-                        onKeyDown={(event) => {
-                          if (event.key === "Enter" || event.key === " ") {
-                            event.preventDefault();
-                            router.push(`/dashboard/pay-flow/${invoice.id}`);
-                          }
-                        }}
-                        role="button"
-                        tabIndex={0}
-                        className="h-[72px] cursor-pointer border-b border-[#2c2c2c] transition-colors hover:bg-white/[0.04] focus:bg-white/[0.05] focus:outline-none"
-                      >
-                        <td className="px-4">
-                          <span className="font-mono text-[13px] font-semibold text-white">
-                            {invoice.id}
-                          </span>
-                        </td>
-                        <td className="px-0">
-                          <AutoSplitToggle
-                            active={autosplitInvoiceIds.includes(invoice.id)}
-                            onToggle={() => toggleAutosplitInvoice(invoice.id)}
-                          />
-                        </td>
-                        <td className="px-0">
-                          <InvoiceStatusPill invoice={invoice} />
-                        </td>
-                        <td className="px-0 text-[13px] text-[#bdbdbd]">{invoice.due}</td>
-                        <td className="px-0 text-[13px] font-semibold text-white">
-                          {formatMainboardMoney(invoice.amount + invoice.fee)}
-                        </td>
-                        <td className="px-0">
-                          <div className="flex min-w-0 items-center gap-3 pr-3">
-                            <PayeeLogoTile invoice={invoice} size="sm" />
-                            <div className="min-w-0">
-                              <p className="truncate text-[13px] font-semibold text-white">{getInvoicePersonName(invoice)}</p>
-                              <p className="truncate text-[11px] text-[#7f7f7f]">{invoice.recipient} - {invoice.jobType}</p>
-                            </div>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </Panel>
-            */}
+                <div className="mt-4 space-y-2">
+                  {allIncomes.slice(0, 5).map((item) => (
+                    <Link
+                      key={`${item.name}-${item.date}`}
+                      href={`/dashboard/income/${item.slug}`}
+                      className="flex items-center gap-3 rounded-[8px] border border-[#333] bg-black px-3 py-2 transition-colors hover:border-[#555] hover:bg-white/[0.04]"
+                    >
+                      <MusicIncomeLogo item={item} />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-[13px] font-semibold text-white">{item.name}</p>
+                        <p className="truncate text-[#7f7f7f] text-[11px]">{item.detail}</p>
+                      </div>
+                      <div className="hidden text-right text-[11px] text-[#7f7f7f] sm:block">{item.date}</div>
+                      <div className="min-w-[92px] text-right text-[13px] font-semibold text-white">
+                        {item.amount}
+                      </div>
+                      <span className="flex h-8 w-8 items-center justify-center rounded-full text-[#7f7f7f]">
+                        <EllipsisVertical className="h-4 w-4" />
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+              </Panel>
+            ) : (
+              <SyncedInvoicesTable />
+            )}
 
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
               <Panel className="flex min-h-[190px] flex-col justify-between p-4 sm:p-5">
@@ -1362,6 +1335,8 @@ export default function DashboardHomePage() {
               </div>
             </Panel>
 
+            <IntegrationsPanel />
+
             <CreativeBankingPanel
               liquidity={liquidityBalance}
               crystallised={crystallisedBalance}
@@ -1369,36 +1344,7 @@ export default function DashboardHomePage() {
               onNet0={() => setIsNet0Open(true)}
             />
 
-            <Panel className="p-4 sm:p-5">
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <h2 className="text-[18px] font-semibold text-white">Banks and Cards</h2>
-                </div>
-              </div>
-
-              <div className="mt-4 space-y-3">
-                {bankCards.map((card) => (
-                  <div
-                    key={card.name}
-                    className="flex items-center gap-3 rounded-[10px] border border-[#3a3a3a] bg-[#090909] p-3"
-                  >
-                    <BankCardFace card={card} />
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-[14px] font-semibold text-white">{card.name}</p>
-                      <p className="mt-1 text-[12px] text-[#8f8f8f]">{card.detail}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <Link
-                href="/dashboard/wallet/link"
-                className="mt-4 inline-flex h-10 items-center gap-2 rounded-[7px] border border-[#333] bg-[#0b0b0b] px-3 text-[12px] font-semibold text-white hover:border-[#666]"
-              >
-                Link a card or bank
-                <ChevronRight className="h-4 w-4" />
-              </Link>
-            </Panel>
+            <BanksAndCardsPanel />
 
             {/*
             <Panel className="overflow-hidden p-4 sm:p-5">
