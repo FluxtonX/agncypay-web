@@ -629,7 +629,7 @@ export default function BrandDashboardPage() {
 
 
           {/* Analytics Cards Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {(() => {
               const paidInvoices = liveFunctionalInvoices.filter(i => 
                 i.status === "settled" || i.status === "talent_disbursed"
@@ -653,7 +653,6 @@ export default function BrandDashboardPage() {
                   count: `${awaitingCount} invoice${awaitingCount !== 1 ? "s" : ""}`,
                   icon: Clock
                 },
-                { label: "Instant Net-0 Funded", value: `$${displayNet0Funded.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, detail: "AgncyPay liquidity", icon: Coins },
                 { label: "Autosplit Fee Savings", value: `$${displayAutosplitSavings.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, detail: "Single payment rail", icon: ShieldCheck }
               ];
 

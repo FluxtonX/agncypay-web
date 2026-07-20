@@ -671,76 +671,95 @@ function WalletContactsOverlay({
   );
 }
 
-function CreativeBankingPanel({
-  liquidity,
-  crystallised,
-  onWithdraw,
-  onNet0,
+function PendingBalancePanel({
+  widgetInvoices,
+  userEmail,
 }: {
-  liquidity: number;
-  crystallised: number;
-  onWithdraw: () => void;
-  onNet0: () => void;
+  widgetInvoices: any[];
+  userEmail: string;
 }) {
+  const myInvoices = widgetInvoices.filter(
+    (i) => i.talentEmail?.toLowerCase() === userEmail?.toLowerCase()
+  );
+
+  // Pending = brand paid but talent hasn't received yet
+  const pendingInvoices = myInvoices.filter(
+    (i) => i.status === "paid" && i.talentPayoutStatus === "pending"
+  );
+  const pendingAmount = pendingInvoices.reduce(
+    (sum, i) => sum + Number(i.amount) * 0.85,
+    0
+  );
+
+  // Total ever disbursed to talent
+  const disbursedAmount = myInvoices
+    .filter((i) => i.talentPayoutStatus === "disbursed")
+    .reduce((sum, i) => sum + Number(i.amount) * 0.85, 0);
+
+  const pendingCount = pendingInvoices.length;
+
   return (
     <Panel className="p-5 relative overflow-hidden border-white/20">
-      <div>
-        <h2 className="text-[20px] font-bold text-white tracking-tight">Payout Balance</h2>
-        <p className="text-[12px] text-[#8E8E93] mt-1">Your available balances and earnings.</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-[20px] font-bold text-white tracking-tight">Pending Balance</h2>
+          <p className="text-[12px] text-[#8E8E93] mt-1">Earnings awaiting disbursement to your account.</p>
+        </div>
+        {pendingCount > 0 && (
+          <span className="inline-flex h-6 items-center rounded-full bg-[#1a2614] border border-[#10b95f]/30 px-2.5 text-[11px] font-black text-[#70ff9e]">
+            {pendingCount} invoice{pendingCount !== 1 ? "s" : ""}
+          </span>
+        )}
       </div>
 
-      <div className="mt-5 space-y-4">
-        {/* Liquidity Balance Row */}
+      <div className="mt-5 space-y-3">
+        {/* Pending Balance */}
         <div className="p-5 bg-[#050505] border border-white/10 rounded-xl flex items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#0A2616] text-[#14C96B] border border-[#10b95f]/20">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#1a2614] text-[#14C96B] border border-[#10b95f]/20">
               <Wallet className="h-5 w-5" />
             </div>
             <div>
-              <span className="text-[12px] font-semibold text-neutral-400">Liquidity Balance</span>
+              <span className="text-[12px] font-semibold text-neutral-400">Pending Payout</span>
               <p className="mt-1 text-[26px] font-black text-white tracking-tight leading-none">
-                ${liquidity.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                ${pendingAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
-              <p className="text-[11px] text-[#8E8E93] mt-1.5">Available to send, withdraw, or spend anytime.</p>
+              <p className="text-[11px] text-[#8E8E93] mt-1.5">
+                {pendingCount > 0
+                  ? `Across ${pendingCount} paid invoice${pendingCount !== 1 ? "s" : ""} — awaiting disbursement.`
+                  : "No pending invoices at this time."}
+              </p>
             </div>
           </div>
-          <button
-            onClick={onWithdraw}
-            disabled={liquidity <= 0}
-            className="h-10 px-4 rounded-xl border border-white/20 hover:border-white/40 bg-black hover:bg-white/[0.02] text-white text-[12px] font-bold transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+          <Link
+            href="/dashboard/incomes"
+            className="h-10 px-4 rounded-xl border border-white/20 hover:border-white/40 bg-black hover:bg-white/[0.02] text-white text-[12px] font-bold transition-all flex items-center gap-1 shrink-0"
           >
-            Withdraw
+            View All
             <ChevronRight className="h-4 w-4" />
-          </button>
+          </Link>
         </div>
 
-        {/* Crystallised Balance Row */}
+        {/* Total Earned */}
         <div className="p-5 bg-[#050505] border border-white/10 rounded-xl flex items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#1A0B2E] text-[#9b51e0] border border-[#8a2be2]/20">
-              <Lock className="h-5 w-5" />
+              <Sparkles className="h-5 w-5" />
             </div>
             <div>
-              <span className="text-[12px] font-semibold text-neutral-400">Crystallised Balance</span>
+              <span className="text-[12px] font-semibold text-neutral-400">Total Earned (All Time)</span>
               <p className="mt-1 text-[26px] font-black text-white tracking-tight leading-none">
-                ${crystallised.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                ${disbursedAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
-              <p className="text-[11px] text-[#8E8E93] mt-1.5">Earnings locked from completed settlements.</p>
+              <p className="text-[11px] text-[#8E8E93] mt-1.5">After 15% platform split — disbursed to your account.</p>
             </div>
           </div>
-          <button
-            onClick={onNet0}
-            disabled={crystallised <= 0}
-            className="h-10 px-4 rounded-xl border border-white/20 hover:border-white/40 bg-black hover:bg-white/[0.02] text-white text-[12px] font-bold transition-all flex items-center gap-1 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
-          >
-            Early Payout
-            <ChevronRight className="h-4 w-4" />
-          </button>
         </div>
       </div>
     </Panel>
   );
 }
+
 
 function DashboardFooter() {
   return (
@@ -1327,11 +1346,9 @@ export default function DashboardHomePage() {
               </div>
             </Panel>
 
-            <CreativeBankingPanel
-              liquidity={liquidityBalance}
-              crystallised={crystallisedBalance}
-              onWithdraw={() => setIsWithdrawOpen(true)}
-              onNet0={() => setIsNet0Open(true)}
+            <PendingBalancePanel
+              widgetInvoices={widgetInvoices}
+              userEmail={state.user?.email || ""}
             />
 
             <Panel className="p-4 sm:p-5">

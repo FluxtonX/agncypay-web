@@ -17,6 +17,8 @@ export interface FirestoreUser {
   agencyId: string;
   createdAt: string;
   profileImage?: string;
+  connectedCRMs?: string[];
+  lastCrmSync?: string;
 }
 
 const USERS_COLLECTION = "users";
@@ -117,6 +119,29 @@ export async function resetPasswordWithFirebase(email: string): Promise<void> {
     await sendPasswordResetEmail(auth, email);
   } catch (error) {
     console.error("Error sending password reset email with Firebase:", error);
+    throw error;
+  }
+}
+
+export async function addConnectedCRM(uid: string, crmId: string, currentCRMs: string[] = []): Promise<void> {
+  try {
+    const docRef = doc(db, USERS_COLLECTION, uid);
+    const newCRMs = Array.from(new Set([...currentCRMs, crmId]));
+    await setDoc(docRef, { connectedCRMs: newCRMs }, { merge: true });
+  } catch (error) {
+    console.error("Error adding connected CRM:", error);
+    throw error;
+  }
+}
+
+export async function updateLastCrmSyncTime(uid: string): Promise<string> {
+  try {
+    const docRef = doc(db, USERS_COLLECTION, uid);
+    const time = new Date().toISOString();
+    await setDoc(docRef, { lastCrmSync: time }, { merge: true });
+    return time;
+  } catch (error) {
+    console.error("Error updating last CRM sync time:", error);
     throw error;
   }
 }

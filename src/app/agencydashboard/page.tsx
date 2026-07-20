@@ -29,13 +29,273 @@ import {
   RefreshCw,
   Search,
   Loader2,
-  Check
+  Check,
+  X,
+  Plus,
+  CreditCard
 } from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import { subscribeInvoicesByBrand, subscribeInvoicesByAgency, updateInvoiceStatus, createFirestoreInvoice, getRegisteredBrands, getRegisteredTalents } from "../../lib/firebaseInvoices";
-import { FirestoreUser } from "../../lib/firebaseAuth";
+import { FirestoreUser, addConnectedCRM, updateLastCrmSyncTime } from "../../lib/firebaseAuth";
 
 // Using real Firebase data - no mock interfaces needed
+
+const CRM_PROVIDERS = [
+  { id: "quickbooks", name: "QuickBooks", domain: "quickbooks.intuit.com" },
+  { id: "hubspot", name: "HubSpot", domain: "hubspot.com" },
+  { id: "mainboard", name: "Mainboard", domain: "mainboard.com" },
+  { id: "mediaslide", name: "MediaSlide", domain: "mediaslide.com" },
+];
+
+function DepositBalancePanel() {
+  const [isOpen, setIsOpen] = useState(false);
+  const [amount, setAmount] = useState("");
+  const [selectedCard, setSelectedCard] = useState<string | null>("card_1");
+
+  const DUMMY_CARDS = [
+    { id: "card_1", brand: "Visa", last4: "4242", expiry: "12/26", icon: "/visa-logo.svg" },
+    { id: "card_2", brand: "Mastercard", last4: "8888", expiry: "09/27", icon: "/mastercard-logo.svg" }
+  ];
+
+  const handleDeposit = () => {
+    // mock deposit action
+    setIsOpen(false);
+    setAmount("");
+  };
+
+  return (
+    <>
+      <div className="bg-[#050505] rounded-2xl border border-white/20 p-5 shadow-sm">
+        <h3 className="text-xs font-black uppercase tracking-wider text-[#8f8f8f] pb-3 border-b border-white/20">Deposit Balance to AgncyPay</h3>
+        <div className="mt-4 flex items-center justify-between">
+          <div>
+            <span className="text-[28px] font-black text-white tracking-tight leading-none mt-1 block">
+              $0.00
+            </span>
+          </div>
+          <button 
+            onClick={() => setIsOpen(true)}
+            className="h-10 px-4 rounded-xl border border-white/20 hover:border-white/40 bg-white/10 hover:bg-white/20 text-white text-[12px] font-bold transition-colors cursor-pointer"
+          >
+            Deposit
+          </button>
+        </div>
+      </div>
+
+      <AnimatePresence>
+        {isOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsOpen(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-md bg-[#0A0A0A] border border-white/20 rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+            >
+              <div className="flex justify-between items-center p-5 border-b border-white/10">
+                <h3 className="text-lg font-bold text-white">Deposit to AgncyPay</h3>
+                <button onClick={() => setIsOpen(false)} className="text-[#8f8f8f] hover:text-white transition-colors cursor-pointer p-1">
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <div className="p-5 space-y-6">
+                <div>
+                  <label className="text-xs font-bold text-[#8f8f8f] uppercase tracking-wider block mb-2">Deposit Amount</label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                      <DollarSign className="h-5 w-5 text-neutral-500" />
+                    </div>
+                    <input 
+                      type="number"
+                      value={amount}
+                      onChange={(e) => setAmount(e.target.value)}
+                      placeholder="0.00"
+                      className="w-full bg-black border border-white/20 rounded-xl py-3 pl-10 pr-4 text-white font-bold text-lg focus:outline-none focus:border-white/40 transition-colors"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-[#8f8f8f] uppercase tracking-wider block mb-3">Select Funding Source</label>
+                  <div className="space-y-2">
+                    {DUMMY_CARDS.map(card => (
+                      <button
+                        key={card.id}
+                        onClick={() => setSelectedCard(card.id)}
+                        className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all cursor-pointer ${
+                          selectedCard === card.id 
+                            ? "border-emerald-500/50 bg-emerald-950/20" 
+                            : "border-white/10 bg-black hover:border-white/20"
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="h-8 w-12 bg-white rounded flex items-center justify-center p-1 shrink-0">
+                            <img src={card.icon} alt={card.brand} className="max-h-full max-w-full object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                            {!card.icon && <CreditCard className="h-4 w-4 text-black" />}
+                          </div>
+                          <div className="text-left">
+                            <p className="text-sm font-bold text-white">{card.brand} •••• {card.last4}</p>
+                            <p className="text-[10px] text-neutral-400">Expires {card.expiry}</p>
+                          </div>
+                        </div>
+                        {selectedCard === card.id && (
+                          <CheckCircle2 className="h-5 w-5 text-emerald-400" />
+                        )}
+                      </button>
+                    ))}
+                    
+                    <button className="w-full flex items-center gap-3 p-3 rounded-xl border border-dashed border-white/20 hover:border-white/40 bg-black/50 transition-colors cursor-pointer">
+                      <div className="h-8 w-12 rounded flex items-center justify-center border border-white/10 bg-[#111] shrink-0">
+                        <Plus className="h-4 w-4 text-white" />
+                      </div>
+                      <span className="text-sm font-bold text-white">Add new card</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-5 border-t border-white/10 bg-[#050505] flex gap-3">
+                <button 
+                  onClick={() => setIsOpen(false)}
+                  className="flex-1 py-3 rounded-xl border border-white/20 text-white font-bold text-sm hover:bg-white/5 transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={handleDeposit}
+                  disabled={!amount || Number(amount) <= 0 || !selectedCard}
+                  className="flex-1 py-3 rounded-xl bg-white text-black font-bold text-sm hover:bg-neutral-200 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Confirm Deposit
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+    </>
+  );
+}
+
+const getFavicon = (domain: string) => `https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://${domain}&size=128`;
+
+function ConnectedCRMsPanel({
+  user,
+  onUpdateCRMs,
+  onSync
+}: {
+  user: FirestoreUser;
+  onUpdateCRMs: (crmId: string) => void;
+  onSync: () => void;
+}) {
+  const [isAddOpen, setIsAddOpen] = useState(false);
+  const connectedIds = user.connectedCRMs || [];
+  const hasConnected = connectedIds.length > 0;
+  const availableCRMs = CRM_PROVIDERS.filter(p => !connectedIds.includes(p.id));
+
+  // Time formatter
+  const formattedSyncTime = user.lastCrmSync 
+    ? new Date(user.lastCrmSync).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    : "";
+
+  return (
+    <div className="bg-[#050505] rounded-2xl border border-white/20 p-5 shadow-sm">
+      <div className="flex justify-between items-start pb-3 border-b border-white/20">
+        <div>
+          <h3 className="text-xs font-black uppercase tracking-wider text-[#8f8f8f]">Connected CRMs</h3>
+          <p className="text-[10px] text-neutral-500 mt-1">Connect your CRMs to auto-import invoices and talent data.</p>
+        </div>
+        <div className="relative">
+          <button 
+            onClick={() => setIsAddOpen(!isAddOpen)}
+            className="text-[10px] font-bold text-white bg-white/10 hover:bg-white/20 border border-white/20 px-2.5 py-1 rounded-md transition-colors cursor-pointer"
+          >
+            + Add
+          </button>
+          
+          {/* Add Dropdown */}
+          <AnimatePresence>
+            {isAddOpen && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="absolute right-0 top-full mt-2 w-48 bg-[#0a0a0a] border border-white/20 rounded-xl shadow-xl overflow-hidden z-20"
+              >
+                {availableCRMs.length === 0 ? (
+                  <div className="p-3 text-[10px] text-neutral-500 text-center">All CRMs connected</div>
+                ) : (
+                  availableCRMs.map(crm => (
+                    <button
+                      key={crm.id}
+                      onClick={() => {
+                        onUpdateCRMs(crm.id);
+                        setIsAddOpen(false);
+                      }}
+                      className="w-full text-left px-4 py-3 text-xs font-semibold text-white hover:bg-white/10 transition-colors flex items-center gap-2 cursor-pointer"
+                    >
+                      <img src={getFavicon(crm.domain)} alt="" className="w-4 h-4 rounded-full bg-white object-contain p-0.5" />
+                      {crm.name}
+                    </button>
+                  ))
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </div>
+
+      <div className="mt-4 grid grid-cols-2 gap-3">
+        {CRM_PROVIDERS.map(crm => {
+          const isConnected = connectedIds.includes(crm.id);
+          return (
+            <div key={crm.id} className="p-3 rounded-xl border border-white/10 bg-black flex flex-col justify-between h-[84px]">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                  <img src={getFavicon(crm.domain)} alt="" className="w-5 h-5 rounded-full bg-white object-contain p-0.5" />
+                  <span className="text-xs font-bold text-white">{crm.name}</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5 mt-auto">
+                {isConnected ? (
+                  <>
+                    <span className="w-1.5 h-1.5 rounded-full bg-white"></span>
+                    <span className="text-[10px] font-semibold text-white">Connected</span>
+                  </>
+                ) : (
+                  <span className="text-[10px] font-semibold text-neutral-500">Not connected</span>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Sync Footer */}
+      {hasConnected && (
+        <div className="mt-4 pt-4 border-t border-white/20 flex justify-between items-center">
+          <div className="flex items-center gap-1.5 text-[10px] text-neutral-500">
+            <RefreshCw className="w-3 h-3" />
+            Last sync: {user.lastCrmSync ? formattedSyncTime : "Never"}
+          </div>
+          <button 
+            onClick={onSync}
+            className="text-[10px] font-bold text-white px-3 py-1 rounded-md bg-white/5 hover:bg-white/10 border border-white/10 transition-colors cursor-pointer"
+          >
+            Sync now
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function AgencyDashboardPage() {
   const router = useRouter();
@@ -59,6 +319,9 @@ export default function AgencyDashboardPage() {
   const [selectedBrandEmail, setSelectedBrandEmail] = useState("");
   const [selectedTalentEmail, setSelectedTalentEmail] = useState("");
 
+  // CRM state mapped to current user
+  const [currentUserCRMs, setCurrentUserCRMs] = useState<FirestoreUser | null>(null);
+
   useEffect(() => {
     setMounted(true);
     async function loadData() {
@@ -70,6 +333,42 @@ export default function AgencyDashboardPage() {
     }
     loadData();
   }, []);
+
+  useEffect(() => {
+    if (state.user) {
+      // Create a full FirestoreUser compliant object for local CRM state tracking
+      setCurrentUserCRMs({
+        ...state.user,
+        uid: state.user.agncyId || "",
+        workspaceName: state.user.activeWorkspaceId || "",
+        agencyId: state.user.agncyId || "",
+        createdAt: new Date().toISOString(),
+        connectedCRMs: (state.user as any).connectedCRMs || [],
+        lastCrmSync: (state.user as any).lastCrmSync || ""
+      } as FirestoreUser);
+    }
+  }, [state.user]);
+
+  const handleAddCRM = async (crmId: string) => {
+    if (!currentUserCRMs?.uid) return;
+    const currentList = currentUserCRMs.connectedCRMs || [];
+    try {
+      await addConnectedCRM(currentUserCRMs.uid, crmId, currentList);
+      setCurrentUserCRMs({ ...currentUserCRMs, connectedCRMs: [...currentList, crmId] });
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleSyncCRM = async () => {
+    if (!currentUserCRMs?.uid) return;
+    try {
+      const time = await updateLastCrmSyncTime(currentUserCRMs.uid);
+      setCurrentUserCRMs({ ...currentUserCRMs, lastCrmSync: time });
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
 
   // New invoice state hooks
@@ -1252,6 +1551,11 @@ export default function AgencyDashboardPage() {
         {/* Right Column - Queue and History Ledger (Narrower) */}
         <div id="approval-queue-section" className="lg:col-span-4 space-y-6">
           
+          {/* Deposit Balance */}
+          {workspaceType === "agency" && (
+            <DepositBalancePanel />
+          )}
+
           {/* Invoice Approval Queue */}
           <div className="bg-[#050505] rounded-2xl border border-white/20 p-5 shadow-sm">
             <div className="flex justify-between items-center pb-3 border-b border-white/20">
@@ -1311,6 +1615,15 @@ export default function AgencyDashboardPage() {
               )}
               </div>
             </div>
+
+            {/* Connected CRMs Panel */}
+            {workspaceType !== "brand" && currentUserCRMs && (
+              <ConnectedCRMsPanel
+                user={currentUserCRMs}
+                onUpdateCRMs={handleAddCRM}
+                onSync={handleSyncCRM}
+              />
+            )}
 
             {/* Node Map Panel */}
             {workspaceType !== "brand" && (
