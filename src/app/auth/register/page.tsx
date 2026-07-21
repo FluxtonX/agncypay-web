@@ -3,8 +3,8 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Check, ShieldCheck, Eye, EyeOff, Loader2, ArrowRight } from "lucide-react";
-import { registerWithFirebase } from "../../../lib/firebaseAuth";
+import { Check, ShieldCheck, Eye, EyeOff, Loader2, ArrowRight, AlertCircle } from "lucide-react";
+import { registerWithFirebase, parseAuthError } from "../../../lib/firebaseAuth";
 import { WorkspaceType } from "../../../types/workspace";
 
 const DEMO_EMAIL = "martin.safi@adidas.com";
@@ -137,7 +137,14 @@ export default function RegisterPage() {
       router.push("/auth/login");
     } catch (error: any) {
       console.error("Firebase registration failed:", error);
-      setErrors({ email: error.message || "Failed to create account. Please try again." });
+      const parsed = parseAuthError(error);
+      if (parsed.field === "email") {
+        setErrors({ email: parsed.message });
+      } else if (parsed.field === "password") {
+        setErrors({ password: parsed.message });
+      } else {
+        setErrors({ general: parsed.message });
+      }
     } finally {
       setIsLoading(false);
     }
@@ -267,6 +274,12 @@ export default function RegisterPage() {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
+              {errors.general && (
+                <div className="p-3.5 rounded-xl border border-red-500/30 bg-red-950/40 text-red-300 text-xs font-semibold flex items-start gap-2 animate-fade-in">
+                  <AlertCircle className="h-4 w-4 text-red-400 shrink-0 mt-0.5" />
+                  <span className="leading-relaxed">{errors.general}</span>
+                </div>
+              )}
               
               <div className="space-y-3">
                 <label className="text-[13px] font-medium text-[#A1A1AA]">Account Type</label>
