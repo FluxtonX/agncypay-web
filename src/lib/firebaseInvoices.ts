@@ -222,7 +222,7 @@ export function subscribeInvoicesByTalent(talentEmail: string, callback: (invoic
   });
 }
 
-// Update specific invoice status
+// Update specific invoice status and execute payout balance increments
 export async function updateInvoiceStatus(
   id: string, 
   status: "pending" | "paid", 
@@ -244,12 +244,72 @@ export async function updateInvoiceStatus(
           status: "disbursed"
         }));
       }
+
+      // Execute payout balance increments on users when paid/disbursed
+      if (status === "paid" || talentPayoutStatus === "disbursed") {
+        const usersRef = collection(db, "users");
+        
+        // Payout to talents in splits
+        if (data.splits && data.splits.length > 0) {
+          for (const split of data.splits) {
+            if (split.talentEmail) {
+              const q = query(usersRef, where("email", "==", split.talentEmail.trim().toLowerCase()));
+              const snap = await getDocs(q);
+              snap.forEach(async (uDoc) => {
+                const uData = uDoc.data();
+                const curCryst = Number(uData.crystallizedBalance || 0);
+                const curAvail = Number(uData.availableBalance || 0);
+                await updateDoc(doc(db, "users", uDoc.id), {
+                  crystallizedBalance: curCryst + split.amount,
+                  availableBalance: curAvail + split.amount,
+                });
+              });
+            }
+          }
+        } else if (data.talentEmail) {
+          // Single talent payout
+          const q = query(usersRef, where("email", "==", data.talentEmail.trim().toLowerCase()));
+          const snap = await getDocs(q);
+          snap.forEach(async (uDoc) => {
+            const uData = uDoc.data();
+            const curCryst = Number(uData.crystallizedBalance || 0);
+            const curAvail = Number(uData.availableBalance || 0);
+            await updateDoc(doc(db, "users", uDoc.id), {
+              crystallizedBalance: curCryst + data.amount,
+              availableBalance: curAvail + data.amount,
+            });
+          });
+        }
+      }
     }
 
     await updateDoc(docRef, updateData);
   } catch (error) {
     console.error(`Error updating invoice status for ${id}:`, error);
     throw error;
+  }
+}
+
+// Fetch all talents from Firestore for Invoice Creation dropdowns
+export async function getFirestoreTalents(): Promise<{ email: string; name: string }[]> {
+  try {
+    const q = query(collection(db, "users"));
+    const snap = await getDocs(q);
+    const results: { email: string; name: string }[] = [];
+    snap.forEach((d) => {
+      const data = d.data();
+      const role = data.role || (data.accountType === "brand" ? "brand" : data.accountType === "agency" ? "agency" : "talent");
+      if (role === "talent" || data.accountType === "individual" || data.accountType === "talent_agency" || data.accountType === "talent_independent") {
+        results.push({
+          email: data.email || "",
+          name: data.displayName || data.fullName || data.email?.split("@")[0] || "Talent",
+        });
+      }
+    });
+    return results;
+  } catch (err) {
+    console.error("Error fetching talents from Firestore:", err);
+    return [];
   }
 }
 

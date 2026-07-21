@@ -10,14 +10,21 @@ import { AccountType } from "../types/workspace";
 
 export interface FirestoreUser {
   uid: string;
+  id?: string;
   email: string;
   fullName: string;
+  displayName?: string;
   accountType: AccountType;
+  role?: "talent" | "agency" | "brand" | "admin";
   workspaceName: string;
   agencyId: string;
   createdAt: string;
   parentAgencyEmail?: string;
   parentAgencyUid?: string;
+  availableBalance?: number;
+  liquidityBalance?: number;
+  pendingBalance?: number;
+  crystallizedBalance?: number;
 }
 
 const USERS_COLLECTION = "users";
@@ -25,6 +32,12 @@ const USERS_COLLECTION = "users";
 // Helper to generate a random Agency/Org ID
 function generateOrgId(prefix: string) {
   return `${prefix}-${Math.floor(100000 + Math.random() * 900000)}`;
+}
+
+function deriveRole(accountType: AccountType): "talent" | "agency" | "brand" {
+  if (accountType === "brand") return "brand";
+  if (accountType === "agency" || accountType === "mother_agency") return "agency";
+  return "talent";
 }
 
 // Register user in Firebase Auth and Firestore Users collection
@@ -43,15 +56,23 @@ export async function registerWithFirebase(
     // Generate agencyId/identifier depending on user type
     const prefix = accountType === "brand" ? "BRND" : accountType === "agency" ? "AGY" : "TAL";
     const agencyId = generateOrgId(prefix);
+    const role = deriveRole(accountType);
 
     const userProfile: FirestoreUser = {
       uid,
+      id: uid,
       email: normalizedEmail,
       fullName: fullName.trim(),
+      displayName: fullName.trim(),
       accountType,
+      role,
       workspaceName: workspaceName.trim(),
       agencyId,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      availableBalance: 0,
+      liquidityBalance: 0,
+      pendingBalance: 0,
+      crystallizedBalance: 0,
     };
 
     // Save profile to Firestore
@@ -79,19 +100,40 @@ export async function loginWithFirebase(
     const docSnap = await getDoc(docRef);
 
     if (docSnap.exists()) {
-      return docSnap.data() as FirestoreUser;
+      const data = docSnap.data() as FirestoreUser;
+      // Backward compatibility patch: ensure role, id, displayName, and balances exist
+      const role = data.role || deriveRole(data.accountType || "individual");
+      const updatedPatch: Partial<FirestoreUser> = {
+        id: data.id || data.uid,
+        displayName: data.displayName || data.fullName || email.split("@")[0],
+        role,
+        availableBalance: data.availableBalance ?? 0,
+        liquidityBalance: data.liquidityBalance ?? 0,
+        pendingBalance: data.pendingBalance ?? 0,
+        crystallizedBalance: data.crystallizedBalance ?? 0,
+      };
+
+      await setDoc(docRef, updatedPatch, { merge: true });
+      return { ...data, ...updatedPatch };
     }
     
     // In case the Firestore doc is missing, create a basic fallback profile
     const normalizedEmail = email.trim().toLowerCase();
     const fallbackProfile: FirestoreUser = {
       uid,
+      id: uid,
       email: normalizedEmail,
       fullName: normalizedEmail.split("@")[0].toUpperCase(),
+      displayName: normalizedEmail.split("@")[0].toUpperCase(),
       accountType: "brand",
+      role: "brand",
       workspaceName: "AgncyPay Workspace",
       agencyId: generateOrgId("BRND"),
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      availableBalance: 0,
+      liquidityBalance: 0,
+      pendingBalance: 0,
+      crystallizedBalance: 0,
     };
     
     await setDoc(docRef, fallbackProfile);

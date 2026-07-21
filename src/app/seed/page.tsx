@@ -238,16 +238,24 @@ export default function SeederPage() {
     try {
       const cred = await createUserWithEmailAndPassword(auth, user.email, "Asdf1234");
       const uid = cred.user.uid;
+      const role = user.accountType === "brand" ? "brand" : user.accountType === "agency" ? "agency" : "talent";
       const profile = {
         uid,
+        id: uid,
         email: user.email,
         fullName: user.fullName,
+        displayName: user.fullName,
         accountType: user.accountType,
+        role,
         workspaceName: user.workspaceName,
         agencyId: user.agencyId,
         createdAt: new Date().toISOString(),
         parentAgencyEmail: user.parentAgencyEmail || "",
-        parentAgencyUid: user.parentAgencyUid || ""
+        parentAgencyUid: user.parentAgencyUid || "",
+        availableBalance: user.availableBalance ?? (role === "brand" ? 1500000 : role === "agency" ? 450000 : 28500),
+        liquidityBalance: user.liquidityBalance ?? (role === "brand" ? 3000000 : role === "agency" ? 1200000 : 85000),
+        pendingBalance: user.pendingBalance ?? 0,
+        crystallizedBalance: user.crystallizedBalance ?? (role === "brand" ? 1250000 : role === "agency" ? 365000 : 14200),
       };
       await setDoc(doc(db, "users", uid), profile);
       await signOut(auth);
@@ -257,16 +265,24 @@ export default function SeederPage() {
         // Sign in to fetch details and overwrite
         const cred = await signInWithEmailAndPassword(auth, user.email, "Asdf1234");
         const uid = cred.user.uid;
+        const role = user.accountType === "brand" ? "brand" : user.accountType === "agency" ? "agency" : "talent";
         const profile = {
           uid,
+          id: uid,
           email: user.email,
           fullName: user.fullName,
+          displayName: user.fullName,
           accountType: user.accountType,
+          role,
           workspaceName: user.workspaceName,
           agencyId: user.agencyId,
           createdAt: new Date().toISOString(),
           parentAgencyEmail: user.parentAgencyEmail || "",
-          parentAgencyUid: user.parentAgencyUid || ""
+          parentAgencyUid: user.parentAgencyUid || "",
+          availableBalance: user.availableBalance ?? (role === "brand" ? 1500000 : role === "agency" ? 450000 : 28500),
+          liquidityBalance: user.liquidityBalance ?? (role === "brand" ? 3000000 : role === "agency" ? 1200000 : 85000),
+          pendingBalance: user.pendingBalance ?? 0,
+          crystallizedBalance: user.crystallizedBalance ?? (role === "brand" ? 1250000 : role === "agency" ? 365000 : 14200),
         };
         await setDoc(doc(db, "users", uid), profile);
         await signOut(auth);

@@ -21,7 +21,7 @@ import {
 } from "../types/workspace";
 import { auth, db } from "../lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, onSnapshot } from "firebase/firestore";
 
 interface AppState {
   user: {
@@ -280,30 +280,26 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     // Set up Firebase Auth listener
 
 
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: any) => {
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser: any) => {
       if (firebaseUser) {
-        try {
-          const docRef = doc(db, "users", firebaseUser.uid);
-          const docSnap = await getDoc(docRef);
+        const docRef = doc(db, "users", firebaseUser.uid);
+        const unsubDoc = onSnapshot(docRef, (docSnap) => {
           if (docSnap.exists()) {
             const data = docSnap.data();
             
             // Sync user data to local context state
             setState((prev) => {
-              if (prev.user && prev.user.email === data.email && prev.user.isLoggedIn) {
-                return prev;
-              }
-
-              const workspaceType = data.accountType === "brand" ? "brand" : data.accountType === "agency" ? "agency" : "talent_independent";
-              const workspaceId = prev.activeWorkspaceId || `${workspaceType}-${Date.now()}`;
+              const workspaceType = data.accountType === "brand" ? "brand" : data.accountType === "agency" ? "agency" : "talent_independent font";
+              const normalizedWType = (workspaceType.includes("brand") ? "brand" : workspaceType.includes("agency") ? "agency" : "talent_independent") as WorkspaceType;
+              const workspaceId = prev.activeWorkspaceId || `${normalizedWType}-${Date.now()}`;
               
               const existingWorkspace = prev.workspaces.find(w => w.id === workspaceId);
               const workspace = existingWorkspace || {
                 id: workspaceId,
-                type: workspaceType,
-                name: data.workspaceName,
-                agncyId: data.agencyId,
-                verificationTrack: getVerificationTrack(workspaceType),
+                type: normalizedWType,
+                name: data.workspaceName || "AgncyPay Workspace",
+                agncyId: data.agencyId || `USR-${Math.floor(100000 + Math.random() * 900000)}`,
+                verificationTrack: getVerificationTrack(normalizedWType),
                 verificationStatus: "draft" as const,
               };
 
@@ -312,23 +308,29 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                 user: {
                   uid: firebaseUser.uid,
                   agncyId: prev.user?.agncyId || data.agencyId || `USR-${Math.floor(100000 + Math.random() * 900000)}`,
-                  fullName: data.fullName,
-                  email: data.email,
-                  accountType: data.accountType,
+                  fullName: data.fullName || data.displayName || firebaseUser.email?.split("@")[0],
+                  email: data.email || firebaseUser.email,
+                  accountType: data.accountType || "individual",
                   isLoggedIn: true,
                   emailVerified: true,
                   activeWorkspaceId: workspaceId,
                   parentAgencyEmail: data.parentAgencyEmail,
                   parentAgencyUid: data.parentAgencyUid,
+                  availableBalance: data.availableBalance ?? 0,
+                  liquidityBalance: data.liquidityBalance ?? 0,
+                  pendingBalance: data.pendingBalance ?? 0,
+                  crystallizedBalance: data.crystallizedBalance ?? 0,
                 },
                 workspaces: existingWorkspace ? prev.workspaces : [...prev.workspaces, workspace],
                 activeWorkspaceId: workspaceId,
               };
             });
           }
-        } catch (error) {
-          console.error("Error restoring Firebase Auth session:", error);
-        }
+        }, (error) => {
+          console.error("Error listening to user document:", error);
+        });
+
+        return () => unsubDoc();
       }
     });
 
