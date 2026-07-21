@@ -19,6 +19,8 @@ export interface FirestoreUser {
   profileImage?: string;
   connectedCRMs?: string[];
   lastCrmSync?: string;
+  connectedAccountingIntegrations?: string[];
+  lastAccountingSync?: string;
 }
 
 const USERS_COLLECTION = "users";
@@ -142,6 +144,29 @@ export async function updateLastCrmSyncTime(uid: string): Promise<string> {
     return time;
   } catch (error) {
     console.error("Error updating last CRM sync time:", error);
+    throw error;
+  }
+}
+
+export async function addConnectedAccounting(uid: string, providerId: string, current: string[] = []): Promise<void> {
+  try {
+    const docRef = doc(db, USERS_COLLECTION, uid);
+    const newIntegrations = Array.from(new Set([...current, providerId]));
+    await setDoc(docRef, { connectedAccountingIntegrations: newIntegrations }, { merge: true });
+  } catch (error) {
+    console.error("Error adding connected accounting integration:", error);
+    throw error;
+  }
+}
+
+export async function updateLastAccountingSyncTime(uid: string): Promise<string> {
+  try {
+    const docRef = doc(db, USERS_COLLECTION, uid);
+    const time = new Date().toISOString();
+    await setDoc(docRef, { lastAccountingSync: time }, { merge: true });
+    return time;
+  } catch (error) {
+    console.error("Error updating last accounting sync time:", error);
     throw error;
   }
 }

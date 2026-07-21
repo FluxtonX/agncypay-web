@@ -30,11 +30,131 @@ import {
   RefreshCw,
   Search,
   Loader2,
-  Check
+  Check,
+  Plus,
+  X
 } from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import { subscribeInvoicesByBrand, subscribeInvoicesByAgency, updateInvoiceStatus, createFirestoreInvoice, getRegisteredBrands, getRegisteredTalents } from "../../lib/firebaseInvoices";
-import { FirestoreUser } from "../../lib/firebaseAuth";
+import { FirestoreUser, addConnectedAccounting, updateLastAccountingSyncTime } from "../../lib/firebaseAuth";
+
+const ACCOUNTING_PROVIDERS = [
+  { id: "quickbooks", name: "QuickBooks", domain: "quickbooks.intuit.com" },
+  { id: "xero", name: "Xero", domain: "xero.com" },
+  { id: "plaid", name: "Plaid", domain: "plaid.com" },
+  { id: "netsuite", name: "NetSuite", domain: "netsuite.com" },
+];
+
+const getFavicon = (domain: string) => `https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://${domain}&size=128`;
+
+function ConnectedAccountingPanel({
+  user,
+  onUpdateAccounting,
+  onSync
+}: {
+  user: FirestoreUser;
+  onUpdateAccounting: (providerId: string) => void;
+  onSync: () => void;
+}) {
+  const [isAddOpen, setIsAddOpen] = useState(false);
+  const connectedIds = user.connectedAccountingIntegrations || [];
+  const hasConnected = connectedIds.length > 0;
+  const availableProviders = ACCOUNTING_PROVIDERS.filter(p => !connectedIds.includes(p.id));
+
+  // Time formatter
+  const formattedSyncTime = user.lastAccountingSync 
+    ? new Date(user.lastAccountingSync).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    : "";
+
+  return (
+    <div className="bg-[#050505] rounded-2xl border border-white/20 p-5 shadow-sm mt-6">
+      <div className="flex justify-between items-start pb-3 border-b border-white/20">
+        <div>
+          <h3 className="text-xs font-black uppercase tracking-wider text-[#8f8f8f]">Connected Accounting</h3>
+          <p className="text-[10px] text-neutral-500 mt-1">Sync payments to your accounting and banking tools.</p>
+        </div>
+        <div className="relative">
+          <button 
+            onClick={() => setIsAddOpen(!isAddOpen)}
+            className="text-[10px] font-bold text-white bg-white/10 hover:bg-white/20 border border-white/20 px-2.5 py-1 rounded-md transition-colors cursor-pointer"
+          >
+            + Add
+          </button>
+          
+          <AnimatePresence>
+            {isAddOpen && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="absolute right-0 top-full mt-2 w-48 bg-[#0a0a0a] border border-white/20 rounded-xl shadow-xl overflow-hidden z-20"
+              >
+                {availableProviders.length === 0 ? (
+                  <div className="p-3 text-[10px] text-neutral-500 text-center">All tools connected</div>
+                ) : (
+                  availableProviders.map(provider => (
+                    <button
+                      key={provider.id}
+                      onClick={() => {
+                        onUpdateAccounting(provider.id);
+                        setIsAddOpen(false);
+                      }}
+                      className="w-full text-left px-4 py-3 text-xs font-semibold text-white hover:bg-white/10 transition-colors flex items-center gap-2 cursor-pointer"
+                    >
+                      <img src={getFavicon(provider.domain)} alt="" className="w-4 h-4 rounded-full bg-white object-contain p-0.5" />
+                      {provider.name}
+                    </button>
+                  ))
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </div>
+
+      <div className="mt-4 grid grid-cols-2 gap-3">
+        {ACCOUNTING_PROVIDERS.map(provider => {
+          const isConnected = connectedIds.includes(provider.id);
+          return (
+            <div key={provider.id} className="p-3 rounded-xl border border-white/10 bg-black flex flex-col justify-between h-[84px]">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                  <img src={getFavicon(provider.domain)} alt="" className="w-5 h-5 rounded-full bg-white object-contain p-0.5" />
+                  <span className="text-xs font-bold text-white">{provider.name}</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5 mt-auto">
+                {isConnected ? (
+                  <>
+                    <span className="w-1.5 h-1.5 rounded-full bg-white"></span>
+                    <span className="text-[10px] font-semibold text-white">Connected</span>
+                  </>
+                ) : (
+                  <span className="text-[10px] font-semibold text-neutral-500">Not connected</span>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {hasConnected && (
+        <div className="mt-4 pt-4 border-t border-white/20 flex justify-between items-center">
+          <div className="flex items-center gap-1.5 text-[10px] text-neutral-500">
+            <RefreshCw className="w-3 h-3" />
+            Last synced: {user.lastAccountingSync ? formattedSyncTime : "Never"}
+          </div>
+          <button 
+            onClick={onSync}
+            className="text-[10px] font-bold text-white px-3 py-1 rounded-md bg-white/5 hover:bg-white/10 border border-white/10 transition-colors cursor-pointer"
+          >
+            Sync now
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 // Using real Firebase data - no mock interfaces needed
 
@@ -59,6 +179,66 @@ export default function BrandDashboardPage() {
   const [registeredTalents, setRegisteredTalents] = useState<FirestoreUser[]>([]);
   const [selectedBrandEmail, setSelectedBrandEmail] = useState("");
   const [selectedTalentEmail, setSelectedTalentEmail] = useState("");
+
+  const [currentUserAccounting, setCurrentUserAccounting] = useState<FirestoreUser | null>(null);
+
+  useEffect(() => {
+    if (state.user) {
+      setCurrentUserAccounting({
+        ...state.user,
+        uid: state.user.agncyId || "",
+        workspaceName: state.user.activeWorkspaceId || "",
+        agencyId: state.user.agncyId || "",
+        createdAt: new Date().toISOString(),
+        connectedAccountingIntegrations: (state.user as any).connectedAccountingIntegrations || [],
+        lastAccountingSync: (state.user as any).lastAccountingSync || ""
+      } as FirestoreUser);
+    }
+  }, [state.user]);
+
+  const handleAddAccounting = async (providerId: string) => {
+    if (!currentUserAccounting?.uid) return;
+    
+    if (providerId === 'quickbooks') {
+      window.location.href = `/api/quickbooks/connect?userId=${currentUserAccounting.uid}`;
+      return;
+    }
+
+    const currentList = currentUserAccounting.connectedAccountingIntegrations || [];
+    try {
+      await addConnectedAccounting(currentUserAccounting.uid, providerId, currentList);
+      setCurrentUserAccounting({ ...currentUserAccounting, connectedAccountingIntegrations: [...currentList, providerId] });
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleSyncAccounting = async () => {
+    if (!currentUserAccounting?.uid) return;
+    try {
+      const hasQuickbooks = currentUserAccounting.connectedAccountingIntegrations?.includes('quickbooks');
+      
+      if (hasQuickbooks) {
+        const res = await fetch('/api/quickbooks/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: currentUserAccounting.uid }),
+        });
+        
+        if (res.ok) {
+          const data = await res.json();
+          setCurrentUserAccounting({ ...currentUserAccounting, lastAccountingSync: data.lastSyncAt });
+        } else {
+          console.error('Failed to sync QuickBooks', await res.json());
+        }
+      } else {
+        const time = await updateLastAccountingSyncTime(currentUserAccounting.uid);
+        setCurrentUserAccounting({ ...currentUserAccounting, lastAccountingSync: time });
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   useEffect(() => {
     setMounted(true);
@@ -1264,6 +1444,14 @@ export default function BrandDashboardPage() {
               )}
               </div>
             </div>
+
+            {currentUserAccounting && (
+              <ConnectedAccountingPanel 
+                user={currentUserAccounting} 
+                onUpdateAccounting={handleAddAccounting} 
+                onSync={handleSyncAccounting} 
+              />
+            )}
 
             {/* Recent Transactions Ledger */}
             <div className="bg-[#050505] rounded-2xl border border-white/20 p-5 shadow-sm">
