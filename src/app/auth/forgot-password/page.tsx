@@ -6,7 +6,7 @@ import { Mail, ArrowLeft, Send } from "lucide-react";
 import { Input } from "../../../components/ui/Input";
 import { Button } from "../../../components/ui/Button";
 import { Card } from "../../../components/ui/Card";
-import { resetPasswordWithFirebase } from "../../../lib/firebaseAuth";
+import { resetPasswordWithFirebase, parseAuthError } from "../../../lib/firebaseAuth";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -29,7 +29,8 @@ export default function ForgotPasswordPage() {
       setIsSubmitted(true);
     } catch (err: any) {
       console.error("Firebase password reset failed:", err);
-      setError(err.message || "Failed to dispatch reset link. Please check your email.");
+      const parsed = parseAuthError(err);
+      setError(parsed.message);
     } finally {
       setIsLoading(false);
     }

@@ -27,7 +27,7 @@ export default function AppDashboardLayout({ children }: LayoutProps) {
 
   // Client-side redirect if not talent and on /dashboard
   const workspaceType = state.user?.accountType || "brand";
-  const isTalent = ["individual", "talent_independent", "talent_agency"].includes(workspaceType);
+  const isTalent = ["individual", "talent_independent", "talent_agency", "talent", "creator", "model"].includes(workspaceType.toLowerCase());
 
   useEffect(() => {
     if (pathname === "/dashboard" && !isTalent) {
@@ -42,16 +42,18 @@ export default function AppDashboardLayout({ children }: LayoutProps) {
   };
 
   const isIntegrationsPage = pathname === "/dashboard/integrations";
+  const isTalentPortal = pathname === "/dashboard" && isTalent;
+  const hideSidebar = isIntegrationsPage || isTalentPortal;
 
   return (
     <div className="flex h-screen w-full bg-black text-white overflow-hidden font-sans select-none font-medium">
       {/* Desktop Sidebar */}
-      {!isIntegrationsPage && <DashboardSidebar />}
+      {!hideSidebar && <DashboardSidebar />}
 
       {/* Main Content Pane */}
       <div className="flex flex-1 flex-col overflow-hidden bg-black select-text">
         {/* Mobile Header */}
-        {!isIntegrationsPage && (
+        {!hideSidebar && (
           <header className="flex h-16 w-full items-center justify-between border-b border-[#171717] bg-black px-6 lg:hidden shrink-0">
             <div className="flex items-center gap-4">
               <button

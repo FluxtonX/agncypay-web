@@ -344,3 +344,74 @@ export async function getRegisteredTalentsByAgency(agencyEmail: string): Promise
     return [];
   }
 }
+
+// Deposit Balance Helpers & Real-Time Listeners
+const DEPOSITS_COLLECTION = "deposits";
+
+export interface FirestoreDepositRecord {
+  email: string;
+  balance: number;
+  lastDepositAmount: number;
+  lastDepositCard?: string;
+  updatedAt: any;
+}
+
+export async function recordFirestoreDeposit(email: string, depositAmount: number, cardDetail?: string): Promise<number> {
+  try {
+    if (!email) return 0;
+    const normalizedEmail = email.trim().toLowerCase();
+    const docRef = doc(db, DEPOSITS_COLLECTION, normalizedEmail);
+    const snap = await getDoc(docRef);
+
+    const defaultInitial = (normalizedEmail.includes("brand") || normalizedEmail.includes("adidas") || normalizedEmail.includes("nike")) ? 25000 : 0;
+    let currentBalance = defaultInitial;
+    if (snap.exists()) {
+      const data = snap.data() as FirestoreDepositRecord;
+      currentBalance = typeof data.balance === "number" ? data.balance : defaultInitial;
+    }
+
+    const newBalance = currentBalance + depositAmount;
+
+    await setDoc(docRef, {
+      email: normalizedEmail,
+      balance: newBalance,
+      lastDepositAmount: depositAmount,
+      lastDepositCard: cardDetail || "Card ****86",
+      updatedAt: serverTimestamp()
+    }, { merge: true });
+
+    return newBalance;
+  } catch (error) {
+    console.error("Error recording deposit in Firestore:", error);
+    throw error;
+  }
+}
+
+export function subscribeFirestoreDepositBalance(email: string, callback: (balance: number) => void): () => void {
+  if (!email) {
+    callback(0);
+    return () => {};
+  }
+
+  const normalizedEmail = email.trim().toLowerCase();
+  const docRef = doc(db, DEPOSITS_COLLECTION, normalizedEmail);
+
+  const defaultInitial = (normalizedEmail.includes("brand") || normalizedEmail.includes("adidas") || normalizedEmail.includes("nike")) ? 25000 : 0;
+
+  return onSnapshot(docRef, (docSnap) => {
+    if (docSnap.exists()) {
+      const data = docSnap.data() as FirestoreDepositRecord;
+      if (typeof data.balance === "number") {
+        callback(data.balance);
+      } else {
+        callback(defaultInitial);
+      }
+    } else {
+      callback(defaultInitial);
+    }
+  }, (error) => {
+    console.error("Error subscribing to deposit balance:", error);
+    callback(defaultInitial);
+  });
+}
+

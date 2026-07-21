@@ -36,6 +36,7 @@ import {
 } from "lucide-react";
 import { useApp } from "../../../../context/AppContext";
 import { subscribeInvoicesByBrand, subscribeInvoicesByAgency } from "../../../../lib/firebaseInvoices";
+import { CorporatePayoutTermsCard } from "../../../../components/dashboard/CorporatePayoutTermsCard";
 
 // Types
 interface SplitItem {
@@ -368,55 +369,66 @@ export default function InvoiceDetailPage() {
                 </button>
               </div>
 
-              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-                <div>
-                  <span className="text-xs font-bold text-[#8f8f8f] uppercase tracking-wider block">Balance due</span>
-                  <span className="text-4xl md:text-5xl font-black text-white tracking-tight mt-1.5 block">
-                    ${activeInvoice.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </span>
-                  <div className="mt-4 flex items-center gap-2 text-xs text-neutral-400">
-                    <Calendar className="h-4 w-4 text-[#8f8f8f]" />
-                    <span>Due: {activeInvoice.dueDate}</span>
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                
+                {/* Left side: Balance due & action */}
+                <div className="lg:col-span-6 flex flex-col justify-between h-full">
+                  <div>
+                    <span className="text-xs font-bold text-[#8f8f8f] uppercase tracking-wider block">Balance due</span>
+                    <span className="text-4xl md:text-5xl font-black text-white tracking-tight mt-1.5 block">
+                      ${activeInvoice.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                    <div className="mt-4 flex items-center gap-2 text-xs text-neutral-400">
+                      <Calendar className="h-4 w-4 text-[#8f8f8f]" />
+                      <span>Due: {activeInvoice.dueDate}</span>
+                    </div>
+                  </div>
+
+                  {/* Main Action Button ("Approve & Pay" / "Make a payment") */}
+                  <div className="w-full shrink-0 mt-8">
+                    <AnimatePresence mode="wait">
+                      {processingStage === "idle" && (
+                        <button
+                          onClick={handleApproveAndPay}
+                          disabled={activeInvoice.status !== "awaiting_approval"}
+                          className={`w-full h-12 px-6 rounded-xl text-xs font-black shadow-sm flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                            activeInvoice.status === "awaiting_approval"
+                              ? "bg-white text-black hover:bg-neutral-200"
+                              : "bg-emerald-600 text-white cursor-default"
+                          }`}
+                        >
+                          {activeInvoice.status === "awaiting_approval" ? (
+                            <>
+                              Approve & Pay Invoice
+                              <ChevronRight className="h-4 w-4" />
+                            </>
+                          ) : (
+                            <>
+                              <CheckCircle2 className="h-4.5 w-4.5 text-white" />
+                              Approved & Settled
+                            </>
+                          )}
+                        </button>
+                      )}
+
+                      {processingStage !== "idle" && (
+                        <div className="w-full h-12 px-6 rounded-xl border border-white/20 bg-[#0A0A0A] text-[10px] font-bold text-[#8f8f8f] flex items-center justify-center gap-3 shadow-inner">
+                          <RefreshCw className="h-4 w-4 animate-spin text-[#4B6BFB]" />
+                          {processingStage === "verifying" && "Verifying corporate treasury..."}
+                          {processingStage === "routing" && "Auto-routing splits..."}
+                          {processingStage === "success" && "Settlement complete!"}
+                        </div>
+                      )}
+                    </AnimatePresence>
                   </div>
                 </div>
 
-                {/* Main Action Button ("Approve & Pay" / "Make a payment") */}
-                <div className="w-full md:w-auto shrink-0 min-w-[200px]">
-                  <AnimatePresence mode="wait">
-                    {processingStage === "idle" && (
-                      <button
-                        onClick={handleApproveAndPay}
-                        disabled={activeInvoice.status !== "awaiting_approval"}
-                        className={`w-full h-12 px-6 rounded-xl text-xs font-black shadow-sm flex items-center justify-center gap-2 transition-all cursor-pointer ${
-                          activeInvoice.status === "awaiting_approval"
-                            ? "bg-white text-black hover:bg-neutral-200"
-                            : "bg-emerald-600 text-white cursor-default"
-                        }`}
-                      >
-                        {activeInvoice.status === "awaiting_approval" ? (
-                          <>
-                            Approve & Pay Invoice
-                            <ChevronRight className="h-4 w-4" />
-                          </>
-                        ) : (
-                          <>
-                            <CheckCircle2 className="h-4.5 w-4.5 text-white" />
-                            Approved & Settled
-                          </>
-                        )}
-                      </button>
-                    )}
-
-                    {processingStage !== "idle" && (
-                      <div className="w-full h-12 px-6 rounded-xl border border-white/20 bg-[#0A0A0A] text-[10px] font-bold text-[#8f8f8f] flex items-center justify-center gap-3 shadow-inner">
-                        <RefreshCw className="h-4 w-4 animate-spin text-[#4B6BFB]" />
-                        {processingStage === "verifying" && "Verifying corporate treasury..."}
-                        {processingStage === "routing" && "Auto-routing splits..."}
-                        {processingStage === "success" && "Settlement complete!"}
-                      </div>
-                    )}
-                  </AnimatePresence>
-                </div>
+                {/* Right side: Your Corporate Payout Terms Card (Brand Role Only) */}
+                {workspaceType === "brand" && (
+                  <div className="lg:col-span-6">
+                    <CorporatePayoutTermsCard invoiceId={activeInvoice.id} initialTerm={activeInvoice.defaultTerm || "Net-30"} />
+                  </div>
+                )}
               </div>
 
               {/* Bilt-Style Sub-details Rows (Translated to corporate finance details) */}

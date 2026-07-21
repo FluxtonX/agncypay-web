@@ -3,9 +3,9 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff, Loader2, ArrowRight } from "lucide-react";
+import { Eye, EyeOff, Loader2, ArrowRight, AlertCircle } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
-import { loginWithFirebase } from "../../../lib/firebaseAuth";
+import { loginWithFirebase, parseAuthError } from "../../../lib/firebaseAuth";
 
 const DEMO_EMAIL = "martin.safi@adidas.com";
 const DEMO_PASSWORD = "password123";
@@ -74,7 +74,7 @@ export default function LoginPage() {
             ? "Agency" 
             : "Talent";
           setErrors({ 
-            email: `Account type mismatch. Please select the correct login role: ${displayRole}.` 
+            role: `Role Mismatch: This account is registered as a ${displayRole} account. Please select the '${displayRole}' tab above to log in.` 
           });
           
           // Sign out from Firebase Auth to clear session
@@ -107,7 +107,16 @@ export default function LoginPage() {
       }
     } catch (error: any) {
       console.error("Firebase login failed:", error);
-      setErrors({ email: error.message || "Failed to log in. Please check your credentials." });
+      const parsed = parseAuthError(error);
+      if (parsed.field === "password") {
+        setErrors({ password: parsed.message });
+      } else if (parsed.field === "email") {
+        setErrors({ email: parsed.message });
+      } else if (parsed.field === "role") {
+        setErrors({ role: parsed.message });
+      } else {
+        setErrors({ general: parsed.message });
+      }
     } finally {
       setIsLoading(false);
     }
@@ -236,6 +245,14 @@ export default function LoginPage() {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
+              {/* General & Role Error Banner */}
+              {(errors.general || errors.role) && (
+                <div className="p-3.5 rounded-xl border border-red-500/30 bg-red-950/40 text-red-300 text-xs font-semibold flex items-start gap-2 animate-fade-in">
+                  <AlertCircle className="h-4 w-4 text-red-400 shrink-0 mt-0.5" />
+                  <span className="leading-relaxed">{errors.general || errors.role}</span>
+                </div>
+              )}
+
               {/* Account Type Segmented Control */}
               <div className="space-y-3">
                 <label className="text-[13px] font-medium text-[#A1A1AA]">Account Type</label>
