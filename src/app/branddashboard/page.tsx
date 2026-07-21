@@ -35,7 +35,10 @@ import {
   Loader2,
   Check,
   Sun,
-  Moon
+  Moon,
+  Link2,
+  Link2Off,
+  Plug,
 } from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import { subscribeInvoicesByBrand, subscribeInvoicesByAgency, updateInvoiceStatus, createFirestoreInvoice, getRegisteredBrands, getRegisteredTalents, getRegisteredTalentsByAgency } from "../../lib/firebaseInvoices";
@@ -102,6 +105,126 @@ export default function BrandDashboardPage() {
   const [paymentRail, setPaymentRail] = useState("ACH");
   const [paymentTerm, setPaymentTerm] = useState("Pay Now");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
+  // Integrations modal state
+  const [isIntegrationsOpen, setIsIntegrationsOpen] = useState(false);
+  const [connectedIntegration, setConnectedIntegration] = useState<string | null>(null);
+  const [qbSyncStatus, setQbSyncStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [qbSyncMessage, setQbSyncMessage] = useState("");
+
+  const fetchQbInvoices = async () => {
+    setQbSyncStatus("loading");
+    setQbSyncMessage("Syncing QuickBooks...");
+    try {
+      const res = await fetch("/api/quickbooks/invoices");
+      const data = await res.json();
+      if (!res.ok) {
+        setQbSyncStatus("error");
+        setQbSyncMessage(
+          data.error === "not_connected"
+            ? "Please connect QuickBooks first."
+            : "Failed to fetch QuickBooks invoices."
+        );
+        return;
+      }
+      
+      // Update widgetInvoices state with the new invoices from QB
+      setWidgetInvoices(prev => {
+        const existingIds = new Set(prev.map(i => i.id));
+        const newInvoices = data.invoices.filter((inv: any) => !existingIds.has(inv.id)).map((inv: any) => ({
+          ...inv,
+          status: inv.status.toLowerCase() === "paid" ? "settled" : "pending"
+        }));
+        return [...newInvoices, ...prev];
+      });
+      setQbSyncStatus("success");
+      setQbSyncMessage(`Synced ${data.count || 0} invoices!`);
+      
+      // Reset status after a few seconds
+      setTimeout(() => setQbSyncStatus("idle"), 5000);
+    } catch (e) {
+      setQbSyncStatus("error");
+      setQbSyncMessage("Network error fetching QuickBooks invoices.");
+    }
+  };
+
+  const fetchXeroInvoices = async () => {
+    setQbSyncStatus("loading");
+    setQbSyncMessage("Syncing Xero...");
+    try {
+      const res = await fetch("/api/xero/invoices");
+      const data = await res.json();
+      if (!res.ok) {
+        setQbSyncStatus("error");
+        setQbSyncMessage(
+          data.error === "not_connected"
+            ? "Please connect Xero first."
+            : "Failed to fetch Xero invoices."
+        );
+        return;
+      }
+      
+      // Update widgetInvoices state with the new invoices from Xero
+      setWidgetInvoices(prev => {
+        const existingIds = new Set(prev.map(i => i.id));
+        const newInvoices = data.invoices.filter((inv: any) => !existingIds.has(inv.id)).map((inv: any) => ({
+          ...inv,
+          status: inv.status.toLowerCase() === "paid" ? "settled" : "pending"
+        }));
+        return [...newInvoices, ...prev];
+      });
+      setQbSyncStatus("success");
+      setQbSyncMessage(`Synced ${data.count || 0} invoices!`);
+      
+      // Reset status after a few seconds
+      setTimeout(() => setQbSyncStatus("idle"), 5000);
+    } catch (e) {
+      setQbSyncStatus("error");
+      setQbSyncMessage("Network error fetching Xero invoices.");
+    }
+  };
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const searchParams = new URLSearchParams(window.location.search);
+      const qbConnected = searchParams.get("qb_connected");
+      const qbError = searchParams.get("qb_error");
+      const xeroConnected = searchParams.get("xero_connected");
+      const xeroError = searchParams.get("xero_error");
+      
+      if (qbConnected === "true") {
+        setConnectedIntegration("quickbooks");
+        window.history.replaceState({}, document.title, window.location.pathname);
+        fetchQbInvoices();
+      } else if (qbError) {
+        setQbSyncStatus("error");
+        setQbSyncMessage(`QuickBooks error: ${qbError.replace(/_/g, " ")}`);
+        window.history.replaceState({}, document.title, window.location.pathname);
+      } else if (xeroConnected === "true") {
+        setConnectedIntegration("xero");
+        window.history.replaceState({}, document.title, window.location.pathname);
+        fetchXeroInvoices();
+      } else if (xeroError) {
+        setQbSyncStatus("error");
+        setQbSyncMessage(`Xero error: ${xeroError.replace(/_/g, " ")}`);
+        window.history.replaceState({}, document.title, window.location.pathname);
+      } else {
+        fetch("/api/auth/status")
+          .then(res => res.json())
+          .then(data => {
+            if (data.quickbooks) {
+              setConnectedIntegration("quickbooks");
+              fetchQbInvoices();
+            } else if (data.xero) {
+              setConnectedIntegration("xero");
+              fetchXeroInvoices();
+            }
+          })
+          .catch(err => console.error("Failed to check auth status", err));
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const handleProcessPayment = async () => {
     setIsProcessing(true);
     try {
@@ -648,8 +771,121 @@ export default function BrandDashboardPage() {
 
   if (!mounted) return null;
 
+  // ───────────────────────────────────────────────────────────────────
+  // Accounting Integrations Modal
+  const INTEGRATIONS = [
+    { id: "quickbooks", name: "QuickBooks", desc: "Import invoices from QuickBooks company.", color: "#2CA01C", text: "#fff", label: "QB", path: "/api/auth/quickbooks/connect", available: true },
+    { id: "xero",       name: "Xero",       desc: "Sync invoices from your Xero organisation.", color: "#13B5EA", text: "#fff", label: "XE", path: "/api/auth/xero/connect",       available: true },
+    { id: "sage",       name: "Sage",       desc: "Pull from Sage 50 or Sage Business Cloud.", color: "#00DC00", text: "#033000", label: "SG", path: "/api/auth/sage/connect",   available: false },
+    { id: "mainboard", name: "Mainboard",  desc: "Import from Mainboard / ERP approval queue.", color: "#ffffff", text: "#000", label: "MB", path: "/api/auth/mainboard/connect", available: false },
+  ];
+
+  const AccountingModal = () => (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4 py-8 backdrop-blur-sm"
+      onClick={(e) => { if (e.target === e.currentTarget) setIsIntegrationsOpen(false); }}
+    >
+      <div className="w-full max-w-[520px] rounded-[16px] border border-[#2a2a2a] bg-[#0a0a0a] shadow-2xl overflow-hidden">
+        <div className="flex items-center justify-between border-b border-[#1e1e1e] px-6 py-5">
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-[9px] border border-[#333] bg-[#111]">
+              <Plug className="h-4 w-4 text-white" />
+            </div>
+            <div>
+              <h2 className="text-[17px] font-bold text-white">Connect Accounting</h2>
+              <p className="text-[12px] text-[#777] mt-0.5">Sync invoices from your accounting tool</p>
+            </div>
+          </div>
+          <button type="button" onClick={() => setIsIntegrationsOpen(false)} className="flex h-8 w-8 items-center justify-center rounded-full text-[#777] hover:bg-white/[0.06] hover:text-white transition-colors">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="p-5 space-y-3">
+          {INTEGRATIONS.map((ig) => {
+            const isConn = connectedIntegration === ig.id;
+            const isSoon = !ig.available;
+            return (
+              <div
+                key={ig.id}
+                className={`flex items-center gap-4 rounded-[12px] border p-4 transition-all ${
+                  isConn ? "border-[#2a2a2a] bg-[#0d160d]" :
+                  isSoon ? "border-[#1a1a1a] bg-[#060606] opacity-50" :
+                  "border-[#222] bg-[#0d0d0d] hover:border-[#444]"
+                }`}
+              >
+                <div
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] text-[13px] font-black shadow-sm"
+                  style={{ backgroundColor: ig.color, color: ig.text }}
+                >
+                  {ig.label}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="text-[14px] font-bold text-white">{ig.name}</p>
+                    {isConn && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-[#082315] border border-[#10b95f]/40 px-2 py-0.5 text-[10px] font-bold text-[#4ade80]">
+                        <span className="h-1.5 w-1.5 rounded-full bg-[#4ade80] animate-pulse" />
+                        Connected
+                      </span>
+                    )}
+                    {isSoon && <span className="rounded-full bg-[#1a1a1a] border border-[#333] px-2 py-0.5 text-[10px] font-bold text-[#666]">Soon</span>}
+                  </div>
+                  <p className="text-[12px] text-[#666] mt-0.5 leading-4">{ig.desc}</p>
+                </div>
+                <div className="shrink-0">
+                  {isConn ? (
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        const integration = connectedIntegration;
+                        if (integration === "quickbooks") {
+                          await fetch("/api/auth/quickbooks/disconnect", { method: "POST" });
+                        } else if (integration === "xero") {
+                          await fetch("/api/auth/xero/disconnect", { method: "POST" });
+                        }
+                        setConnectedIntegration(null);
+                        setWidgetInvoices(prev => prev.filter(inv => inv._source !== integration));
+                        setIsIntegrationsOpen(false);
+                      }}
+                      className="flex items-center gap-1.5 h-8 rounded-[7px] border border-[#333] bg-[#111] px-3 text-[12px] font-semibold text-[#999] hover:border-red-900/50 hover:text-red-400 transition-colors"
+                    >
+                      <Link2Off className="h-3.5 w-3.5" />
+                      Disconnect
+                    </button>
+                  ) : isSoon ? (
+                    <span className="text-[11px] font-semibold text-[#444]">Coming Soon</span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => { window.location.href = ig.path; }}
+                      className="flex items-center gap-1.5 h-8 rounded-[7px] border border-[#444] bg-[#111] px-3 text-[12px] font-semibold text-white hover:border-white/40 hover:bg-white/[0.04] transition-colors"
+                    >
+                      <Link2 className="h-3.5 w-3.5" />
+                      Connect
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="border-t border-[#1a1a1a] px-6 py-4">
+          <p className="text-[11px] text-[#555] leading-5">
+            Connecting an accounting tool imports your invoices into AgncyPay for payment and reconciliation. Only invoice read access is requested.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+  // ───────────────────────────────────────────────────────────────────
+
   return (
     <main className="min-h-screen bg-background text-foreground flex flex-col font-sans antialiased relative transition-colors duration-200">
+      {/* Accounting Integrations Modal */}
+      {isIntegrationsOpen && <AccountingModal />}
+
       {/* Background radial gradient decoration */}
       <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-white/[0.01] rounded-full blur-[100px] pointer-events-none" />
 
@@ -863,14 +1099,14 @@ export default function BrandDashboardPage() {
             })()}
           </div>
 
-          {/* Embedded Invoices Table */}
+          {/* Pending Invoices Table */}
           <div className="bg-[#050505] rounded-2xl border border-white/20 shadow-sm overflow-hidden mt-6">
             <div className="p-6 border-b border-white/20 bg-white/[0.01] flex justify-between items-center">
               <div className="flex items-center gap-2">
                 <span className="font-bold text-white tracking-tight">agncypay</span>
                 <span className="text-neutral-500 font-medium text-xs">•</span>
                 <span className="text-neutral-400 font-semibold text-xs">
-                  {workspaceType === "brand" ? "Invoices for your brand" : "Invoices sent to brand"}
+                  {workspaceType === "brand" ? "Pending Invoices (To Pay)" : "Pending Invoices (Unpaid)"}
                 </span>
               </div>
             </div>
@@ -900,12 +1136,12 @@ export default function BrandDashboardPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/10">
-                  {widgetInvoices.map((inv) => {
+                  {widgetInvoices.filter(i => i.status === "pending").map((inv) => {
                     const isSelected = selectedIds.includes(inv.id);
                     return (
                       <tr key={inv.id} className={`transition-colors hover:bg-white/[0.02] ${isSelected ? "bg-white/[0.05]" : ""}`}>
                         <td className="p-4">
-                          {workspaceType === "brand" && inv.status === "pending" && (
+                          {workspaceType === "brand" && (
                             <input 
                               type="checkbox" 
                               className="h-4 w-4 accent-white rounded border-white/20 bg-transparent"
@@ -924,21 +1160,24 @@ export default function BrandDashboardPage() {
                         </td>
                         <td className="py-4">
                           <p className="text-white font-medium">{inv.campaign}</p>
-                          <p className="text-[10px] text-[#8f8f8f]">Due {inv.dueDate}</p>
+                          <p className="text-[10px] text-[#8f8f8f]">Due {inv.dueDate || inv.due}</p>
                         </td>
                         <td className="py-4 font-bold text-white">
                           ${(inv.amount * (workspaceType === "brand" ? 1.015 : 1)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </td>
                         <td className="py-4 pr-4">
-                          {inv.status === "pending" ? (
-                            <span className="text-[10px] font-bold px-2.5 py-1 rounded-md bg-[#261603] text-[#ff8a00] border border-[#ff8a00]/20">Awaiting</span>
-                          ) : (
-                            <span className="text-[10px] font-bold px-2.5 py-1 rounded-md bg-[#082315] text-[#10b95f] border border-[#10b95f]/20">Paid</span>
-                          )}
+                          <span className="text-[10px] font-bold px-2.5 py-1 rounded-md bg-[#261603] text-[#ff8a00] border border-[#ff8a00]/20">Awaiting</span>
                         </td>
                       </tr>
                     );
                   })}
+                  {widgetInvoices.filter(i => i.status === "pending").length === 0 && (
+                    <tr>
+                      <td colSpan={6} className="py-8 text-center text-xs font-medium text-neutral-500">
+                        No pending invoices.
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
@@ -958,6 +1197,60 @@ export default function BrandDashboardPage() {
               </div>
             )}
           </div>
+
+          {/* Recent Payouts Table */}
+          <div className="bg-[#050505] rounded-2xl border border-white/20 shadow-sm overflow-hidden mt-6">
+            <div className="p-6 border-b border-white/20 bg-white/[0.01] flex justify-between items-center">
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-white tracking-tight">Recent Payouts</span>
+                <span className="text-neutral-500 font-medium text-xs">•</span>
+                <span className="text-neutral-400 font-semibold text-xs">
+                  {workspaceType === "brand" ? "Successfully settled invoices" : "Completed payouts"}
+                </span>
+              </div>
+            </div>
+            
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b border-white/20 bg-white/[0.02] text-xs font-semibold uppercase tracking-wider text-[#8f8f8f]">
+                    <th className="p-4 pl-6 font-semibold">Invoice</th>
+                    <th className="py-4 font-semibold">Payee</th>
+                    <th className="py-4 font-semibold">Job</th>
+                    <th className="py-4 font-semibold">Total</th>
+                    <th className="py-4 pr-6 font-semibold text-right">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/10">
+                  {widgetInvoices.filter(i => i.status !== "pending").map((inv) => (
+                    <tr key={inv.id} className="transition-colors hover:bg-white/[0.02]">
+                      <td className="p-4 pl-6 text-xs font-mono text-[#8f8f8f]">{inv.id.substring(0,8).toUpperCase()}</td>
+                      <td className="py-4">
+                        <p className="font-bold text-white">{inv.agency}</p>
+                      </td>
+                      <td className="py-4">
+                        <p className="text-white font-medium">{inv.campaign}</p>
+                        <p className="text-[10px] text-[#8f8f8f]">Due {inv.dueDate || inv.due}</p>
+                      </td>
+                      <td className="py-4 font-bold text-white">
+                        ${(inv.amount * (workspaceType === "brand" ? 1.015 : 1)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </td>
+                      <td className="py-4 pr-6 text-right">
+                        <span className="text-[10px] font-bold px-2.5 py-1 rounded-md bg-[#082315] text-[#10b95f] border border-[#10b95f]/20">Paid</span>
+                      </td>
+                    </tr>
+                  ))}
+                  {widgetInvoices.filter(i => i.status !== "pending").length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="py-8 text-center text-xs font-medium text-neutral-500">
+                        No recent payouts.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
 </div>
 
         {/* Right Column - Queue and History Ledger (Narrower) */}
@@ -965,10 +1258,35 @@ export default function BrandDashboardPage() {
           
           {/* Integrations Widget */}
           <div className="bg-[#050505] rounded-xl border border-white/10 p-5 shadow-sm">
-            <h3 className="text-[15px] font-semibold text-white tracking-tight">Integrations</h3>
-            <p className="text-[12px] text-neutral-400 font-medium mt-1">Connect external systems and services to sync data automatically.</p>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 className="text-[15px] font-semibold text-white tracking-tight">Integrations</h3>
+                <p className="text-[12px] text-neutral-400 font-medium mt-1">Connect accounting tools to sync invoices automatically.</p>
+              </div>
+              {connectedIntegration && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-[#082315] border border-[#10b95f]/40 px-2 py-0.5 text-[10px] font-bold text-[#4ade80] shrink-0 mt-0.5">
+                  <span className="h-1.5 w-1.5 rounded-full bg-[#4ade80] animate-pulse" />
+                  Connected
+                </span>
+              )}
+            </div>
+            
+            {/* Sync Status Banner */}
+            {qbSyncStatus !== "idle" && (
+              <div className={`mt-4 px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 ${
+                qbSyncStatus === "loading" ? "bg-white/10 text-white" :
+                qbSyncStatus === "success" ? "bg-[#082315] text-[#4ade80] border border-[#10b95f]/30" :
+                "bg-red-950/30 text-red-400 border border-red-900/50"
+              }`}>
+                {qbSyncStatus === "loading" && <RefreshCw className="h-3 w-3 animate-spin" />}
+                {qbSyncStatus === "success" && <Check className="h-3 w-3" />}
+                {qbSyncStatus === "error" && <AlertCircle className="h-3 w-3" />}
+                {qbSyncMessage}
+              </div>
+            )}
             
             <div className="flex items-center justify-between gap-2 mt-6">
+              {/* Sage tile — pre-connected look */}
               <div className="flex flex-col items-center gap-2">
                 <div className="w-14 h-14 rounded-xl bg-[#00d053] flex items-center justify-center cursor-pointer hover:opacity-90 transition-opacity border border-[#00d053]/50">
                   <span className="text-white font-bold text-lg tracking-tight leading-none" style={{ fontFamily: 'Georgia, serif' }}>Sage</span>
@@ -976,11 +1294,43 @@ export default function BrandDashboardPage() {
                 <span className="text-[11px] font-semibold text-neutral-400">Sage</span>
               </div>
               
-              <div className="flex flex-col items-center gap-2">
-                <div className="w-14 h-14 rounded-xl border border-dashed border-white/20 flex items-center justify-center cursor-pointer hover:bg-white/5 transition-colors group">
+              {/* Render connected integrations dynamically */}
+              {connectedIntegration === "quickbooks" && (
+                <div className="flex flex-col items-center gap-2">
+                  <div
+                    className="w-14 h-14 rounded-xl flex items-center justify-center cursor-pointer border-2 border-[#2CA01C] bg-[#0a1f0a] relative"
+                    onClick={() => setIsIntegrationsOpen(true)}
+                    title="QuickBooks Connected"
+                  >
+                    <span className="text-white font-black text-[13px]">QB</span>
+                    <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-[#4ade80] border-2 border-[#050505] animate-pulse" />
+                  </div>
+                  <span className="text-[11px] font-semibold text-[#4ade80]">QB ✓</span>
+                </div>
+              )}
+              {connectedIntegration === "xero" && (
+                <div className="flex flex-col items-center gap-2">
+                  <div
+                    className="w-14 h-14 rounded-xl flex items-center justify-center cursor-pointer border-2 border-[#13B5EA] bg-[#00171f] relative"
+                    onClick={() => setIsIntegrationsOpen(true)}
+                    title="Xero Connected"
+                  >
+                    <span className="text-white font-black text-[18px]">X</span>
+                    <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-[#4ade80] border-2 border-[#050505] animate-pulse" />
+                  </div>
+                  <span className="text-[11px] font-semibold text-[#4ade80]">Xero ✓</span>
+                </div>
+              )}
+              
+              {/* + Connect button always available to add more */}
+              <div
+                className="flex flex-col items-center gap-2 cursor-pointer"
+                onClick={() => setIsIntegrationsOpen(true)}
+              >
+                <div className="w-14 h-14 rounded-xl border border-dashed border-white/30 flex items-center justify-center hover:bg-white/5 hover:border-white/60 transition-all group">
                   <Plus className="w-5 h-5 text-neutral-500 group-hover:text-white transition-colors" />
                 </div>
-                <span className="text-[11px] font-semibold text-neutral-400">Connect</span>
+                <span className="text-[11px] font-semibold text-neutral-400 group-hover:text-white">Connect</span>
               </div>
               
               <div className="flex flex-col items-center gap-2">
@@ -997,12 +1347,14 @@ export default function BrandDashboardPage() {
                 <span className="text-[11px] font-semibold text-neutral-600">N/A</span>
               </div>
 
-              <div className="flex flex-col items-center gap-2">
-                <div className="w-14 h-14 rounded-xl border border-white/10 bg-white/[0.02] flex items-center justify-center cursor-default">
-                  <span className="text-[10px] font-bold text-neutral-600">N/A</span>
+              {connectedIntegration !== "quickbooks" && connectedIntegration !== "xero" && (
+                <div className="flex flex-col items-center gap-2">
+                  <div className="w-14 h-14 rounded-xl border border-white/10 bg-white/[0.02] flex items-center justify-center cursor-default">
+                    <span className="text-[10px] font-bold text-neutral-600">N/A</span>
+                  </div>
+                  <span className="text-[11px] font-semibold text-neutral-600">N/A</span>
                 </div>
-                <span className="text-[11px] font-semibold text-neutral-600">N/A</span>
-              </div>
+              )}
             </div>
           </div>
 
@@ -1377,6 +1729,15 @@ export default function BrandDashboardPage() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ── Full Screen Loader for Invoices Sync ── */}
+      {qbSyncStatus === "loading" && (
+        <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm">
+          <RefreshCw className="h-12 w-12 animate-spin text-white mb-4" />
+          <h2 className="text-xl font-bold text-white mb-2">Fetching Invoices</h2>
+          <p className="text-[#aaa] text-sm">{qbSyncMessage}</p>
         </div>
       )}
     </main>

@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowUpRight,
   CalendarDays,
@@ -13,10 +13,13 @@ import {
   Eye,
   FileText,
   Filter,
+  Link2,
+  Link2Off,
   Lock,
   Mail,
   MoreHorizontal,
   Network,
+  Plug,
   Plus,
   RefreshCw,
   Search,
@@ -37,6 +40,8 @@ import {
   normalizeWorkspaceType,
 } from "../../../types/workspace";
 
+type InvoiceSource = "manual" | "quickbooks" | "xero" | "sage" | "mainboard";
+
 const initialInvoices: {
   id: string;
   agency: string;
@@ -45,7 +50,206 @@ const initialInvoices: {
   fees: string;
   status: string;
   due: string;
+  _source?: InvoiceSource;
 }[] = [];
+
+// ─── Integration definitions ────────────────────────────────────────
+type IntegrationDef = {
+  id: InvoiceSource;
+  name: string;
+  description: string;
+  color: string;       // badge background
+  textColor: string;   // badge text
+  logoText: string;    // short label shown in badge
+  connectPath: string; // API route to start OAuth
+  available: boolean;
+};
+
+const INTEGRATIONS: IntegrationDef[] = [
+  {
+    id: "quickbooks",
+    name: "QuickBooks",
+    description: "Import invoices directly from your QuickBooks company.",
+    color: "#2CA01C",
+    textColor: "#ffffff",
+    logoText: "QB",
+    connectPath: "/api/auth/quickbooks/connect",
+    available: true,
+  },
+  {
+    id: "xero",
+    name: "Xero",
+    description: "Sync outstanding invoices from your Xero organisation.",
+    color: "#13B5EA",
+    textColor: "#ffffff",
+    logoText: "XE",
+    connectPath: "/api/auth/xero/connect",
+    available: true,
+  },
+  {
+    id: "sage",
+    name: "Sage",
+    description: "Pull approved invoices from Sage 50 or Sage Business Cloud.",
+    color: "#00DC00",
+    textColor: "#033000",
+    logoText: "SG",
+    connectPath: "/api/auth/sage/connect",
+    available: false,
+  },
+  {
+    id: "mainboard",
+    name: "Mainboard",
+    description: "Import from your Mainboard / ERP approval queue.",
+    color: "#ffffff",
+    textColor: "#000000",
+    logoText: "MB",
+    connectPath: "/api/auth/mainboard/connect",
+    available: false,
+  },
+];
+
+// ─── Integrations Modal ──────────────────────────────────────────────
+function IntegrationsModal({
+  onClose,
+  connectedSource,
+  onDisconnect,
+}: {
+  onClose: () => void;
+  connectedSource: InvoiceSource | null;
+  onDisconnect: () => void;
+}) {
+  const [disconnecting, setDisconnecting] = useState(false);
+
+  const handleConnect = (integration: IntegrationDef) => {
+    if (!integration.available) return;
+    window.location.href = integration.connectPath;
+  };
+
+  const handleDisconnect = async () => {
+    setDisconnecting(true);
+    try {
+      if (connectedSource === "quickbooks") {
+        await fetch("/api/auth/quickbooks/disconnect", { method: "POST" });
+      } else if (connectedSource === "xero") {
+        await fetch("/api/auth/xero/disconnect", { method: "POST" });
+      }
+      onDisconnect();
+      onClose();
+    } finally {
+      setDisconnecting(false);
+    }
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4 py-8 backdrop-blur-sm"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div className="w-full max-w-[520px] rounded-[16px] border border-[#2a2a2a] bg-[#0a0a0a] shadow-2xl overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-[#1e1e1e] px-6 py-5">
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-[9px] border border-[#333] bg-[#111]">
+              <Plug className="h-4 w-4 text-white" />
+            </div>
+            <div>
+              <h2 className="text-[17px] font-bold text-white">Connect Accounting</h2>
+              <p className="text-[12px] text-[#777] mt-0.5">Sync invoices from your accounting tool</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-8 w-8 items-center justify-center rounded-full text-[#777] hover:bg-white/[0.06] hover:text-white transition-colors"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* Integration list */}
+        <div className="p-5 space-y-3">
+          {INTEGRATIONS.map((integration) => {
+            const isConnected = connectedSource === integration.id;
+            const isComingSoon = !integration.available;
+
+            return (
+              <div
+                key={integration.id}
+                className={cn(
+                  "flex items-center gap-4 rounded-[12px] border p-4 transition-all",
+                  isConnected
+                    ? "border-[#2a2a2a] bg-[#0d160d]"
+                    : isComingSoon
+                    ? "border-[#1a1a1a] bg-[#060606] opacity-50"
+                    : "border-[#222] bg-[#0d0d0d] hover:border-[#444] cursor-pointer"
+                )}
+              >
+                {/* Logo badge */}
+                <div
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] text-[13px] font-black shadow-sm"
+                  style={{ backgroundColor: integration.color, color: integration.textColor }}
+                >
+                  {integration.logoText}
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="text-[14px] font-bold text-white">{integration.name}</p>
+                    {isConnected && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-[#082315] border border-[#10b95f]/40 px-2 py-0.5 text-[10px] font-bold text-[#4ade80]">
+                        <span className="h-1.5 w-1.5 rounded-full bg-[#4ade80] animate-pulse" />
+                        Connected
+                      </span>
+                    )}
+                    {isComingSoon && (
+                      <span className="rounded-full bg-[#1a1a1a] border border-[#333] px-2 py-0.5 text-[10px] font-bold text-[#666]">
+                        Soon
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[12px] text-[#666] mt-0.5 leading-4">{integration.description}</p>
+                </div>
+
+                {/* Action button */}
+                <div className="shrink-0">
+                  {isConnected ? (
+                    <button
+                      type="button"
+                      onClick={handleDisconnect}
+                      disabled={disconnecting}
+                      className="flex items-center gap-1.5 h-8 rounded-[7px] border border-[#333] bg-[#111] px-3 text-[12px] font-semibold text-[#999] hover:border-red-900/50 hover:text-red-400 transition-colors disabled:opacity-50"
+                    >
+                      <Link2Off className="h-3.5 w-3.5" />
+                      {disconnecting ? "Disconnecting..." : "Disconnect"}
+                    </button>
+                  ) : isComingSoon ? (
+                    <span className="text-[11px] font-semibold text-[#444]">Coming Soon</span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => handleConnect(integration)}
+                      className="flex items-center gap-1.5 h-8 rounded-[7px] border border-[#444] bg-[#111] px-3 text-[12px] font-semibold text-white hover:border-white/40 hover:bg-white/[0.04] transition-colors"
+                    >
+                      <Link2 className="h-3.5 w-3.5" />
+                      Connect
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Footer note */}
+        <div className="border-t border-[#1a1a1a] px-6 py-4">
+          <p className="text-[11px] text-[#555] leading-5">
+            Connecting an accounting tool will import your invoices into AgncyPay for payment and reconciliation. Only invoice read access is requested.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 const filterOptions = ["All Invoices", "Pending", "Approved", "Processing", "Paid", "Failed"] as const;
 
@@ -318,6 +522,7 @@ function StatusBadge({ status }: { status: string }) {
 
 export default function InvoicesPortalPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { state } = useApp();
   const workspaceType = state.user ? normalizeWorkspaceType(state.user.accountType) : "brand";
   const activeMembership = state.memberships.find(
@@ -333,8 +538,143 @@ export default function InvoicesPortalPage() {
   const canProcessInvoices = effectivePermissions.includes("initiate_payments");
   const canEditInvoiceSource = canCreateInvoice;
   const canSelectInvoices = workspaceType !== "talent_agency";
+
+  // ── Integrations state ──────────────────────────────────────────────
+  const [isIntegrationsOpen, setIsIntegrationsOpen] = useState(false);
+  const [connectedSource, setConnectedSource] = useState<InvoiceSource | null>(null);
+  const [qbSyncStatus, setQbSyncStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [qbSyncMessage, setQbSyncMessage] = useState("");
+  const [xeroSyncStatus, setXeroSyncStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [xeroSyncMessage, setXeroSyncMessage] = useState("");
+
+  // ── Invoice rows state (must be declared before fetchQbInvoices) ────
   const selectedActionLabel = canProcessInvoices ? "Process Selected" : "Export Selected";
   const [invoiceRows, setInvoiceRows] = useState<InvoiceRow[]>(initialInvoices);
+
+  // Detect OAuth return from Xero
+  const fetchXeroInvoices = useCallback(async () => {
+    setXeroSyncStatus("loading");
+    setXeroSyncMessage("Fetching invoices from Xero...");
+    try {
+      const res = await fetch("/api/xero/invoices");
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        setXeroSyncStatus("error");
+        setXeroSyncMessage(
+          data.error === "not_connected"
+            ? "Xero not connected."
+            : data.error === "token_expired"
+            ? "Xero session expired. Please reconnect."
+            : "Failed to fetch Xero invoices."
+        );
+        return;
+      }
+      const xeroInvoices = data.invoices || [];
+      if (xeroInvoices.length > 0) {
+        setInvoiceRows((prev) => {
+          const existingIds = new Set(prev.map((inv) => inv.id));
+          const newOnes = xeroInvoices.filter((inv: any) => !existingIds.has(inv.id));
+          return [...newOnes, ...prev];
+        });
+      }
+      setConnectedSource("xero");
+      setXeroSyncStatus("success");
+      setXeroSyncMessage(
+        xeroInvoices.length > 0
+          ? `${xeroInvoices.length} invoice${xeroInvoices.length === 1 ? "" : "s"} imported from Xero.`
+          : "Xero connected — no invoices found."
+      );
+    } catch {
+      setXeroSyncStatus("error");
+      setXeroSyncMessage("Network error fetching Xero invoices.");
+    }
+  }, []);
+
+  // Detect OAuth return from QuickBooks
+  const fetchQbInvoices = useCallback(async () => {
+    setQbSyncStatus("loading");
+    setQbSyncMessage("Fetching invoices from QuickBooks...");
+    try {
+      const res = await fetch("/api/quickbooks/invoices");
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        setQbSyncStatus("error");
+        setQbSyncMessage(
+          data.error === "not_connected"
+            ? "QuickBooks not connected."
+            : data.error === "token_expired"
+            ? "QuickBooks session expired. Please reconnect."
+            : "Failed to fetch QuickBooks invoices."
+        );
+        return;
+      }
+      const qbInvoices = data.invoices || [];
+      if (qbInvoices.length > 0) {
+        setInvoiceRows((prev) => {
+          const existingIds = new Set(prev.map((inv) => inv.id));
+          const newOnes = qbInvoices.filter((inv: any) => !existingIds.has(inv.id));
+          return [...newOnes, ...prev];
+        });
+      }
+      setConnectedSource("quickbooks");
+      setQbSyncStatus("success");
+      setQbSyncMessage(
+        qbInvoices.length > 0
+          ? `${qbInvoices.length} invoice${qbInvoices.length === 1 ? "" : "s"} imported from QuickBooks.`
+          : "QuickBooks connected — no invoices found."
+      );
+    } catch {
+      setQbSyncStatus("error");
+      setQbSyncMessage("Network error fetching QuickBooks invoices.");
+    }
+  }, []);
+
+  useEffect(() => {
+    const qbConnected = searchParams.get("qb_connected");
+    const qbError = searchParams.get("qb_error");
+    const xeroConnected = searchParams.get("xero_connected");
+    const xeroError = searchParams.get("xero_error");
+
+    if (qbConnected === "true") {
+      // Clean up URL
+      router.replace("/dashboard/invoices");
+      fetchQbInvoices();
+    } else if (qbError) {
+      router.replace("/dashboard/invoices");
+      setQbSyncStatus("error");
+      setQbSyncMessage(
+        qbError === "state_mismatch"
+          ? "Security check failed. Please try again."
+          : `QuickBooks authorization failed: ${qbError.replace(/_/g, " ")}.`
+      );
+    } else if (xeroConnected === "true") {
+      router.replace("/dashboard/invoices");
+      fetchXeroInvoices();
+    } else if (xeroError) {
+      router.replace("/dashboard/invoices");
+      setXeroSyncStatus("error");
+      setXeroSyncMessage(
+        xeroError === "state_mismatch"
+          ? "Security check failed. Please try again."
+          : `Xero authorization failed: ${xeroError.replace(/_/g, " ")}.`
+      );
+    } else {
+      fetch("/api/auth/status")
+        .then(res => res.json())
+        .then(data => {
+          if (data.quickbooks) {
+            setConnectedSource("quickbooks");
+            fetchQbInvoices();
+          } else if (data.xero) {
+            setConnectedSource("xero");
+            fetchXeroInvoices();
+          }
+        })
+        .catch(err => console.error("Failed to check auth status", err));
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<InvoiceFilter>("All Invoices");
   const [currentPage, setCurrentPage] = useState(1);
@@ -728,6 +1068,21 @@ export default function InvoicesPortalPage() {
 
   return (
     <div className="w-full max-w-[1048px]">
+      {/* ── Integrations modal ── */}
+      {isIntegrationsOpen && (
+        <IntegrationsModal
+          onClose={() => setIsIntegrationsOpen(false)}
+          connectedSource={connectedSource}
+          onDisconnect={() => {
+            setConnectedSource(null);
+            setQbSyncStatus("idle");
+            setQbSyncMessage("");
+            // Remove QB-sourced invoices
+            setInvoiceRows((prev) => prev.filter((inv) => (inv as any)._source !== "quickbooks"));
+          }}
+        />
+      )}
+
       <div className="flex flex-col items-start justify-between gap-5 md:flex-row md:gap-8">
         <div>
           <h1 className="text-[34px] font-semibold leading-none text-white">
@@ -739,6 +1094,32 @@ export default function InvoicesPortalPage() {
         </div>
 
         <div className="flex w-full flex-col gap-3 sm:flex-row md:mt-[21px] md:w-auto">
+          {/* ── Connect Integrations (+) button ── */}
+          <button
+            type="button"
+            id="open-integrations-btn"
+            onClick={() => setIsIntegrationsOpen(true)}
+            title="Connect accounting software"
+            className={cn(
+              "inline-flex h-[36px] items-center justify-center gap-[8px] rounded-[6px] border px-3 text-[14px] font-semibold transition-colors whitespace-nowrap",
+              connectedSource
+                ? "border-[#10b95f]/50 bg-[#082315] text-[#4ade80] hover:border-[#10b95f]"
+                : "border-[#5a5a5a] bg-[#0c0c0c] text-white hover:border-[#777]"
+            )}
+          >
+            {connectedSource ? (
+              <>
+                <span className="h-2 w-2 rounded-full bg-[#4ade80] animate-pulse" />
+                {INTEGRATIONS.find((i) => i.id === connectedSource)?.name || "Connected"}
+              </>
+            ) : (
+              <>
+                <Plus className="h-4 w-4" />
+                Connect
+              </>
+            )}
+          </button>
+
           <button
             type="button"
             onClick={exportInvoices}
@@ -760,23 +1141,105 @@ export default function InvoicesPortalPage() {
         </div>
       </div>
 
+      {/* ── QB Sync Status Banner ── */}
+      {qbSyncStatus !== "idle" && (
+        <div className={cn(
+          "mt-[18px] flex items-center gap-3 rounded-[8px] border px-4 py-3 text-[13px] font-semibold",
+          qbSyncStatus === "loading" && "border-[#333] bg-[#0a0a0a] text-[#aaa]",
+          qbSyncStatus === "success" && "border-[#10b95f]/40 bg-[#082315] text-[#4ade80]",
+          qbSyncStatus === "error" && "border-[#ff3b30]/30 bg-[#180805] text-[#ff9088]"
+        )}>
+          {qbSyncStatus === "loading" && (
+            <RefreshCw className="h-4 w-4 animate-spin shrink-0" />
+          )}
+          {qbSyncStatus === "success" && (
+            <CheckCircle2 className="h-4 w-4 shrink-0" />
+          )}
+          {qbSyncStatus === "error" && (
+            <X className="h-4 w-4 shrink-0" />
+          )}
+          <span className="flex-1">{qbSyncMessage}</span>
+          {qbSyncStatus !== "loading" && (
+            <button
+              type="button"
+              onClick={() => { setQbSyncStatus("idle"); setQbSyncMessage(""); }}
+              className="ml-auto text-current opacity-60 hover:opacity-100"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* ── Xero Sync Status Banner ── */}
+      {xeroSyncStatus !== "idle" && (
+        <div className={cn(
+          "mt-[18px] flex items-center gap-3 rounded-[8px] border px-4 py-3 text-[13px] font-semibold",
+          xeroSyncStatus === "loading" && "border-[#333] bg-[#0a0a0a] text-[#aaa]",
+          xeroSyncStatus === "success" && "border-[#10b95f]/40 bg-[#082315] text-[#4ade80]",
+          xeroSyncStatus === "error" && "border-[#ff3b30]/30 bg-[#180805] text-[#ff9088]"
+        )}>
+          {xeroSyncStatus === "loading" && (
+            <RefreshCw className="h-4 w-4 animate-spin shrink-0" />
+          )}
+          {xeroSyncStatus === "success" && (
+            <CheckCircle2 className="h-4 w-4 shrink-0" />
+          )}
+          {xeroSyncStatus === "error" && (
+            <X className="h-4 w-4 shrink-0" />
+          )}
+          <span className="flex-1">{xeroSyncMessage}</span>
+          {xeroSyncStatus !== "loading" && (
+            <button
+              type="button"
+              onClick={() => { setXeroSyncStatus("idle"); setXeroSyncMessage(""); }}
+              className="ml-auto text-current opacity-60 hover:opacity-100"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+      )}
+
       <section className="mt-[27px] rounded-[8px] border border-[#4f4f4f] bg-[#050505] px-5 py-4">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <p className="text-[18px] font-semibold leading-6 text-white">
-              {invoiceSource.title}
+              {connectedSource === "quickbooks"
+                ? "QuickBooks-synced invoices"
+                : connectedSource === "xero"
+                ? "Xero-synced invoices"
+                : invoiceSource.title}
             </p>
             <p className="mt-1 text-[14px] leading-5 text-[#8f8f8f]">
-              Source: {invoiceSource.source}
+              Source:{" "}
+              {connectedSource === "quickbooks" ? (
+                <span className="text-[#4ade80] font-semibold">QuickBooks Online</span>
+              ) : (
+                invoiceSource.source
+              )}
             </p>
           </div>
-          <span className="inline-flex h-8 w-fit items-center rounded-[7px] border border-[#444] px-3 text-[13px] font-semibold text-[#d7d7d7]">
-            {canProcessInvoices
-              ? "Payment controls enabled"
-              : canCreateInvoice
-                ? "Invoice creation enabled"
-                : "View-only access"}
-          </span>
+          <div className="flex items-center gap-2">
+            {connectedSource && (
+              <button
+                type="button"
+                onClick={fetchQbInvoices}
+                disabled={qbSyncStatus === "loading"}
+                className="inline-flex h-8 items-center gap-1.5 rounded-[7px] border border-[#333] bg-[#0c0c0c] px-3 text-[12px] font-semibold text-white hover:border-[#555] disabled:opacity-50 transition-colors"
+              >
+                <RefreshCw className={cn("h-3.5 w-3.5", qbSyncStatus === "loading" && "animate-spin")} />
+                Sync
+              </button>
+            )}
+            <span className="inline-flex h-8 w-fit items-center rounded-[7px] border border-[#444] px-3 text-[13px] font-semibold text-[#d7d7d7]">
+              {canProcessInvoices
+                ? "Payment controls enabled"
+                : canCreateInvoice
+                  ? "Invoice creation enabled"
+                  : "View-only access"}
+            </span>
+          </div>
         </div>
       </section>
 

@@ -45,7 +45,7 @@ export default function MainboardPage() {
   const [selectedInvoiceId, setSelectedInvoiceId] = useState(mainboardInvoices[0].id);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [search, setSearch] = useState("");
-  
+
   // Embedded Checkout State
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -54,7 +54,7 @@ export default function MainboardPage() {
   const [paymentTerm, setPaymentTerm] = useState("Pay Now");
 
   const selectedInvoice = invoices.find((invoice) => invoice.id === selectedInvoiceId) || invoices[0];
-  const selectedInvoicesList = selectedIds.length > 0 
+  const selectedInvoicesList = selectedIds.length > 0
     ? invoices.filter((invoice) => selectedIds.includes(invoice.id))
     : [selectedInvoice];
 
@@ -105,7 +105,7 @@ export default function MainboardPage() {
     setTimeout(() => {
       setIsProcessing(false);
       setIsSuccess(true);
-      
+
       // Update local invoice state
       setInvoices(current => current.map(inv => {
         if (selectedInvoicesList.some(s => s.id === inv.id)) {
@@ -318,7 +318,7 @@ export default function MainboardPage() {
       {isCheckoutOpen && (
         <div className="fixed inset-0 z-50 flex justify-end">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsCheckoutOpen(false)}></div>
-          
+
           <div className="relative w-full md:w-[540px] h-full bg-[#F8FAFC] shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
             {/* Header */}
             <div className="h-20 border-b border-black/5 flex items-center justify-between px-8 bg-white shrink-0">
@@ -338,7 +338,7 @@ export default function MainboardPage() {
 
             {/* Body */}
             <div className="flex-1 overflow-y-auto p-8 text-[#0F172A]">
-              
+
               {/* Summary */}
               <div className="mb-8">
                 <h3 className="text-[13px] font-bold uppercase tracking-wider text-[#64748B] mb-4">Payment Summary</h3>
