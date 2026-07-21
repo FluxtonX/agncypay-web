@@ -1155,6 +1155,14 @@ export default function BrandDashboardPage() {
                     )}
                   </>
                 )}
+
+                <Link
+                  href="/branddashboard/invoices"
+                  className="h-7 px-3 text-[10px] font-bold text-neutral-400 hover:text-white bg-neutral-900 border border-[#3a3a3a] rounded-lg transition-all flex items-center gap-1 cursor-pointer"
+                >
+                  <span>View All</span>
+                  <ArrowUpRight className="h-3 w-3" />
+                </Link>
               </div>
             </div>
 
@@ -1260,9 +1268,18 @@ export default function BrandDashboardPage() {
                 </div>
               </div>
 
-              <span className="text-xs font-semibold text-neutral-400">
-                Total Settled: <span className="text-white font-bold">${paidTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-              </span>
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-semibold text-neutral-400">
+                  Total Settled: <span className="text-white font-bold">${paidTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                </span>
+                <Link
+                  href="/branddashboard/invoices"
+                  className="h-7 px-3 text-[10px] font-bold text-neutral-400 hover:text-white bg-neutral-900 border border-[#3a3a3a] rounded-lg transition-all flex items-center gap-1 cursor-pointer"
+                >
+                  <span>View All</span>
+                  <ArrowUpRight className="h-3 w-3" />
+                </Link>
+              </div>
             </div>
 
             {isFetchingInvoices ? (
