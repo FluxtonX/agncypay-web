@@ -44,7 +44,7 @@ const secondaryNav = [
 
 const navByWorkspace: Record<WorkspaceType, DashboardNavItem[]> = {
   brand: [
-    { label: "Dashboard", path: "/dashboard", activePath: "/dashboard", icon: LayoutGrid },
+    { label: "Dashboard", path: "/branddashboard", activePath: "/branddashboard", icon: LayoutGrid },
     { label: "Wallet", path: "/dashboard/wallet", activePath: "/dashboard/wallet", icon: WalletCards },
     { label: "Invoices", path: "/dashboard/invoices", activePath: "/dashboard/invoices", icon: FileText },
     { label: "Payments", path: "/dashboard/payments", activePath: "/dashboard/payments", icon: CreditCard, permission: "initiate_payments" },
@@ -52,7 +52,7 @@ const navByWorkspace: Record<WorkspaceType, DashboardNavItem[]> = {
     { label: "Integrations", path: "/dashboard/integrations", activePath: "/dashboard/integrations", icon: Link2 },
   ],
   agency: [
-    { label: "Dashboard", path: "/dashboard", activePath: "/dashboard", icon: LayoutGrid },
+    { label: "Dashboard", path: "/branddashboard", activePath: "/branddashboard", icon: LayoutGrid },
     { label: "Wallet", path: "/dashboard/wallet", activePath: "/dashboard/wallet", icon: WalletCards },
     { label: "Invoices", path: "/dashboard/invoices", activePath: "/dashboard/invoices", icon: FileText },
     { label: "Talent", path: "/dashboard/talent", activePath: "/dashboard/talent", icon: UsersRound, permission: "manage_talent" },
