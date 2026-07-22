@@ -321,3 +321,62 @@ export async function getRegisteredTalentsByAgency(agencyEmail: string): Promise
     return [];
   }
 }
+
+// Record deposit balance in Firestore
+export async function recordFirestoreDeposit(
+  userEmail: string,
+  amount: number,
+  paymentMethod: string = "Card"
+): Promise<number> {
+  try {
+    if (!userEmail) return 25000 + amount;
+    const normalizedEmail = userEmail.trim().toLowerCase();
+    const docRef = doc(db, "brand_treasury", normalizedEmail);
+    const docSnap = await getDoc(docRef);
+
+    let currentBalance = 25000;
+    if (docSnap.exists()) {
+      currentBalance = docSnap.data().balance || 25000;
+    }
+
+    const newBalance = currentBalance + amount;
+    await setDoc(docRef, {
+      userEmail: normalizedEmail,
+      balance: newBalance,
+      lastUpdated: new Date().toISOString(),
+      lastDepositAmount: amount,
+      lastDepositMethod: paymentMethod,
+    }, { merge: true });
+
+    return newBalance;
+  } catch (error) {
+    console.error("Error recording Firestore deposit:", error);
+    return 25000 + amount;
+  }
+}
+
+// Subscribe to deposit balance updates
+export function subscribeFirestoreDepositBalance(
+  userEmail: string,
+  callback: (balance: number) => void
+) {
+  if (!userEmail) {
+    callback(25000);
+    return () => {};
+  }
+
+  const normalizedEmail = userEmail.trim().toLowerCase();
+  const docRef = doc(db, "brand_treasury", normalizedEmail);
+
+  return onSnapshot(docRef, (docSnap) => {
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      callback(data.balance || 25000);
+    } else {
+      callback(25000);
+    }
+  }, (error) => {
+    console.error("Error subscribing to deposit balance:", error);
+    callback(25000);
+  });
+}

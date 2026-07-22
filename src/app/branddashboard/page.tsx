@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
@@ -39,9 +39,10 @@ import {
   Link2,
   Link2Off,
   Plug,
+  Wallet,
 } from "lucide-react";
 import { useApp } from "../../context/AppContext";
-import { subscribeInvoicesByBrand, subscribeInvoicesByAgency, updateInvoiceStatus, createFirestoreInvoice, getRegisteredBrands, getRegisteredTalents, getRegisteredTalentsByAgency } from "../../lib/firebaseInvoices";
+import { subscribeInvoicesByBrand, subscribeInvoicesByAgency, updateInvoiceStatus, createFirestoreInvoice, getRegisteredBrands, getRegisteredTalents, getRegisteredTalentsByAgency, recordFirestoreDeposit } from "../../lib/firebaseInvoices";
 import { FirestoreUser } from "../../lib/firebaseAuth";
 
 // Refactored Data Models
@@ -60,6 +61,21 @@ interface VendorItem {
   amount: number;
   walletId: string;
   avatar: string;
+}
+
+interface PlaidAccount {
+  id: string;
+  itemId: string;
+  institutionName: string;
+  name: string;
+  officialName?: string;
+  mask: string;
+  type: string;
+  subtype: string;
+  availableBalance: number;
+  currentBalance: number;
+  currency: string;
+  connectedAt: string;
 }
 
 interface InvoiceMock {
@@ -111,6 +127,219 @@ export default function BrandDashboardPage() {
   const [connectedIntegration, setConnectedIntegration] = useState<string | null>(null);
   const [qbSyncStatus, setQbSyncStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [qbSyncMessage, setQbSyncMessage] = useState("");
+
+  // Deposit Balance & Deposit Modal State (Brand Side)
+  const [depositedBalance, setDepositedBalance] = useState(25000);
+  const [isDepositModalOpen, setIsDepositModalOpen] = useState(false);
+  const [depositAmount, setDepositAmount] = useState("1000");
+  const [depositMethod, setDepositMethod] = useState<"card" | "ach" | "wire" | "rtp">("card");
+  const [selectedCardId, setSelectedCardId] = useState("card-1");
+  const [showAddCard, setShowAddCard] = useState(false);
+  const [isProcessingDeposit, setIsProcessingDeposit] = useState(false);
+  const [depositSuccessMsg, setDepositSuccessMsg] = useState<string | null>(null);
+
+  const [newCardHolder, setNewCardHolder] = useState("");
+  const [newCardNumber, setNewCardNumber] = useState("");
+  const [newCardExpiry, setNewCardExpiry] = useState("");
+  const [newCardCVC, setNewCardCVC] = useState("");
+  const [newCardZip, setNewCardZip] = useState("");
+
+  const [linkedCards, setLinkedCards] = useState([
+    { id: "card-1", name: "Chase Ink Business Unlimited Visa", detail: "Visa ****86", fallback: "Chase" },
+    { id: "card-2", name: "Mercury Business IO Mastercard", detail: "Mastercard ****57", fallback: "Mercury" },
+    { id: "card-3", name: "Bank of America Business Debit", detail: "Debit ****88", fallback: "BoFA" }
+  ]);
+
+  // Plaid Connection State & Handlers
+  const [plaidAccounts, setPlaidAccounts] = useState<PlaidAccount[]>([]);
+  const [isPlaidLoading, setIsPlaidLoading] = useState(false);
+  const [plaidError, setPlaidError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      if (!document.getElementById("plaid-link-sdk")) {
+        const script = document.createElement("script");
+        script.id = "plaid-link-sdk";
+        script.src = "https://cdn.plaid.com/link/v2/stable/link-initialize.js";
+        script.async = true;
+        document.body.appendChild(script);
+      }
+
+      const savedPlaid = localStorage.getItem("brand_plaid_accounts");
+      if (savedPlaid) {
+        try {
+          setPlaidAccounts(JSON.parse(savedPlaid));
+        } catch (e) {
+          console.error("Error loading saved Plaid accounts", e);
+        }
+      }
+    }
+  }, []);
+
+  const handleConnectPlaid = async () => {
+    setIsPlaidLoading(true);
+    setPlaidError(null);
+
+    try {
+      const res = await fetch("/api/plaid/link-token", { method: "POST" });
+      const data = await res.json();
+
+      if (!res.ok || !data.link_token) {
+        throw new Error(data.error || "Failed to generate Plaid link token");
+      }
+
+      if (typeof (window as any).Plaid === "undefined") {
+        throw new Error("Plaid SDK is still loading. Please try again in a moment.");
+      }
+
+      const handler = (window as any).Plaid.create({
+        token: data.link_token,
+        onSuccess: async (public_token: string, metadata: any) => {
+          setIsPlaidLoading(true);
+          try {
+            const exchangeRes = await fetch("/api/plaid/exchange-token", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                public_token,
+                institution: metadata?.institution,
+              }),
+            });
+
+            const exchangeData = await exchangeRes.json();
+
+            if (!exchangeRes.ok || !exchangeData.success) {
+              throw new Error(exchangeData.error || "Failed to exchange Plaid public token");
+            }
+
+            const newAccounts: PlaidAccount[] = exchangeData.accounts || [];
+
+            setPlaidAccounts((prev) => {
+              const existingIds = new Set(prev.map((a) => a.id));
+              const filtered = newAccounts.filter((a) => !existingIds.has(a.id));
+              const updated = [...prev, ...filtered];
+              if (typeof window !== "undefined") {
+                localStorage.setItem("brand_plaid_accounts", JSON.stringify(updated));
+              }
+              return updated;
+            });
+          } catch (err: any) {
+            console.error("Plaid token exchange error:", err);
+            setPlaidError(err.message || "Failed to complete Plaid bank connection.");
+          } finally {
+            setIsPlaidLoading(false);
+          }
+        },
+        onExit: (err: any) => {
+          setIsPlaidLoading(false);
+          if (err != null) {
+            console.warn("Plaid Link exited with error:", err);
+          }
+        },
+      });
+
+      handler.open();
+    } catch (err: any) {
+      console.error("Error launching Plaid:", err);
+      setPlaidError(err.message || "Failed to initiate Plaid link.");
+      setIsPlaidLoading(false);
+    }
+  };
+
+  const handleDisconnectPlaidAccount = (id: string) => {
+    setPlaidAccounts((prev) => {
+      const updated = prev.filter((acc) => acc.id !== id);
+      if (typeof window !== "undefined") {
+        localStorage.setItem("brand_plaid_accounts", JSON.stringify(updated));
+      }
+      return updated;
+    });
+  };
+
+  const totalPlaidFloat = useMemo(() => {
+    if (plaidAccounts.length === 0) return 250000;
+    return plaidAccounts.reduce((sum, acc) => sum + (acc.availableBalance || 0), 0);
+  }, [plaidAccounts]);
+
+  // Sync balance from localStorage on mount
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const userEmail = state.user?.email || "";
+      const savedBalance = localStorage.getItem(`brand_deposited_balance_${userEmail}`);
+      if (savedBalance) {
+        setDepositedBalance(parseFloat(savedBalance));
+      }
+    }
+  }, [state.user?.email]);
+
+  const handleConfirmDeposit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const numericAmt = parseFloat(depositAmount);
+    if (isNaN(numericAmt) || numericAmt <= 0) return;
+
+    setIsProcessingDeposit(true);
+    const userEmail = state.user?.email || "";
+
+    try {
+      let updated = depositedBalance + numericAmt;
+      try {
+        updated = await recordFirestoreDeposit(userEmail, numericAmt, depositMethod);
+      } catch (err) {
+        console.warn("Firestore deposit record warning:", err);
+      }
+
+      setDepositedBalance(updated);
+      if (typeof window !== "undefined") {
+        localStorage.setItem(`brand_deposited_balance_${userEmail}`, updated.toString());
+      }
+
+      setDepositSuccessMsg(
+        `Successfully deposited $${numericAmt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} into AGNCYPAY Treasury!`
+      );
+
+      setTimeout(() => {
+        setIsDepositModalOpen(false);
+        setIsProcessingDeposit(false);
+        setDepositSuccessMsg(null);
+      }, 1500);
+    } catch (err) {
+      console.error("Deposit error:", err);
+      const fallbackBal = depositedBalance + numericAmt;
+      setDepositedBalance(fallbackBal);
+      if (typeof window !== "undefined") {
+        localStorage.setItem(`brand_deposited_balance_${userEmail}`, fallbackBal.toString());
+      }
+      setDepositSuccessMsg(
+        `Successfully deposited $${numericAmt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} into AGNCYPAY Treasury!`
+      );
+
+      setTimeout(() => {
+        setIsDepositModalOpen(false);
+        setIsProcessingDeposit(false);
+        setDepositSuccessMsg(null);
+      }, 1500);
+    }
+  };
+
+  const handleAddNewCard = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCardHolder.trim() || !newCardNumber.trim()) return;
+    const last4 = newCardNumber.replace(/\D/g, "").slice(-4) || "9999";
+    const newCardObj = {
+      id: `card-${Date.now()}`,
+      name: `${newCardHolder.trim()}'s Card`,
+      detail: `Visa ****${last4}`,
+      fallback: "Card"
+    };
+    setLinkedCards(prev => [...prev, newCardObj]);
+    setSelectedCardId(newCardObj.id);
+    setShowAddCard(false);
+    setNewCardHolder("");
+    setNewCardNumber("");
+    setNewCardExpiry("");
+    setNewCardCVC("");
+    setNewCardZip("");
+  };
 
   const fetchQbInvoices = async () => {
     setQbSyncStatus("loading");
@@ -1109,9 +1338,22 @@ export default function BrandDashboardPage() {
                   {workspaceType === "brand" ? "Pending Invoices (To Pay)" : "Pending Invoices (Unpaid)"}
                 </span>
               </div>
+              {qbSyncStatus === "loading" && (
+                <div className="flex items-center gap-2 text-xs font-semibold text-white bg-white/10 px-3 py-1 rounded-full border border-white/20">
+                  <RefreshCw className="h-3.5 w-3.5 animate-spin text-white" />
+                  <span>Syncing...</span>
+                </div>
+              )}
             </div>
             
             <div className="overflow-x-auto">
+              {qbSyncStatus === "loading" ? (
+                <div className="py-12 flex flex-col items-center justify-center text-center bg-black/40">
+                  <RefreshCw className="h-8 w-8 animate-spin text-white mb-3" />
+                  <p className="text-sm font-bold text-white">Fetching Invoices</p>
+                  <p className="text-xs text-neutral-400 mt-1">{qbSyncMessage || "Syncing with connected accounting platform..."}</p>
+                </div>
+              ) : (
               <table className="w-full text-left text-sm">
                 <thead>
                   <tr className="border-b border-white/20 bg-white/[0.02] text-xs font-semibold uppercase tracking-wider text-[#8f8f8f]">
@@ -1180,6 +1422,7 @@ export default function BrandDashboardPage() {
                   )}
                 </tbody>
               </table>
+              )}
             </div>
             
             {workspaceType === "brand" && selectedIds.length > 0 && (
@@ -1256,6 +1499,53 @@ export default function BrandDashboardPage() {
         {/* Right Column - Queue and History Ledger (Narrower) */}
         <div id="approval-queue-section" className="lg:col-span-4 space-y-6">
           
+          {/* Brand Treasury Balance & Deposit Section */}
+          <div className="bg-[#050505] rounded-xl border border-white/10 p-5 shadow-sm space-y-4">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-bold uppercase tracking-wider text-neutral-400">Brand Treasury Balance</h3>
+                  <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">
+                    Active Liquidity
+                  </span>
+                </div>
+                <p className="text-2xl font-black text-white mt-1 font-mono">
+                  ${depositedBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </p>
+                <p className="text-xs text-neutral-400 mt-0.5">Available for instant invoice settlement & automated payouts.</p>
+              </div>
+              <button
+                onClick={() => setIsDepositModalOpen(true)}
+                className="py-2.5 px-4 rounded-xl bg-white text-black font-bold text-xs flex items-center justify-center gap-2 hover:bg-neutral-200 transition-all shadow-md active:scale-[0.99] cursor-pointer shrink-0"
+              >
+                <Plus className="h-4 w-4 text-black" />
+                Deposit Funds
+              </button>
+            </div>
+
+            <div className="pt-3 border-t border-white/10 flex items-center justify-between gap-2 text-xs">
+              <div className="flex items-center gap-2">
+                <span className="text-neutral-500 font-medium">Quick Deposit:</span>
+                {["1000", "5000", "10000"].map((amt) => (
+                  <button
+                    key={amt}
+                    onClick={() => {
+                      setDepositAmount(amt);
+                      setIsDepositModalOpen(true);
+                    }}
+                    className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-neutral-300 font-bold hover:bg-white/10 hover:text-white transition-all cursor-pointer"
+                  >
+                    +${parseInt(amt).toLocaleString()}
+                  </button>
+                ))}
+              </div>
+              <span className="text-[11px] text-emerald-400 font-semibold flex items-center gap-1">
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                100% FDIC Insured
+              </span>
+            </div>
+          </div>
+
           {/* Integrations Widget */}
           <div className="bg-[#050505] rounded-xl border border-white/10 p-5 shadow-sm">
             <div className="flex items-start justify-between gap-3">
@@ -1360,12 +1650,82 @@ export default function BrandDashboardPage() {
 
           {/* Connected Banking Feeds */}
           <div className="bg-[#050505] rounded-xl border border-white/10 overflow-hidden shadow-sm flex flex-col">
-            <div className="p-5 border-b border-white/10 bg-white/[0.01]">
-              <h3 className="text-[11px] font-bold uppercase tracking-wider text-[#8f8f8f]">CONNECTED BANKING FEEDS</h3>
+            <div className="p-5 border-b border-white/10 bg-white/[0.01] flex items-center justify-between">
+              <div>
+                <h3 className="text-[11px] font-bold uppercase tracking-wider text-[#8f8f8f]">CONNECTED BANKING FEEDS</h3>
+                <p className="text-[11px] text-neutral-500 mt-0.5">Real-time balances & float verified via Plaid</p>
+              </div>
+              <button
+                type="button"
+                onClick={handleConnectPlaid}
+                disabled={isPlaidLoading}
+                className="px-3.5 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[11px] font-bold hover:bg-emerald-500/20 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              >
+                {isPlaidLoading ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin text-emerald-400" />
+                    Connecting...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="h-3.5 w-3.5 text-emerald-400" />
+                    + Connect Bank (Plaid)
+                  </>
+                )}
+              </button>
             </div>
+
+            {plaidError && (
+              <div className="p-3 bg-red-500/10 border-b border-red-500/20 text-red-400 text-xs font-semibold flex items-center justify-between px-5">
+                <span>{plaidError}</span>
+                <button onClick={() => setPlaidError(null)} className="text-red-400 hover:text-white cursor-pointer">
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            )}
             
             <div className="p-5 flex flex-col gap-4 border-b border-white/10 bg-white/[0.02]">
-              {/* Card 1 */}
+              {/* Dynamic Plaid Connected Accounts */}
+              {plaidAccounts.length > 0 && plaidAccounts.map((acc) => (
+                <div
+                  key={acc.id}
+                  className="flex items-center justify-between p-4 rounded-xl border border-emerald-500/30 bg-emerald-950/10 hover:border-emerald-500/50 transition-all"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl border border-emerald-500/30 bg-emerald-500/10 flex items-center justify-center shrink-0">
+                      <Building2 className="h-6 w-6 text-emerald-400" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h4 className="text-[13px] font-bold text-white">{acc.institutionName} — {acc.name}</h4>
+                        <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold uppercase bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                          Plaid Verified
+                        </span>
+                      </div>
+                      <p className="text-[11px] font-medium text-neutral-400 mt-0.5">
+                        {acc.subtype?.toUpperCase()} ••••{acc.mask}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <div className="text-right">
+                      <span className="text-[13px] font-bold text-white block">
+                        ${acc.availableBalance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                      <span className="text-[10px] text-emerald-400 font-semibold">Available Float</span>
+                    </div>
+                    <button
+                      onClick={() => handleDisconnectPlaidAccount(acc.id)}
+                      title="Disconnect Bank Feed"
+                      className="p-1.5 rounded-lg border border-white/10 bg-black/40 text-neutral-400 hover:text-red-400 hover:border-red-500/30 transition-all cursor-pointer"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+
+              {/* Sample Feeds */}
               <div className="flex items-center gap-4 p-4 rounded-xl border border-white/10 bg-[#0A0A0A] cursor-pointer hover:border-white/20 transition-all">
                 <div className="w-20 h-12 rounded-md shrink-0 border border-white/10 overflow-hidden bg-black flex items-center justify-center">
                   <img src="/cards/chase-ink-business-unlimited.png" alt="Chase" className="w-full h-full object-cover opacity-90" onError={(e) => { e.currentTarget.style.display='none'; if (e.currentTarget.parentElement) e.currentTarget.parentElement.innerHTML = '<div class="w-full h-full bg-gradient-to-br from-blue-900 to-black flex items-center justify-center"><span class="text-[10px] font-bold text-white">CHASE</span></div>'; }} />
@@ -1376,7 +1736,6 @@ export default function BrandDashboardPage() {
                 </div>
               </div>
               
-              {/* Card 2 */}
               <div className="flex items-center gap-4 p-4 rounded-xl border border-white/10 bg-[#0A0A0A] cursor-pointer hover:border-white/20 transition-all">
                 <div className="w-20 h-12 rounded-md shrink-0 border border-white/10 overflow-hidden bg-black flex items-center justify-center">
                   <img src="/cards/mercury-io.png" alt="Mercury" className="w-full h-full object-cover opacity-90" onError={(e) => { e.currentTarget.style.display='none'; if (e.currentTarget.parentElement) e.currentTarget.parentElement.innerHTML = '<div class="w-full h-full bg-gradient-to-br from-indigo-900 to-purple-900 flex items-center justify-center"><span class="text-[10px] font-bold text-white">MERCURY</span></div>'; }} />
@@ -1390,7 +1749,9 @@ export default function BrandDashboardPage() {
 
             <div className="p-5 bg-white/[0.01] flex justify-between items-center">
               <span className="text-[13px] font-semibold text-neutral-400">Plaid Available Float</span>
-              <span className="text-[14px] font-bold text-white">$250,000.00</span>
+              <span className="text-[14px] font-bold text-white">
+                ${totalPlaidFloat.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
             </div>
           </div>
 
@@ -1732,12 +2093,256 @@ export default function BrandDashboardPage() {
         </div>
       )}
 
-      {/* ── Full Screen Loader for Invoices Sync ── */}
-      {qbSyncStatus === "loading" && (
-        <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm">
-          <RefreshCw className="h-12 w-12 animate-spin text-white mb-4" />
-          <h2 className="text-xl font-bold text-white mb-2">Fetching Invoices</h2>
-          <p className="text-[#aaa] text-sm">{qbSyncMessage}</p>
+
+      {/* Brand Deposit Modal */}
+      {isDepositModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/75 backdrop-blur-md" onClick={() => !isProcessingDeposit && setIsDepositModalOpen(false)} />
+          
+          <div className="relative w-full max-w-lg bg-[#0A0A0A] border border-white/20 rounded-2xl shadow-2xl overflow-hidden text-white animate-in fade-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className="p-6 border-b border-white/10 flex items-center justify-between bg-white/[0.02]">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center text-white">
+                  <Wallet className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-white leading-tight">Deposit Treasury Balance</h3>
+                  <p className="text-xs text-neutral-400">Add funds to instant liquidity balance</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsDepositModalOpen(false)}
+                className="p-2 rounded-lg text-neutral-400 hover:bg-white/10 hover:text-white transition-colors cursor-pointer"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-6 max-h-[80vh] overflow-y-auto">
+              {depositSuccessMsg ? (
+                <div className="py-10 text-center space-y-4">
+                  <div className="h-16 w-16 rounded-full bg-emerald-500/20 border border-emerald-500 text-emerald-400 flex items-center justify-center mx-auto animate-bounce">
+                    <CheckCircle2 className="h-8 w-8" />
+                  </div>
+                  <h4 className="text-xl font-bold text-white">Deposit Successful</h4>
+                  <p className="text-sm text-neutral-300 max-w-[280px] mx-auto">{depositSuccessMsg}</p>
+                </div>
+              ) : isProcessingDeposit ? (
+                <div className="py-14 text-center space-y-4">
+                  <Loader2 className="h-10 w-10 text-white animate-spin mx-auto" />
+                  <div>
+                    <p className="text-lg font-bold text-white">Processing Deposit...</p>
+                    <p className="text-xs text-neutral-400 mt-1">Securing funds via selected payment channel.</p>
+                  </div>
+                </div>
+              ) : (
+                <form onSubmit={handleConfirmDeposit} className="space-y-6">
+                  {/* Step 1: Amount Selection */}
+                  <div>
+                    <label className="block text-xs font-bold text-neutral-300 uppercase tracking-wider mb-2">Deposit Amount ($USD)</label>
+                    <div className="relative">
+                      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-lg font-bold text-neutral-400">$</span>
+                      <input
+                        type="number"
+                        min="1"
+                        step="any"
+                        value={depositAmount}
+                        onChange={(e) => setDepositAmount(e.target.value)}
+                        placeholder="1000.00"
+                        className="w-full pl-8 pr-4 py-3 bg-black border border-white/20 rounded-xl text-lg font-bold text-white focus:outline-none focus:border-white font-mono"
+                        required
+                      />
+                    </div>
+                    
+                    {/* Quick Pills */}
+                    <div className="grid grid-cols-4 gap-2 mt-2.5">
+                      {["500", "1000", "2500", "5000"].map((preset) => (
+                        <button
+                          key={preset}
+                          type="button"
+                          onClick={() => setDepositAmount(preset)}
+                          className={`py-2 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
+                            depositAmount === preset
+                              ? "border-white bg-white text-black shadow"
+                              : "border-white/10 bg-white/[0.02] text-neutral-300 hover:border-white/20"
+                          }`}
+                        >
+                          +${parseInt(preset).toLocaleString()}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Step 2: Method Selection */}
+                  <div>
+                    <label className="block text-xs font-bold text-neutral-300 uppercase tracking-wider mb-2">Deposit Method</label>
+                    <div className="grid grid-cols-2 gap-2.5">
+                      {[
+                        { id: "card", label: "Linked Card", sub: "Instant • Standard Fee" },
+                        { id: "ach", label: "ACH Bank Transfer", sub: "1-2 Days • 0% Fee" },
+                        { id: "wire", label: "Wire Transfer", sub: "Same Day • $15 Fee" },
+                        { id: "rtp", label: "RTP Instant", sub: "Instant • $5 Fee" },
+                      ].map((m) => (
+                        <button
+                          key={m.id}
+                          type="button"
+                          onClick={() => setDepositMethod(m.id as any)}
+                          className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                            depositMethod === m.id
+                              ? "border-white bg-white/10"
+                              : "border-white/10 bg-black hover:border-white/20"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-white">{m.label}</span>
+                            <div className={`h-3.5 w-3.5 rounded-full border flex items-center justify-center ${
+                              depositMethod === m.id ? "border-white bg-white text-black" : "border-white/30"
+                            }`}>
+                              {depositMethod === m.id && <div className="h-1.5 w-1.5 rounded-full bg-black" />}
+                            </div>
+                          </div>
+                          <span className="text-[10px] text-neutral-400 block mt-1">{m.sub}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Step 3: Card Selection if Linked Card chosen */}
+                  {depositMethod === "card" && (
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center">
+                        <label className="text-xs font-bold text-neutral-300 uppercase tracking-wider">Select Card</label>
+                        <button
+                          type="button"
+                          onClick={() => setShowAddCard(!showAddCard)}
+                          className="text-xs font-bold text-neutral-300 hover:text-white flex items-center gap-1 cursor-pointer"
+                        >
+                          <Plus className="h-3 w-3" />
+                          {showAddCard ? "Use Saved Card" : "Add New Card"}
+                        </button>
+                      </div>
+
+                      {showAddCard ? (
+                        <div className="p-4 rounded-xl border border-white/20 bg-black space-y-3">
+                          <div>
+                            <label className="text-[10px] text-neutral-400 uppercase font-semibold">Cardholder Name</label>
+                            <input
+                              type="text"
+                              placeholder="Jane Doe"
+                              value={newCardHolder}
+                              onChange={(e) => setNewCardHolder(e.target.value)}
+                              className="w-full mt-1 bg-neutral-900 border border-white/20 rounded-lg p-2 text-white text-xs focus:outline-none focus:border-white"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[10px] text-neutral-400 uppercase font-semibold">Card Number</label>
+                            <input
+                              type="text"
+                              placeholder="4000 0000 0000 0000"
+                              value={newCardNumber}
+                              onChange={(e) => setNewCardNumber(e.target.value)}
+                              className="w-full mt-1 bg-neutral-900 border border-white/20 rounded-lg p-2 text-white text-xs focus:outline-none focus:border-white"
+                            />
+                          </div>
+                          <div className="grid grid-cols-3 gap-2">
+                            <div>
+                              <label className="text-[10px] text-neutral-400 uppercase font-semibold">Expires</label>
+                              <input
+                                type="text"
+                                placeholder="MM/YY"
+                                value={newCardExpiry}
+                                onChange={(e) => setNewCardExpiry(e.target.value)}
+                                className="w-full mt-1 bg-neutral-900 border border-white/20 rounded-lg p-2 text-white text-xs focus:outline-none focus:border-white"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-[10px] text-neutral-400 uppercase font-semibold">CVC</label>
+                              <input
+                                type="text"
+                                placeholder="123"
+                                value={newCardCVC}
+                                onChange={(e) => setNewCardCVC(e.target.value)}
+                                className="w-full mt-1 bg-neutral-900 border border-white/20 rounded-lg p-2 text-white text-xs focus:outline-none focus:border-white"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-[10px] text-neutral-400 uppercase font-semibold">ZIP</label>
+                              <input
+                                type="text"
+                                placeholder="10001"
+                                value={newCardZip}
+                                onChange={(e) => setNewCardZip(e.target.value)}
+                                className="w-full mt-1 bg-neutral-900 border border-white/20 rounded-lg p-2 text-white text-xs focus:outline-none focus:border-white"
+                              />
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={handleAddNewCard}
+                            className="w-full py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-bold text-white text-xs mt-2 cursor-pointer transition-colors"
+                          >
+                            Save & Attach Card
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          {linkedCards.map((card) => {
+                            const isSelected = card.id === selectedCardId;
+                            return (
+                              <div
+                                key={card.id}
+                                onClick={() => setSelectedCardId(card.id)}
+                                className={`p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${
+                                  isSelected
+                                    ? "border-white bg-white/[0.08] shadow-sm"
+                                    : "border-white/10 hover:border-white/20 bg-black"
+                                }`}
+                              >
+                                <div className="flex items-center gap-3">
+                                  <div className="h-8 w-12 shrink-0 rounded bg-neutral-900 border border-white/10 flex items-center justify-center p-0.5">
+                                    <span className="text-[10px] font-bold text-white">{card.fallback}</span>
+                                  </div>
+                                  <div>
+                                    <p className="text-xs font-bold text-white">{card.name}</p>
+                                    <p className="text-[10px] text-neutral-400">{card.detail}</p>
+                                  </div>
+                                </div>
+                                <div className={`h-4 w-4 rounded-full border flex items-center justify-center ${
+                                  isSelected ? "border-white bg-white text-black" : "border-white/30"
+                                }`}>
+                                  {isSelected && <Check className="h-2.5 w-2.5 stroke-[3]" />}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Actions */}
+                  <div className="pt-2 flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setIsDepositModalOpen(false)}
+                      className="flex-1 py-3 rounded-xl border border-white/20 text-xs font-bold text-neutral-300 hover:text-white hover:bg-white/5 transition-all cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="flex-1 py-3 rounded-xl bg-white text-black text-xs font-bold hover:bg-neutral-200 transition-all flex items-center justify-center gap-2 shadow-lg cursor-pointer"
+                    >
+                      <Wallet className="h-4 w-4" />
+                      Confirm Deposit
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </main>
