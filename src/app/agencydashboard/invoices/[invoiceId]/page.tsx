@@ -333,7 +333,7 @@ export default function InvoiceDetailPage() {
               <ArrowLeft className="h-5 w-5 inline-block mr-2 -mt-1 text-[#8f8f8f]" />
             </Link>
             <h2 className="text-xl font-bold tracking-tight text-white">{activeInvoice.location},</h2>
-            <span className="text-xl font-extrabold text-[#4B6BFB]">{activeInvoice.costCenter}</span>
+            <span className="text-xl font-extrabold text-[#10b981]">{activeInvoice.costCenter}</span>
             <span className="text-xs font-bold uppercase tracking-wider text-[#8f8f8f]/60 ml-2">
               {activeInvoice.brandName}
             </span>
@@ -342,7 +342,7 @@ export default function InvoiceDetailPage() {
           {/* Right Selector Pills (Mirroring "My Home" and "Find a Home") */}
           <div className="flex items-center gap-1.5 bg-white/[0.03] p-1 rounded-full border border-white/20">
             <button className="px-4 py-1.5 rounded-full text-xs font-bold bg-[#111111] border border-white/20 text-white flex items-center gap-1.5">
-              <Home className="h-3.5 w-3.5 text-[#4B6BFB]" />
+              <Home className="h-3.5 w-3.5 text-[#10b981]" />
               Campaign Hub
             </button>
             <button 
@@ -413,7 +413,7 @@ export default function InvoiceDetailPage() {
 
                       {processingStage !== "idle" && (
                         <div className="w-full h-12 px-6 rounded-xl border border-white/20 bg-[#0A0A0A] text-[10px] font-bold text-[#8f8f8f] flex items-center justify-center gap-3 shadow-inner">
-                          <RefreshCw className="h-4 w-4 animate-spin text-[#4B6BFB]" />
+                          <RefreshCw className="h-4 w-4 animate-spin text-[#10b981]" />
                           {processingStage === "verifying" && "Verifying corporate treasury..."}
                           {processingStage === "routing" && "Auto-routing splits..."}
                           {processingStage === "success" && "Settlement complete!"}
@@ -451,7 +451,7 @@ export default function InvoiceDetailPage() {
                     <Coins className="h-4 w-4 text-neutral-500" />
                     Liquidity Guarantee (Net-0 Advance Payout)
                   </span>
-                  <span className="font-bold text-[#4B6BFB] bg-[#4B6BFB]/10 px-2 py-0.5 rounded border border-[#4B6BFB]/20 text-[10px] uppercase">
+                  <span className="font-bold text-[#10b981] bg-[#10b981]/10 px-2 py-0.5 rounded border border-[#10b981]/20 text-[10px] uppercase">
                     Eligible
                   </span>
                 </div>
@@ -532,7 +532,7 @@ export default function InvoiceDetailPage() {
                         className="p-4 bg-black border border-white/20 rounded-xl relative overflow-hidden group"
                       >
                         <div 
-                          className="absolute bottom-0 left-0 h-1 bg-gradient-to-r from-[#4B6BFB] to-purple-600 transition-all duration-500"
+                          className="absolute bottom-0 left-0 h-1 bg-gradient-to-r from-[#10b981] to-purple-600 transition-all duration-500"
                           style={{ width: activeInvoice.status === "settled" ? `${split.percentage}%` : "0%" }}
                         />
 
@@ -551,7 +551,7 @@ export default function InvoiceDetailPage() {
                           <span className={`text-[10px] font-bold px-2 py-0.5 rounded shrink-0 uppercase tracking-wider ${
                             split.role === "Talent" 
                               ? "bg-purple-950/60 text-purple-300 border border-purple-800/30" 
-                              : "bg-blue-950/60 text-blue-300 border border-blue-800/30"
+                              : "bg-emerald-950/60 text-emerald-300 border border-emerald-800/30"
                           }`}>
                             {split.role}
                           </span>
@@ -589,13 +589,13 @@ export default function InvoiceDetailPage() {
 
                 {/* Network routes */}
                 <svg className="absolute inset-0 h-full w-full pointer-events-none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M 50 50 L 150 100 L 250 60" fill="none" stroke="#4B6BFB" strokeWidth="1.5" strokeDasharray="4 4" className="animate-[dash_10s_linear_infinite]" />
+                  <path d="M 50 50 L 150 100 L 250 60" fill="none" stroke="#10b981" strokeWidth="1.5" strokeDasharray="4 4" className="animate-[dash_10s_linear_infinite]" />
                   <path d="M 150 100 L 80 150" fill="none" stroke="#a855f7" strokeWidth="1.5" strokeDasharray="4 4" className="animate-[dash_8s_linear_infinite]" />
                 </svg>
 
                 {/* Nodes */}
                 <div className="absolute top-10 left-12 flex flex-col items-center">
-                  <div className="h-6 w-6 rounded-full bg-[#4B6BFB] border-2 border-white flex items-center justify-center text-[8px] font-black text-white shadow">
+                  <div className="h-6 w-6 rounded-full bg-[#10b981] border-2 border-white flex items-center justify-center text-[8px] font-black text-white shadow">
                     NY
                   </div>
                   <span className="text-[8px] font-bold text-[#8f8f8f] mt-1">Brand</span>
@@ -617,7 +617,7 @@ export default function InvoiceDetailPage() {
 
                 <div className="relative z-10 bg-[#0A0A0A] border border-white/20 rounded-lg p-2.5 shadow-sm text-[11px] text-center">
                   <span className="font-bold text-white flex items-center justify-center gap-1.5">
-                    <MapPin className="h-3.5 w-3.5 text-[#4B6BFB]" />
+                    <MapPin className="h-3.5 w-3.5 text-[#10b981]" />
                     Explore Settlement Routes
                   </span>
                 </div>

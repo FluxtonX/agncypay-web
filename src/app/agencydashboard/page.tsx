@@ -36,7 +36,8 @@ import {
   Plus,
   Wallet,
   CreditCard,
-  X
+  X,
+  Landmark
 } from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import { 
@@ -112,6 +113,7 @@ export default function AgencyDashboardPage() {
   const [isFetchingInvoices, setIsFetchingInvoices] = useState(true);
   const [selectedPendingIds, setSelectedPendingIds] = useState<string[]>([]);
   const [notifications, setNotifications] = useState<any[]>([]);
+  const [linkedCards, setLinkedCards] = useState<any[]>([]);
   const [isPayingAll, setIsPayingAll] = useState(false);
   const [payingInvoiceId, setPayingInvoiceId] = useState<string | null>(null);
   const [payoutingInvoiceId, setPayoutingInvoiceId] = useState<string | null>(null);
@@ -838,6 +840,14 @@ export default function AgencyDashboardPage() {
             {workspaceType === "agency" && (
               <>
                 <button
+                  onClick={() => router.push("/agencydashboard/agencybanking")}
+                  className="px-3.5 py-1.5 rounded-full text-xs font-bold bg-emerald-600/90 hover:bg-emerald-600 text-white shadow-sm hover:shadow-emerald-500/20 border border-emerald-400/30 transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Landmark className="h-3.5 w-3.5 text-emerald-200" />
+                  Agency Banking
+                </button>
+                <div className="h-4 w-[1px] bg-white/20" />
+                <button
                   onClick={() => router.push("/dashboard")}
                   className="text-xs font-semibold text-[#8f8f8f] hover:text-white transition-colors flex items-center gap-1"
                 >
@@ -882,7 +892,7 @@ export default function AgencyDashboardPage() {
             {workspaceType === "brand" ? (
               <>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-[#4B6BFB] bg-[#4B6BFB]/10 px-2 py-0.5 rounded">Active Campaign</span>
+                  <span className="text-xs font-bold text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded">Active Campaign</span>
                   <span className="text-xs text-neutral-400 font-mono">ID: ADIDAS-2026-Q3</span>
                 </div>
                 <h1 className="text-2xl font-bold text-white mt-1 tracking-tight">Adidas Executive Billing</h1>
@@ -993,7 +1003,7 @@ export default function AgencyDashboardPage() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 pb-3 border-b border-[#222] gap-3">
               <div className="flex items-center gap-3">
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-neutral-900 border border-[#3a3a3a] p-1.5">
-                  <FileText className="h-4 w-4 text-[#4B6BFB]" />
+                  <FileText className="h-4 w-4 text-emerald-400" />
                 </div>
                 <div className="text-left">
                   <div className="flex items-center gap-2">
@@ -1022,7 +1032,7 @@ export default function AgencyDashboardPage() {
                         type="checkbox"
                         checked={selectedPendingIds.length === pendingInvoices.length && pendingInvoices.length > 0}
                         onChange={handleSelectAllPending}
-                        className="rounded border-neutral-700 bg-black text-[#4B6BFB] focus:ring-0 cursor-pointer"
+                        className="rounded border-neutral-700 bg-black text-emerald-400 focus:ring-0 cursor-pointer"
                       />
                       <span>Select All ({pendingInvoices.length})</span>
                     </button>
@@ -1102,7 +1112,7 @@ export default function AgencyDashboardPage() {
                                 type="checkbox"
                                 checked={isSelected}
                                 onChange={() => handleTogglePendingSelect(inv.id)}
-                                className="h-3.5 w-3.5 rounded border-neutral-700 bg-black text-[#4B6BFB] focus:ring-0 cursor-pointer"
+                                className="h-3.5 w-3.5 rounded border-neutral-700 bg-black text-emerald-400 focus:ring-0 cursor-pointer"
                               />
                             </td>
                           )}
@@ -1241,7 +1251,7 @@ export default function AgencyDashboardPage() {
                               <button
                                 type="button"
                                 onClick={() => router.push(`/payout/${inv.id}?returnTo=dashboard`)}
-                                className="h-6 px-2.5 bg-[#4B6BFB] text-white hover:bg-[#5b7bfb] font-bold rounded text-[9px] transition-all cursor-pointer inline-flex items-center justify-center active:scale-[0.98]"
+                                className="h-6 px-2.5 bg-emerald-500 text-black hover:bg-emerald-600 font-bold rounded text-[9px] transition-all cursor-pointer inline-flex items-center justify-center active:scale-[0.98]"
                               >
                                 Payout Talent (85%)
                               </button>
@@ -1359,8 +1369,8 @@ export default function AgencyDashboardPage() {
                                activeInvoice.status === "awaiting_approval"
                                  ? "bg-white/[0.02] border border-white/20 text-neutral-500 cursor-default"
                                  : activeInvoice.status === "settled"
-                                 ? "bg-[#4B6BFB] hover:bg-[#5b7bfb] text-white cursor-pointer"
-                                 : "bg-[#4B6BFB]/10 border border-[#4B6BFB]/20 text-[#4B6BFB] cursor-default"
+                                 ? "bg-emerald-500 hover:bg-emerald-600 text-black cursor-pointer"
+                                 : "bg-emerald-950/60 border border-emerald-800/40 text-emerald-400 cursor-default"
                              }`}
                            >
                              {activeInvoice.status === "awaiting_approval" && (
@@ -1371,13 +1381,13 @@ export default function AgencyDashboardPage() {
                              )}
                              {activeInvoice.status === "settled" && (
                                <>
-                                 <Sparkles className="h-4.5 w-4.5 text-white" />
+                                 <Sparkles className="h-4.5 w-4.5 text-black" />
                                  Payout Talent (Split)
                                </>
                              )}
                              {activeInvoice.status === "talent_disbursed" && (
                                <>
-                                 <CheckCircle2 className="h-4.5 w-4.5 text-[#4B6BFB]" />
+                                 <CheckCircle2 className="h-4.5 w-4.5 text-emerald-400" />
                                  Talent Disbursed
                                </>
                              )}
@@ -1387,7 +1397,7 @@ export default function AgencyDashboardPage() {
 
                        {processingStage !== "idle" && (
                          <div className="w-full h-12 rounded-xl border border-white/20 bg-[#0A0A0A] text-xs font-bold text-[#8f8f8f] flex items-center justify-center gap-3 shadow-inner">
-                           <RefreshCw className="h-4 w-4 animate-spin text-[#4B6BFB]" />
+                           <RefreshCw className="h-4 w-4 animate-spin text-emerald-400" />
                            {processingStage === "verifying" && "Verifying corporate treasury clearance..."}
                            {processingStage === "routing" && "Auto-routing splits to Wallet IDs..."}
                            {processingStage === "success" && "Settlement complete!"}
@@ -1425,7 +1435,7 @@ export default function AgencyDashboardPage() {
                   </div>
 
                   <div className="mt-3 max-w-sm">
-                    <div className="p-4 bg-black border border-white/20 rounded-xl shadow-sm hover:border-[#4B6BFB]/30 transition-all relative overflow-hidden">
+                    <div className="p-4 bg-black border border-white/20 rounded-xl shadow-sm hover:border-emerald-500/30 transition-all relative overflow-hidden">
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex items-center gap-3 min-w-0">
                           <img
@@ -1587,7 +1597,7 @@ export default function AgencyDashboardPage() {
                     <div className="min-w-0">
                       <p className="text-xs font-bold text-white">{step.label}</p>
                       <p className="text-[10px] text-[#8f8f8f] leading-tight mt-0.5">{step.desc}</p>
-                      <p className="text-[10px] font-bold text-[#4B6BFB] mt-1">{step.date}</p>
+                      <p className="text-[10px] font-bold text-emerald-400 mt-1">{step.date}</p>
                     </div>
                   </div>
                 ))}

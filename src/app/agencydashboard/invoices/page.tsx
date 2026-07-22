@@ -287,7 +287,7 @@ export default function InvoicesQueuePage() {
               >
                 {tab.label}
                 {tab.id === "awaiting_approval" && (
-                  <span className="ml-1.5 px-1.5 py-0.5 rounded bg-[#4B6BFB]/10 text-[#4B6BFB] text-[10px] font-bold">
+                  <span className="ml-1.5 px-1.5 py-0.5 rounded bg-[#10b981]/10 text-[#10b981] text-[10px] font-bold">
                     {invoices.filter(i => i.status === "awaiting_approval").length}
                   </span>
                 )}

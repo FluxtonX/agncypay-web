@@ -40,6 +40,7 @@ import {
   Link2Off,
   Plug,
   Wallet,
+  Landmark
 } from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import { subscribeInvoicesByBrand, subscribeInvoicesByAgency, updateInvoiceStatus, createFirestoreInvoice, getRegisteredBrands, getRegisteredTalents, getRegisteredTalentsByAgency, recordFirestoreDeposit } from "../../lib/firebaseInvoices";
@@ -1173,6 +1174,14 @@ export default function BrandDashboardPage() {
           <div className="flex items-center gap-3">
             {workspaceType === "agency" && (
               <>
+                <button
+                  onClick={() => router.push("/agencydashboard/agencybanking")}
+                  className="px-3.5 py-1.5 rounded-full text-xs font-bold bg-emerald-600/90 hover:bg-emerald-600 text-white shadow-sm hover:shadow-emerald-500/20 border border-emerald-400/30 transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Landmark className="h-3.5 w-3.5 text-emerald-200" />
+                  Agency Banking
+                </button>
+                <div className="h-4 w-[1px] bg-white/20" />
                 <button
                   onClick={() => router.push("/dashboard")}
                   className="text-xs font-semibold text-[#8f8f8f] hover:text-white transition-colors flex items-center gap-1"
