@@ -45,6 +45,7 @@ import {
 import { useApp } from "../../context/AppContext";
 import { subscribeInvoicesByBrand, subscribeInvoicesByAgency, updateInvoiceStatus, createFirestoreInvoice, getRegisteredBrands, getRegisteredTalents, getRegisteredTalentsByAgency, recordFirestoreDeposit } from "../../lib/firebaseInvoices";
 import { FirestoreUser } from "../../lib/firebaseAuth";
+import { BatchPaymentCheckoutModal } from "../../components/payment/BatchPaymentCheckoutModal";
 
 // Refactored Data Models
 interface SplitItem {
@@ -2013,76 +2014,13 @@ export default function BrandDashboardPage() {
         )}
       </AnimatePresence>
 
-      {/* Embedded Checkout Modal */}
-      {isCheckoutOpen && (
-        <div className="fixed inset-0 z-[100] flex justify-end text-black">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => !isProcessing && setIsCheckoutOpen(false)}></div>
-          <div className="relative w-full md:w-[500px] h-full bg-[#F8FAFC] shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
-            <div className="h-20 border-b border-black/5 flex items-center justify-between px-8 bg-white shrink-0">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-[#0F172A] flex items-center justify-center shadow-md">
-                  <ShieldCheck className="w-5 h-5 text-[#38BDF8]" />
-                </div>
-                <div>
-                  <h2 className="text-[16px] font-bold text-[#0F172A] leading-tight">AGNCYPay Checkout</h2>
-                  <p className="text-[12px] text-[#64748B] font-medium">Secure embedded payment</p>
-                </div>
-              </div>
-              <button disabled={isProcessing} onClick={() => setIsCheckoutOpen(false)} className="p-2 text-[#64748B] hover:text-[#0F172A] hover:bg-black/5 rounded-full">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="flex-1 overflow-y-auto p-8">
-              <div className="mb-8">
-                <h3 className="text-[13px] font-bold uppercase tracking-wider text-[#64748B] mb-4">Payment Summary</h3>
-                <div className="bg-white rounded-2xl border border-black/5 p-5 shadow-sm">
-                  {widgetInvoices.filter(i => selectedIds.includes(i.id)).map(inv => (
-                    <div key={inv.id} className="flex justify-between items-center text-sm mb-3">
-                      <div className="flex flex-col">
-                        <span className="font-semibold">{inv.agency}</span>
-                        <span className="text-[#64748B] text-xs font-mono">{inv.id.substring(0,8)}</span>
-                      </div>
-                      <span className="font-semibold">${(inv.amount * 1.015).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                    </div>
-                  ))}
-                  <div className="pt-4 border-t border-black/5 flex justify-between items-center">
-                    <span className="font-bold">Total to Pay</span>
-                    <span className="text-xl font-black">${widgetInvoices.filter(i => selectedIds.includes(i.id)).reduce((sum, inv) => sum + (inv.amount * 1.015), 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="mb-8">
-                <h3 className="text-[13px] font-bold uppercase tracking-wider text-[#64748B] mb-4">Payment Method</h3>
-                <div className="grid grid-cols-2 gap-3">
-                  {["ACH", "Wire", "RTP", "USDC"].map(rail => (
-                    <button key={rail} onClick={() => setPaymentRail(rail)} className={`p-4 rounded-xl border text-left transition-all ${paymentRail === rail ? "border-[#0F172A] bg-white shadow-md ring-1 ring-[#0F172A]" : "border-black/10 hover:bg-white"}`}>
-                      <div className="font-bold text-sm text-[#0F172A]">{rail}</div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-              
-              <div className="mb-8">
-                <h3 className="text-[13px] font-bold uppercase tracking-wider text-[#64748B] mb-4">Payment Terms</h3>
-                <div className="bg-white p-1 rounded-xl border border-black/5 flex shadow-sm">
-                  {["Pay Now", "Net-30", "Net-60", "Installments"].map(term => (
-                    <button key={term} onClick={() => setPaymentTerm(term)} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${paymentTerm === term ? "bg-[#0F172A] text-white shadow-md" : "text-[#64748B] hover:text-[#0F172A]"}`}>
-                      {term}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-            
-            <div className="p-8 bg-white border-t border-black/5 shrink-0">
-              <button onClick={handleProcessPayment} disabled={isProcessing || isSuccess} className={`w-full h-14 rounded-xl font-bold text-[15px] flex items-center justify-center gap-2 transition-all shadow-lg ${isSuccess ? "bg-emerald-500 text-white" : "bg-[#0F172A] text-white hover:-translate-y-0.5"}`}>
-                {isProcessing ? <><Loader2 className="w-5 h-5 animate-spin" /> Processing...</> : isSuccess ? <><Check className="w-5 h-5" /> Successful</> : <>Authorize Payment</>}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Bilt-Style High-Contrast Batch Payment Checkout Overlay */}
+      <BatchPaymentCheckoutModal
+        isOpen={isCheckoutOpen}
+        onClose={() => setIsCheckoutOpen(false)}
+        selectedInvoices={widgetInvoices.filter(i => selectedIds.includes(i.id))}
+        onAuthorizePayment={handleProcessPayment}
+      />
 
 
       {/* Brand Deposit Modal */}

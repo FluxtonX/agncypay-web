@@ -282,7 +282,7 @@ function MetricCard({
   );
 }
 
-export default async function PlatformIncomePage(props: PageProps<"/dashboard/income/[platform]">) {
+export default async function PlatformIncomePage(props: { params: Promise<{ platform: string }> }) {
   const { platform: platformSlug } = await props.params;
   const platform = platformAnalytics[platformSlug as PlatformKey];
 
