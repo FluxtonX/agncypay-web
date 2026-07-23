@@ -2,10 +2,24 @@ import { NextRequest, NextResponse } from "next/server";
 
 const CLIENT_ID = process.env.XERO_CLIENT_ID!;
 const CLIENT_SECRET = process.env.XERO_CLIENT_SECRET!;
-const REDIRECT_URI = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/auth/xero/callback`;
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+
+function getAppUrl(request: NextRequest): string {
+  if (process.env.NEXT_PUBLIC_APP_URL && !process.env.NEXT_PUBLIC_APP_URL.includes("localhost")) {
+    return process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, "");
+  }
+  if (request.nextUrl?.origin && !request.nextUrl.origin.includes("localhost")) {
+    return request.nextUrl.origin;
+  }
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
+  }
+  return (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000").replace(/\/$/, "");
+}
 
 export async function GET(request: NextRequest) {
+  const appUrl = getAppUrl(request);
+  const redirectUri = `${appUrl}/api/auth/xero/callback`;
+
   const { searchParams } = new URL(request.url);
   const returnTo = request.cookies.get("xero_return_to")?.value || "/dashboard/invoices";
 
@@ -14,16 +28,16 @@ export async function GET(request: NextRequest) {
   const error = searchParams.get("error");
 
   if (error) {
-    return NextResponse.redirect(`${APP_URL}${returnTo}?xero_error=${encodeURIComponent(error)}`);
+    return NextResponse.redirect(`${appUrl}${returnTo}?xero_error=${encodeURIComponent(error)}`);
   }
 
   if (!code) {
-    return NextResponse.redirect(`${APP_URL}${returnTo}?xero_error=missing_params`);
+    return NextResponse.redirect(`${appUrl}${returnTo}?xero_error=missing_params`);
   }
 
   const savedState = request.cookies.get("xero_oauth_state")?.value;
   if (state && savedState && state !== savedState) {
-    return NextResponse.redirect(`${APP_URL}${returnTo}?xero_error=state_mismatch`);
+    return NextResponse.redirect(`${appUrl}${returnTo}?xero_error=state_mismatch`);
   }
 
   try {
@@ -39,14 +53,14 @@ export async function GET(request: NextRequest) {
       body: new URLSearchParams({
         grant_type: "authorization_code",
         code,
-        redirect_uri: REDIRECT_URI,
+        redirect_uri: redirectUri,
       }),
     });
 
     if (!tokenResponse.ok) {
       const errText = await tokenResponse.text();
       console.error("[Xero Callback] Token exchange failed:", errText);
-      return NextResponse.redirect(`${APP_URL}${returnTo}?xero_error=token_exchange_failed`);
+      return NextResponse.redirect(`${appUrl}${returnTo}?xero_error=token_exchange_failed`);
     }
 
     const tokenData = await tokenResponse.json();
@@ -62,17 +76,17 @@ export async function GET(request: NextRequest) {
 
     if (!connectionsResponse.ok) {
       console.error("[Xero Callback] Failed to fetch connections:", await connectionsResponse.text());
-      return NextResponse.redirect(`${APP_URL}${returnTo}?xero_error=connections_failed`);
+      return NextResponse.redirect(`${appUrl}${returnTo}?xero_error=connections_failed`);
     }
 
     const connectionsData = await connectionsResponse.json();
     if (!connectionsData || connectionsData.length === 0) {
-      return NextResponse.redirect(`${APP_URL}${returnTo}?xero_error=no_tenant_found`);
+      return NextResponse.redirect(`${appUrl}${returnTo}?xero_error=no_tenant_found`);
     }
 
     const tenantId = connectionsData[0].tenantId;
 
-    const redirectResponse = NextResponse.redirect(`${APP_URL}${returnTo}?xero_connected=true`);
+    const redirectResponse = NextResponse.redirect(`${appUrl}${returnTo}?xero_connected=true`);
 
     const cookieOpts = {
       httpOnly: true,
@@ -103,6 +117,6 @@ export async function GET(request: NextRequest) {
     return redirectResponse;
   } catch (err) {
     console.error("[Xero Callback] Unexpected error:", err);
-    return NextResponse.redirect(`${APP_URL}${returnTo}?xero_error=server_error`);
+    return NextResponse.redirect(`${appUrl}${returnTo}?xero_error=server_error`);
   }
 }

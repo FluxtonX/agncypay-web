@@ -1508,52 +1508,54 @@ export default function BrandDashboardPage() {
         {/* Right Column - Queue and History Ledger (Narrower) */}
         <div id="approval-queue-section" className="lg:col-span-4 space-y-6">
           
-          {/* Brand Treasury Balance & Deposit Section */}
-          <div className="bg-[#050505] rounded-xl border border-white/10 p-5 shadow-sm space-y-4">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="text-sm font-bold uppercase tracking-wider text-neutral-400">Brand Treasury Balance</h3>
-                  <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">
-                    Active Liquidity
-                  </span>
+          {/* Brand Treasury Balance & Deposit Section (Brand Side Only) */}
+          {workspaceType === "brand" && (
+            <div className="bg-[#050505] rounded-xl border border-white/10 p-5 shadow-sm space-y-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-bold uppercase tracking-wider text-neutral-400">Brand Treasury Balance</h3>
+                    <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">
+                      Active Liquidity
+                    </span>
+                  </div>
+                  <p className="text-2xl font-black text-white mt-1 font-mono">
+                    ${depositedBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </p>
+                  <p className="text-xs text-neutral-400 mt-0.5">Available for instant invoice settlement & automated payouts.</p>
                 </div>
-                <p className="text-2xl font-black text-white mt-1 font-mono">
-                  ${depositedBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </p>
-                <p className="text-xs text-neutral-400 mt-0.5">Available for instant invoice settlement & automated payouts.</p>
+                <button
+                  onClick={() => setIsDepositModalOpen(true)}
+                  className="py-2.5 px-4 rounded-xl bg-white text-black font-bold text-xs flex items-center justify-center gap-2 hover:bg-neutral-200 transition-all shadow-md active:scale-[0.99] cursor-pointer shrink-0"
+                >
+                  <Plus className="h-4 w-4 text-black" />
+                  Deposit Funds
+                </button>
               </div>
-              <button
-                onClick={() => setIsDepositModalOpen(true)}
-                className="py-2.5 px-4 rounded-xl bg-white text-black font-bold text-xs flex items-center justify-center gap-2 hover:bg-neutral-200 transition-all shadow-md active:scale-[0.99] cursor-pointer shrink-0"
-              >
-                <Plus className="h-4 w-4 text-black" />
-                Deposit Funds
-              </button>
-            </div>
 
-            <div className="pt-3 border-t border-white/10 flex items-center justify-between gap-2 text-xs">
-              <div className="flex items-center gap-2">
-                <span className="text-neutral-500 font-medium">Quick Deposit:</span>
-                {["1000", "5000", "10000"].map((amt) => (
-                  <button
-                    key={amt}
-                    onClick={() => {
-                      setDepositAmount(amt);
-                      setIsDepositModalOpen(true);
-                    }}
-                    className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-neutral-300 font-bold hover:bg-white/10 hover:text-white transition-all cursor-pointer"
-                  >
-                    +${parseInt(amt).toLocaleString()}
-                  </button>
-                ))}
+              <div className="pt-3 border-t border-white/10 flex items-center justify-between gap-2 text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="text-neutral-500 font-medium">Quick Deposit:</span>
+                  {["1000", "5000", "10000"].map((amt) => (
+                    <button
+                      key={amt}
+                      onClick={() => {
+                        setDepositAmount(amt);
+                        setIsDepositModalOpen(true);
+                      }}
+                      className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-neutral-300 font-bold hover:bg-white/10 hover:text-white transition-all cursor-pointer"
+                    >
+                      +${parseInt(amt).toLocaleString()}
+                    </button>
+                  ))}
+                </div>
+                <span className="text-[11px] text-emerald-400 font-semibold flex items-center gap-1">
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  100% FDIC Insured
+                </span>
               </div>
-              <span className="text-[11px] text-emerald-400 font-semibold flex items-center gap-1">
-                <CheckCircle2 className="h-3.5 w-3.5" />
-                100% FDIC Insured
-              </span>
             </div>
-          </div>
+          )}
 
           {/* Integrations Widget */}
           <div className="bg-[#050505] rounded-xl border border-white/10 p-5 shadow-sm">
@@ -1584,77 +1586,57 @@ export default function BrandDashboardPage() {
               </div>
             )}
             
-            <div className="flex items-center justify-between gap-2 mt-6">
-              {/* Sage tile — pre-connected look */}
-              <div className="flex flex-col items-center gap-2">
-                <div className="w-14 h-14 rounded-xl bg-[#00d053] flex items-center justify-center cursor-pointer hover:opacity-90 transition-opacity border border-[#00d053]/50">
-                  <span className="text-white font-bold text-lg tracking-tight leading-none" style={{ fontFamily: 'Georgia, serif' }}>Sage</span>
-                </div>
-                <span className="text-[11px] font-semibold text-neutral-400">Sage</span>
-              </div>
-              
-              {/* Render connected integrations dynamically */}
-              {connectedIntegration === "quickbooks" && (
-                <div className="flex flex-col items-center gap-2">
-                  <div
-                    className="w-14 h-14 rounded-xl flex items-center justify-center cursor-pointer border-2 border-[#2CA01C] bg-[#0a1f0a] relative"
-                    onClick={() => setIsIntegrationsOpen(true)}
-                    title="QuickBooks Connected"
-                  >
-                    <span className="text-white font-black text-[13px]">QB</span>
-                    <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-[#4ade80] border-2 border-[#050505] animate-pulse" />
-                  </div>
-                  <span className="text-[11px] font-semibold text-[#4ade80]">QB ✓</span>
-                </div>
-              )}
-              {connectedIntegration === "xero" && (
-                <div className="flex flex-col items-center gap-2">
-                  <div
-                    className="w-14 h-14 rounded-xl flex items-center justify-center cursor-pointer border-2 border-[#13B5EA] bg-[#00171f] relative"
-                    onClick={() => setIsIntegrationsOpen(true)}
-                    title="Xero Connected"
-                  >
-                    <span className="text-white font-black text-[18px]">X</span>
-                    <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-[#4ade80] border-2 border-[#050505] animate-pulse" />
-                  </div>
-                  <span className="text-[11px] font-semibold text-[#4ade80]">Xero ✓</span>
-                </div>
-              )}
-              
-              {/* + Connect button always available to add more */}
-              <div
-                className="flex flex-col items-center gap-2 cursor-pointer"
-                onClick={() => setIsIntegrationsOpen(true)}
-              >
-                <div className="w-14 h-14 rounded-xl border border-dashed border-white/30 flex items-center justify-center hover:bg-white/5 hover:border-white/60 transition-all group">
-                  <Plus className="w-5 h-5 text-neutral-500 group-hover:text-white transition-colors" />
-                </div>
-                <span className="text-[11px] font-semibold text-neutral-400 group-hover:text-white">Connect</span>
-              </div>
-              
-              <div className="flex flex-col items-center gap-2">
-                <div className="w-14 h-14 rounded-xl border border-white/10 bg-white/[0.02] flex items-center justify-center cursor-default">
-                  <span className="text-[10px] font-bold text-neutral-600">N/A</span>
-                </div>
-                <span className="text-[11px] font-semibold text-neutral-600">N/A</span>
-              </div>
+            {(() => {
+              const connectedList: { id: string; name: string; logo: string; label: string }[] = [];
+              if (connectedIntegration === "quickbooks") {
+                connectedList.push({ id: "quickbooks", name: "QuickBooks", logo: "/quickbook.png", label: "QB ✓" });
+              }
+              if (connectedIntegration === "xero") {
+                connectedList.push({ id: "xero", name: "Xero", logo: "/xero.png", label: "Xero ✓" });
+              }
+              if (connectedIntegration === "sage") {
+                connectedList.push({ id: "sage", name: "Sage", logo: "/sage.png", label: "Sage ✓" });
+              }
 
-              <div className="flex flex-col items-center gap-2">
-                <div className="w-14 h-14 rounded-xl border border-white/10 bg-white/[0.02] flex items-center justify-center cursor-default">
-                  <span className="text-[10px] font-bold text-neutral-600">N/A</span>
-                </div>
-                <span className="text-[11px] font-semibold text-neutral-600">N/A</span>
-              </div>
+              const connectCount = Math.max(1, 5 - connectedList.length);
 
-              {connectedIntegration !== "quickbooks" && connectedIntegration !== "xero" && (
-                <div className="flex flex-col items-center gap-2">
-                  <div className="w-14 h-14 rounded-xl border border-white/10 bg-white/[0.02] flex items-center justify-center cursor-default">
-                    <span className="text-[10px] font-bold text-neutral-600">N/A</span>
-                  </div>
-                  <span className="text-[11px] font-semibold text-neutral-600">N/A</span>
+              return (
+                <div className="grid grid-cols-5 gap-2 mt-6">
+                  {/* Connected Tiles */}
+                  {connectedList.map((item) => (
+                    <div
+                      key={item.id}
+                      onClick={() => setIsIntegrationsOpen(true)}
+                      className="flex flex-col items-center gap-1.5 group cursor-pointer"
+                    >
+                      <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl border border-emerald-500 bg-emerald-950/40 flex items-center justify-center p-2 transition-all shadow-md relative">
+                        <img src={item.logo} alt={item.name} className="w-8 h-8 object-contain" />
+                        <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-emerald-400 border-2 border-[#050505] animate-pulse" />
+                      </div>
+                      <span className="text-[11px] font-bold text-[#4ade80] truncate max-w-full">
+                        {item.label}
+                      </span>
+                    </div>
+                  ))}
+
+                  {/* + Connect Tiles (Fills remaining slots up to 5 total) */}
+                  {Array.from({ length: connectCount }).map((_, index) => (
+                    <div
+                      key={`connect-slot-${index}`}
+                      className="flex flex-col items-center gap-1.5 cursor-pointer group"
+                      onClick={() => setIsIntegrationsOpen(true)}
+                    >
+                      <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl border border-dashed border-white/30 flex items-center justify-center group-hover:bg-white/5 group-hover:border-white/60 transition-all shadow-md">
+                        <Plus className="w-5 h-5 text-neutral-400 group-hover:text-white transition-colors" />
+                      </div>
+                      <span className="text-[11px] font-semibold text-neutral-400 group-hover:text-white truncate max-w-full">
+                        Connect
+                      </span>
+                    </div>
+                  ))}
                 </div>
-              )}
-            </div>
+              );
+            })()}
           </div>
 
           {/* Connected Banking Feeds */}

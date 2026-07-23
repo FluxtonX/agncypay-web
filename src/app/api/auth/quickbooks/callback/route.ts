@@ -2,10 +2,24 @@ import { NextRequest, NextResponse } from "next/server";
 
 const CLIENT_ID = process.env.QUICKBOOKS_CLIENT_ID!;
 const CLIENT_SECRET = process.env.QUICKBOOKS_CLIENT_SECRET!;
-const REDIRECT_URI = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/auth/quickbooks/callback`;
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+
+function getAppUrl(request: NextRequest): string {
+  if (process.env.NEXT_PUBLIC_APP_URL && !process.env.NEXT_PUBLIC_APP_URL.includes("localhost")) {
+    return process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, "");
+  }
+  if (request.nextUrl?.origin && !request.nextUrl.origin.includes("localhost")) {
+    return request.nextUrl.origin;
+  }
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
+  }
+  return (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000").replace(/\/$/, "");
+}
 
 export async function GET(request: NextRequest) {
+  const appUrl = getAppUrl(request);
+  const redirectUri = `${appUrl}/api/auth/quickbooks/callback`;
+
   const { searchParams } = new URL(request.url);
   const returnTo = request.cookies.get("qb_return_to")?.value || "/dashboard/invoices";
 
@@ -17,13 +31,13 @@ export async function GET(request: NextRequest) {
   // Handle user denying access
   if (error) {
     return NextResponse.redirect(
-      `${APP_URL}${returnTo}?qb_error=${encodeURIComponent(error)}`
+      `${appUrl}${returnTo}?qb_error=${encodeURIComponent(error)}`
     );
   }
 
   if (!code || !realmId) {
     return NextResponse.redirect(
-      `${APP_URL}${returnTo}?qb_error=missing_params`
+      `${appUrl}${returnTo}?qb_error=missing_params`
     );
   }
 
@@ -31,7 +45,7 @@ export async function GET(request: NextRequest) {
   const savedState = request.cookies.get("qb_oauth_state")?.value;
   if (state && savedState && state !== savedState) {
     return NextResponse.redirect(
-      `${APP_URL}${returnTo}?qb_error=state_mismatch`
+      `${appUrl}${returnTo}?qb_error=state_mismatch`
     );
   }
 
@@ -49,7 +63,7 @@ export async function GET(request: NextRequest) {
       body: new URLSearchParams({
         grant_type: "authorization_code",
         code,
-        redirect_uri: REDIRECT_URI,
+        redirect_uri: redirectUri,
       }),
     });
 
@@ -57,7 +71,7 @@ export async function GET(request: NextRequest) {
       const errText = await tokenResponse.text();
       console.error("[QB Callback] Token exchange failed:", errText);
       return NextResponse.redirect(
-        `${APP_URL}${returnTo}?qb_error=token_exchange_failed`
+        `${appUrl}${returnTo}?qb_error=token_exchange_failed`
       );
     }
 
@@ -66,7 +80,7 @@ export async function GET(request: NextRequest) {
 
     // Build redirect response and store tokens in secure cookies
     const redirectResponse = NextResponse.redirect(
-      `${APP_URL}${returnTo}?qb_connected=true&realm_id=${realmId}`
+      `${appUrl}${returnTo}?qb_connected=true&realm_id=${realmId}`
     );
 
     const cookieOpts = {
@@ -100,7 +114,7 @@ export async function GET(request: NextRequest) {
   } catch (err) {
     console.error("[QB Callback] Unexpected error:", err);
     return NextResponse.redirect(
-      `${APP_URL}${returnTo}?qb_error=server_error`
+      `${appUrl}${returnTo}?qb_error=server_error`
     );
   }
 }

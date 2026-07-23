@@ -1,11 +1,51 @@
 import { NextRequest, NextResponse } from "next/server";
 
 const CLIENT_ID = process.env.QUICKBOOKS_CLIENT_ID!;
-const REDIRECT_URI = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/auth/quickbooks/callback`;
 
 const SCOPES = [
   "com.intuit.quickbooks.accounting",
 ].join(" ");
+
+function getAppUrl(request: NextRequest): string {
+  if (process.env.NEXT_PUBLIC_APP_URL && !process.env.NEXT_PUBLIC_APP_URL.includes("localhost")) {
+    return process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, "");
+  }
+  if (request.nextUrl?.origin && !request.nextUrl.origin.includes("localhost")) {
+    return request.nextUrl.origin;
+  }
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
+  }
+  return (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000").replace(/\/$/, "");
+}
+
+function getReturnToPath(request: NextRequest): string {
+  // 1. Explicit query param
+  const queryReturnTo = request.nextUrl.searchParams.get("returnTo");
+  if (queryReturnTo && queryReturnTo.startsWith("/")) {
+    return queryReturnTo;
+  }
+
+  // 2. HTTP referer header
+  const referer = request.headers.get("referer") || "";
+  if (referer) {
+    try {
+      const refererUrl = new URL(referer);
+      const pathname = refererUrl.pathname;
+      if (pathname && pathname.startsWith("/") && !pathname.includes("/api/auth")) {
+        return pathname + refererUrl.search;
+      }
+    } catch {
+      // ignore
+    }
+    if (referer.includes("/agencydashboard/agencybanking")) return "/agencydashboard/agencybanking";
+    if (referer.includes("/agencydashboard")) return "/agencydashboard";
+    if (referer.includes("/branddashboard")) return "/branddashboard";
+    if (referer.includes("/dashboard/invoices")) return "/dashboard/invoices";
+  }
+
+  return "/branddashboard";
+}
 
 export async function GET(request: NextRequest) {
   if (!CLIENT_ID) {
@@ -15,15 +55,20 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  const appUrl = getAppUrl(request);
+  const redirectUri = `${appUrl}/api/auth/quickbooks/callback`;
+  const returnToPath = getReturnToPath(request);
+
   // Debug: print exact values being sent to Intuit
   console.log("[QB Connect] CLIENT_ID:", CLIENT_ID);
-  console.log("[QB Connect] REDIRECT_URI:", REDIRECT_URI);
+  console.log("[QB Connect] REDIRECT_URI:", redirectUri);
+  console.log("[QB Connect] RETURN_TO:", returnToPath);
 
   const state = crypto.randomUUID();
 
   const params = new URLSearchParams({
     client_id: CLIENT_ID,
-    redirect_uri: REDIRECT_URI,
+    redirect_uri: redirectUri,
     scope: SCOPES,
     response_type: "code",
     access_type: "offline",
@@ -43,15 +88,8 @@ export async function GET(request: NextRequest) {
     sameSite: "lax",
   });
 
-  // Store the referer so we know where to redirect back
-  // (we read this from the headers since it's a GET request initiated via window.location.href)
-  const headersList = request.headers;
-  const referer = headersList.get("referer") || "";
-  if (referer.includes("/branddashboard")) {
-    response.cookies.set("qb_return_to", "/branddashboard", { path: "/" });
-  } else {
-    response.cookies.set("qb_return_to", "/dashboard/invoices", { path: "/" });
-  }
+  // Store the return_to path dynamically based on referer / query param
+  response.cookies.set("qb_return_to", returnToPath, { path: "/" });
 
   return response;
 }

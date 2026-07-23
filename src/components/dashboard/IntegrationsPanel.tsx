@@ -84,66 +84,57 @@ export function IntegrationsPanel() {
           </div>
         )}
 
-        <div className="grid grid-cols-4 gap-4 pt-2">
-          {/* QuickBooks Logo Tile */}
-          <div
-            onClick={() => setIsIntegrationsOpen(true)}
-            className="flex flex-col items-center gap-2 group cursor-pointer"
-          >
-            <div className={`w-14 h-14 rounded-2xl border flex items-center justify-center p-2.5 transition-all shadow-md relative ${
-              connectedIntegration === "quickbooks"
-                ? "border-emerald-500 bg-emerald-950/40"
-                : "border-white/10 bg-white/5 group-hover:border-white/30"
-            }`}>
-              <img src="/quickbook.png" alt="QuickBooks" className="w-9 h-9 object-contain" />
-              {connectedIntegration === "quickbooks" && (
-                <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-emerald-400 border-2 border-[#0D0D0D] animate-pulse" />
-              )}
-            </div>
-            <span className={`text-[11px] font-semibold ${connectedIntegration === "quickbooks" ? "text-emerald-400 font-bold" : "text-[#8f8f8f] group-hover:text-white"}`}>
-              {connectedIntegration === "quickbooks" ? "QB ✓" : "QuickBooks"}
-            </span>
-          </div>
+        {(() => {
+          const connectedList: { id: string; name: string; logo: string; label: string }[] = [];
+          if (connectedIntegration === "quickbooks") {
+            connectedList.push({ id: "quickbooks", name: "QuickBooks", logo: "/quickbook.png", label: "QB ✓" });
+          }
+          if (connectedIntegration === "xero") {
+            connectedList.push({ id: "xero", name: "Xero", logo: "/xero.png", label: "Xero ✓" });
+          }
+          if (connectedIntegration === "sage") {
+            connectedList.push({ id: "sage", name: "Sage", logo: "/sage.png", label: "Sage ✓" });
+          }
 
-          {/* Xero Logo Tile */}
-          <div
-            onClick={() => setIsIntegrationsOpen(true)}
-            className="flex flex-col items-center gap-2 group cursor-pointer"
-          >
-            <div className={`w-14 h-14 rounded-2xl border flex items-center justify-center p-2.5 transition-all shadow-md relative ${
-              connectedIntegration === "xero"
-                ? "border-emerald-500 bg-emerald-950/40"
-                : "border-white/10 bg-white/5 group-hover:border-white/30"
-            }`}>
-              <img src="/xero.png" alt="Xero" className="w-9 h-9 object-contain" />
-              {connectedIntegration === "xero" && (
-                <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-emerald-400 border-2 border-[#0D0D0D] animate-pulse" />
-              )}
-            </div>
-            <span className={`text-[11px] font-semibold ${connectedIntegration === "xero" ? "text-emerald-400 font-bold" : "text-[#8f8f8f] group-hover:text-white"}`}>
-              {connectedIntegration === "xero" ? "Xero ✓" : "Xero"}
-            </span>
-          </div>
+          const connectCount = Math.max(1, 5 - connectedList.length);
 
-          {/* Sage Logo Tile */}
-          <div className="flex flex-col items-center gap-2 group cursor-pointer" onClick={() => setIsIntegrationsOpen(true)}>
-            <div className="w-14 h-14 rounded-2xl border border-white/10 bg-white/5 flex items-center justify-center p-2.5 group-hover:border-white/30 transition-all shadow-md">
-              <img src="/sage.png" alt="Sage" className="w-9 h-9 object-contain" />
-            </div>
-            <span className="text-[11px] font-semibold text-[#8f8f8f] group-hover:text-white">Sage</span>
-          </div>
+          return (
+            <div className="grid grid-cols-5 gap-2 pt-2">
+              {/* Connected Tiles */}
+              {connectedList.map((item) => (
+                <div
+                  key={item.id}
+                  onClick={() => setIsIntegrationsOpen(true)}
+                  className="flex flex-col items-center gap-1.5 group cursor-pointer"
+                >
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl border border-emerald-500 bg-emerald-950/40 flex items-center justify-center p-2 transition-all shadow-md relative">
+                    <img src={item.logo} alt={item.name} className="w-8 h-8 object-contain" />
+                    <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-emerald-400 border-2 border-[#0D0D0D] animate-pulse" />
+                  </div>
+                  <span className="text-[11px] font-bold text-emerald-400 truncate max-w-full">
+                    {item.label}
+                  </span>
+                </div>
+              ))}
 
-          {/* + Connect button */}
-          <div
-            className="flex flex-col items-center gap-2 cursor-pointer group"
-            onClick={() => setIsIntegrationsOpen(true)}
-          >
-            <div className="w-14 h-14 rounded-2xl border border-dashed border-white/30 flex items-center justify-center group-hover:bg-white/5 group-hover:border-emerald-500 transition-all shadow-md">
-              <Plus className="w-5 h-5 text-[#8f8f8f] group-hover:text-emerald-400 transition-colors" />
+              {/* + Connect Tiles (Fills remaining slots up to 5 total) */}
+              {Array.from({ length: connectCount }).map((_, index) => (
+                <div
+                  key={`connect-slot-${index}`}
+                  className="flex flex-col items-center gap-1.5 cursor-pointer group"
+                  onClick={() => setIsIntegrationsOpen(true)}
+                >
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl border border-dashed border-white/30 flex items-center justify-center group-hover:bg-white/5 group-hover:border-emerald-500 transition-all shadow-md">
+                    <Plus className="w-5 h-5 text-[#8f8f8f] group-hover:text-emerald-400 transition-colors" />
+                  </div>
+                  <span className="text-[11px] font-bold text-[#8f8f8f] group-hover:text-white truncate max-w-full">
+                    Connect
+                  </span>
+                </div>
+              ))}
             </div>
-            <span className="text-[11px] font-bold text-[#8f8f8f] group-hover:text-white">Connect</span>
-          </div>
-        </div>
+          );
+        })()}
       </div>
 
       {/* Accounting Modal */}
