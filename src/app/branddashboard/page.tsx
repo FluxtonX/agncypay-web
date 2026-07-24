@@ -150,7 +150,28 @@ export default function BrandDashboardPage() {
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      setIsLightTheme(document.documentElement.classList.contains("light"));
+      const savedTheme = localStorage.getItem("agncypay_theme_brand");
+      if (savedTheme) {
+        if (savedTheme === "light") {
+          document.documentElement.classList.add("light");
+          document.documentElement.classList.remove("dark");
+          setIsLightTheme(true);
+        } else {
+          document.documentElement.classList.add("dark");
+          document.documentElement.classList.remove("light");
+          setIsLightTheme(false);
+        }
+      } else {
+        if (true) {
+          document.documentElement.classList.add("light");
+          document.documentElement.classList.remove("dark");
+          setIsLightTheme(true);
+        } else {
+          document.documentElement.classList.add("dark");
+          document.documentElement.classList.remove("light");
+          setIsLightTheme(false);
+        }
+      }
     }
   }, []);
 
@@ -540,15 +561,41 @@ export default function BrandDashboardPage() {
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      setIsLightTheme(document.documentElement.classList.contains("light"));
+      const savedTheme = localStorage.getItem("agncypay_theme_brand");
+      if (savedTheme) {
+        if (savedTheme === "light") {
+          document.documentElement.classList.add("light");
+          document.documentElement.classList.remove("dark");
+          setIsLightTheme(true);
+        } else {
+          document.documentElement.classList.add("dark");
+          document.documentElement.classList.remove("light");
+          setIsLightTheme(false);
+        }
+      } else {
+        if (true) {
+          document.documentElement.classList.add("light");
+          document.documentElement.classList.remove("dark");
+          setIsLightTheme(true);
+        } else {
+          document.documentElement.classList.add("dark");
+          document.documentElement.classList.remove("light");
+          setIsLightTheme(false);
+        }
+      }
     }
   }, []);
 
   const toggleTheme = () => {
     if (typeof window !== "undefined") {
       const isLight = document.documentElement.classList.toggle("light");
+      if (isLight) {
+        document.documentElement.classList.remove("dark");
+      } else {
+        document.documentElement.classList.add("dark");
+      }
       setIsLightTheme(isLight);
-      localStorage.setItem("agncypay_theme", isLight ? "light" : "dark");
+      localStorage.setItem("agncypay_theme_brand", isLight ? "light" : "dark");
     }
   };
 
@@ -1182,7 +1229,7 @@ export default function BrandDashboardPage() {
               onClick={() => router.push("/branddashboard/nodes")}
               className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#8f8f8f] light:text-[#475569] hover:text-white light:hover:text-[#0F172A] transition-all cursor-pointer"
             >
-              {workspaceType === "brand" ? "Settlement Nodes" : "Payout Split Nodes"}
+              {workspaceType === "brand" ? "Rewards" : "Payout Split Nodes"}
             </button>
             <button 
               onClick={() => router.push("/branddashboard/analytics")}
@@ -1287,7 +1334,7 @@ export default function BrandDashboardPage() {
 
 
           {/* Analytics Cards Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className={`grid grid-cols-2 ${workspaceType === "brand" ? "md:grid-cols-3" : "md:grid-cols-4"} gap-4`}>
             {(() => {
               const paidInvoices = liveFunctionalInvoices.filter(i => 
                 workspaceType === "brand" 
@@ -1316,8 +1363,7 @@ export default function BrandDashboardPage() {
                       count: `${awaitingCount} invoice${awaitingCount !== 1 ? "s" : ""}`,
                       icon: Clock
                     },
-                    { label: "Instant Net-0 Funded", value: `$${displayNet0Funded.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, detail: "AgncyPay liquidity", icon: Coins },
-                    { label: "Autosplit Fee Savings", value: `$${displayAutosplitSavings.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, detail: "Single payment rail", icon: ShieldCheck }
+                    { label: "Reward Points", value: `${Math.floor(displayPaidVolume * 10).toLocaleString()}`, detail: "Earned from payouts", icon: Sparkles }
                   ]
                 : [
                     { label: "Total Billed", value: `$${liveFunctionalInvoices.reduce((a, b) => a + b.amount, 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, trend: "+15.2%", icon: TrendingUp },
@@ -1553,22 +1599,7 @@ export default function BrandDashboardPage() {
                 </button>
               </div>
 
-              <div className="pt-3 border-t border-white/10 flex items-center justify-between gap-2 text-xs">
-                <div className="flex items-center gap-2">
-                  <span className="text-neutral-500 font-medium">Quick Deposit:</span>
-                  {["1000", "5000", "10000"].map((amt) => (
-                    <button
-                      key={amt}
-                      onClick={() => {
-                        setDepositAmount(amt);
-                        setIsDepositModalOpen(true);
-                      }}
-                      className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-neutral-300 font-bold hover:bg-white/10 hover:text-white transition-all cursor-pointer"
-                    >
-                      +${parseInt(amt).toLocaleString()}
-                    </button>
-                  ))}
-                </div>
+              <div className="pt-3 border-t border-white/10 flex items-center justify-end gap-2 text-xs">
                 <span className="text-[11px] text-emerald-400 font-semibold flex items-center gap-1">
                   <CheckCircle2 className="h-3.5 w-3.5" />
                   100% FDIC Insured

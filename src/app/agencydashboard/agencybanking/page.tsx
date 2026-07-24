@@ -335,34 +335,23 @@ export default function AgencyBankingDashboardPage() {
           {/* Navigation Tabs */}
           <nav className="hidden lg:flex items-center gap-1 bg-white/[0.03] p-1 rounded-full border border-white/20">
             <button
-              onClick={() => router.push("/agencydashboard")}
-              className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#8f8f8f] light:text-[#475569] hover:text-white light:hover:text-[#0F172A] transition-all cursor-pointer"
-            >
-              Home
-            </button>
-            <button
-              onClick={() => router.push("/agencydashboard/invoices")}
-              className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#8f8f8f] light:text-[#475569] hover:text-white light:hover:text-[#0F172A] transition-all cursor-pointer"
-            >
-              Sent Invoices
-            </button>
-            <button
+                  onClick={() => router.push("/agencydashboard")}
+                  className="px-3.5 py-1.5 rounded-full text-xs font-bold bg-white light:bg-[#0F172A] text-black light:text-white hover:bg-neutral-200 light:hover:bg-[#1E293B] border border-white/20 light:border-black/10 shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Building2 className="h-3.5 w-3.5" />
+                  Agency Portal
+                </button>
+            <button 
               onClick={() => router.push("/agencydashboard/nodes")}
               className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#8f8f8f] light:text-[#475569] hover:text-white light:hover:text-[#0F172A] transition-all cursor-pointer"
             >
-              Payout Split Nodes
+              {workspaceType === "brand" ? "Settlement Nodes" : "Payout Split Nodes"}
             </button>
-            <button
+            <button 
               onClick={() => router.push("/agencydashboard/analytics")}
               className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#8f8f8f] light:text-[#475569] hover:text-white light:hover:text-[#0F172A] transition-all cursor-pointer"
             >
-              Agency Earnings
-            </button>
-            <button
-              onClick={() => router.push("/agencydashboard/agencybanking")}
-              className="px-4 py-1.5 rounded-full text-xs font-bold bg-white light:bg-[#0F172A] text-black light:text-white shadow-sm border border-white/20 light:border-black/10 transition-all cursor-pointer"
-            >
-              Agency Banking
+              {workspaceType === "brand" ? "Analytics" : "Agency Earnings"}
             </button>
           </nav>
 

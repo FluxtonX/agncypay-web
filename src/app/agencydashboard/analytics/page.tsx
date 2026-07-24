@@ -31,15 +31,41 @@ export default function AnalyticsDashboardPage() {
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      setIsLightTheme(document.documentElement.classList.contains("light"));
+      const savedTheme = localStorage.getItem("agncypay_theme_agency");
+      if (savedTheme) {
+        if (savedTheme === "light") {
+          document.documentElement.classList.add("light");
+          document.documentElement.classList.remove("dark");
+          setIsLightTheme(true);
+        } else {
+          document.documentElement.classList.add("dark");
+          document.documentElement.classList.remove("light");
+          setIsLightTheme(false);
+        }
+      } else {
+        if (true) {
+          document.documentElement.classList.add("light");
+          document.documentElement.classList.remove("dark");
+          setIsLightTheme(true);
+        } else {
+          document.documentElement.classList.add("dark");
+          document.documentElement.classList.remove("light");
+          setIsLightTheme(false);
+        }
+      }
     }
   }, []);
 
   const toggleTheme = () => {
     if (typeof window !== "undefined") {
       const isLight = document.documentElement.classList.toggle("light");
+      if (isLight) {
+        document.documentElement.classList.remove("dark");
+      } else {
+        document.documentElement.classList.add("dark");
+      }
       setIsLightTheme(isLight);
-      localStorage.setItem("agncypay_theme", isLight ? "light" : "dark");
+      localStorage.setItem("agncypay_theme_agency", isLight ? "light" : "dark");
     }
   };
 
@@ -106,18 +132,13 @@ export default function AnalyticsDashboardPage() {
           </div>
 
           <nav className="hidden lg:flex items-center gap-1 bg-white/[0.03] p-1 rounded-full border border-white/20">
-            <button 
-              onClick={() => router.push("/agencydashboard")}
-              className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#8f8f8f] light:text-[#475569] hover:text-white light:hover:text-[#0F172A] transition-all cursor-pointer"
-            >
-              Home
-            </button>
-            <button 
-              onClick={() => router.push("/agencydashboard/invoices")}
-              className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#8f8f8f] light:text-[#475569] hover:text-white light:hover:text-[#0F172A] transition-all cursor-pointer"
-            >
-              {workspaceType === "brand" ? "Invoice Queue" : "Sent Invoices"}
-            </button>
+            <button
+                  onClick={() => router.push("/agencydashboard")}
+                  className="px-3.5 py-1.5 rounded-full text-xs font-bold bg-white light:bg-[#0F172A] text-black light:text-white hover:bg-neutral-200 light:hover:bg-[#1E293B] border border-white/20 light:border-black/10 shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Building2 className="h-3.5 w-3.5" />
+                  Agency Portal
+                </button>
             <button 
               onClick={() => router.push("/agencydashboard/nodes")}
               className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#8f8f8f] light:text-[#475569] hover:text-white light:hover:text-[#0F172A] transition-all cursor-pointer"
@@ -136,11 +157,11 @@ export default function AnalyticsDashboardPage() {
             {workspaceType === "agency" && (
               <>
                 <button
-                  onClick={() => router.push("/agencydashboard/agencybanking")}
+                  onClick={() => router.push("/agencydashboard")}
                   className="px-3.5 py-1.5 rounded-full text-xs font-bold bg-white light:bg-[#0F172A] text-black light:text-white hover:bg-neutral-200 light:hover:bg-[#1E293B] border border-white/20 light:border-black/10 shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
                 >
-                  <Landmark className="h-3.5 w-3.5" />
-                  Agency Banking
+                  <Building2 className="h-3.5 w-3.5" />
+                  Agency Portal
                 </button>
                 <div className="h-4 w-[1px] bg-white/20" />
                 <button

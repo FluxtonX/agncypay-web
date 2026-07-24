@@ -30,15 +30,41 @@ export default function AnalyticsDashboardPage() {
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      setIsLightTheme(document.documentElement.classList.contains("light"));
+      const savedTheme = localStorage.getItem("agncypay_theme_brand");
+      if (savedTheme) {
+        if (savedTheme === "light") {
+          document.documentElement.classList.add("light");
+          document.documentElement.classList.remove("dark");
+          setIsLightTheme(true);
+        } else {
+          document.documentElement.classList.add("dark");
+          document.documentElement.classList.remove("light");
+          setIsLightTheme(false);
+        }
+      } else {
+        if (true) {
+          document.documentElement.classList.add("light");
+          document.documentElement.classList.remove("dark");
+          setIsLightTheme(true);
+        } else {
+          document.documentElement.classList.add("dark");
+          document.documentElement.classList.remove("light");
+          setIsLightTheme(false);
+        }
+      }
     }
   }, []);
 
   const toggleTheme = () => {
     if (typeof window !== "undefined") {
       const isLight = document.documentElement.classList.toggle("light");
+      if (isLight) {
+        document.documentElement.classList.remove("dark");
+      } else {
+        document.documentElement.classList.add("dark");
+      }
       setIsLightTheme(isLight);
-      localStorage.setItem("agncypay_theme", isLight ? "light" : "dark");
+      localStorage.setItem("agncypay_theme_brand", isLight ? "light" : "dark");
     }
   };
 
@@ -121,7 +147,7 @@ export default function AnalyticsDashboardPage() {
               onClick={() => router.push("/branddashboard/nodes")}
               className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#8f8f8f] light:text-[#475569] hover:text-white light:hover:text-[#0F172A] transition-all cursor-pointer"
             >
-              Settlement Nodes
+              Rewards
             </button>
             <button 
               onClick={() => router.push("/branddashboard/analytics")}

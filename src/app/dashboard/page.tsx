@@ -790,15 +790,41 @@ export default function DashboardHomePage() {
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      setIsLightTheme(document.documentElement.classList.contains("light"));
+      const savedTheme = localStorage.getItem("agncypay_theme_talent");
+      if (savedTheme) {
+        if (savedTheme === "light") {
+          document.documentElement.classList.add("light");
+          document.documentElement.classList.remove("dark");
+          setIsLightTheme(true);
+        } else {
+          document.documentElement.classList.add("dark");
+          document.documentElement.classList.remove("light");
+          setIsLightTheme(false);
+        }
+      } else {
+        if (false) {
+          document.documentElement.classList.add("light");
+          document.documentElement.classList.remove("dark");
+          setIsLightTheme(true);
+        } else {
+          document.documentElement.classList.add("dark");
+          document.documentElement.classList.remove("light");
+          setIsLightTheme(false);
+        }
+      }
     }
   }, []);
 
   const toggleTheme = () => {
     if (typeof window !== "undefined") {
       const isLight = document.documentElement.classList.toggle("light");
+      if (isLight) {
+        document.documentElement.classList.remove("dark");
+      } else {
+        document.documentElement.classList.add("dark");
+      }
       setIsLightTheme(isLight);
-      localStorage.setItem("agncypay_theme", isLight ? "light" : "dark");
+      localStorage.setItem("agncypay_theme_talent", isLight ? "light" : "dark");
     }
   };
 

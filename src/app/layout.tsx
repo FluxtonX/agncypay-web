@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Plus_Jakarta_Sans, Outfit } from "next/font/google";
 import "./globals.css";
 import { AppProvider } from "@/context/AppContext";
+import ThemeEnforcer from "@/components/ThemeEnforcer";
 
 const plusJakarta = Plus_Jakarta_Sans({
   variable: "--font-plus-jakarta",
@@ -39,10 +40,48 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{
             __html: `
               try {
-                if (localStorage.getItem('agncypay_theme') === 'light') {
-                  document.documentElement.classList.add('light');
-                } else {
+                const path = window.location.pathname;
+                let storageKey = 'agncypay_theme';
+                let defaultTheme = 'dark'; // fallback
+                
+                if (path === '/' || path.startsWith('/auth') || path.startsWith('/onboarding')) {
                   document.documentElement.classList.add('dark');
+                  document.documentElement.classList.remove('light');
+                  return;
+                }
+
+                if (path.includes('/branddashboard')) {
+                  storageKey = 'agncypay_theme_brand';
+                  defaultTheme = 'light';
+                } else if (path.includes('/agencydashboard/agencybanking')) {
+                  storageKey = 'agncypay_theme_agencybanking';
+                  defaultTheme = 'dark';
+                } else if (path.includes('/agencydashboard')) {
+                  storageKey = 'agncypay_theme_agency';
+                  defaultTheme = 'light';
+                } else if (path.includes('/dashboard')) {
+                  storageKey = 'agncypay_theme_talent';
+                  defaultTheme = 'dark';
+                }
+
+                const savedTheme = localStorage.getItem(storageKey);
+                
+                if (savedTheme) {
+                  if (savedTheme === 'light') {
+                    document.documentElement.classList.add('light');
+                    document.documentElement.classList.remove('dark');
+                  } else {
+                    document.documentElement.classList.add('dark');
+                    document.documentElement.classList.remove('light');
+                  }
+                } else {
+                  if (defaultTheme === 'light') {
+                    document.documentElement.classList.add('light');
+                    document.documentElement.classList.remove('dark');
+                  } else {
+                    document.documentElement.classList.add('dark');
+                    document.documentElement.classList.remove('light');
+                  }
                 }
               } catch (_) {}
             `,
@@ -50,6 +89,7 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-full flex flex-col bg-background text-foreground transition-colors duration-200">
+        <ThemeEnforcer />
         <AppProvider>{children}</AppProvider>
       </body>
     </html>

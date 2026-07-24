@@ -94,8 +94,13 @@ export default function InvoiceDetailPage() {
   const toggleTheme = () => {
     if (typeof window !== "undefined") {
       const isLight = document.documentElement.classList.toggle("light");
+      if (isLight) {
+        document.documentElement.classList.remove("dark");
+      } else {
+        document.documentElement.classList.add("dark");
+      }
       setIsLightTheme(isLight);
-      localStorage.setItem("agncypay_theme", isLight ? "light" : "dark");
+      localStorage.setItem("agncypay_theme_brand", isLight ? "light" : "dark");
     }
   };
 
@@ -270,7 +275,7 @@ export default function InvoiceDetailPage() {
               onClick={() => router.push("/branddashboard/nodes")}
               className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#8f8f8f] hover:text-white transition-all cursor-pointer"
             >
-              {workspaceType === "brand" ? "Settlement Nodes" : "Payout Split Nodes"}
+              {workspaceType === "brand" ? "Rewards" : "Payout Split Nodes"}
             </button>
             <button 
               onClick={() => router.push("/branddashboard/analytics")}

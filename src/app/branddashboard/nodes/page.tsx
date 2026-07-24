@@ -33,15 +33,41 @@ export default function NodesDashboardPage() {
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      setIsLightTheme(document.documentElement.classList.contains("light"));
+      const savedTheme = localStorage.getItem("agncypay_theme_brand");
+      if (savedTheme) {
+        if (savedTheme === "light") {
+          document.documentElement.classList.add("light");
+          document.documentElement.classList.remove("dark");
+          setIsLightTheme(true);
+        } else {
+          document.documentElement.classList.add("dark");
+          document.documentElement.classList.remove("light");
+          setIsLightTheme(false);
+        }
+      } else {
+        if (true) {
+          document.documentElement.classList.add("light");
+          document.documentElement.classList.remove("dark");
+          setIsLightTheme(true);
+        } else {
+          document.documentElement.classList.add("dark");
+          document.documentElement.classList.remove("light");
+          setIsLightTheme(false);
+        }
+      }
     }
   }, []);
 
   const toggleTheme = () => {
     if (typeof window !== "undefined") {
       const isLight = document.documentElement.classList.toggle("light");
+      if (isLight) {
+        document.documentElement.classList.remove("dark");
+      } else {
+        document.documentElement.classList.add("dark");
+      }
       setIsLightTheme(isLight);
-      localStorage.setItem("agncypay_theme", isLight ? "light" : "dark");
+      localStorage.setItem("agncypay_theme_brand", isLight ? "light" : "dark");
     }
   };
 
@@ -139,7 +165,7 @@ export default function NodesDashboardPage() {
               onClick={() => router.push("/branddashboard/nodes")}
               className="px-4 py-1.5 rounded-full text-xs font-bold bg-white light:bg-[#0F172A] text-black light:text-white shadow-sm border border-white/20 light:border-black/10 transition-all cursor-pointer"
             >
-              Settlement Nodes
+              Rewards
             </button>
             <button 
               onClick={() => router.push("/branddashboard/analytics")}
@@ -202,7 +228,7 @@ export default function NodesDashboardPage() {
           </Link>
           <span className="text-xs text-neutral-500">/</span>
           <span className="text-xs text-neutral-300 font-semibold">
-            {workspaceType === "brand" ? "Settlement Nodes" : "Payout Split Nodes"}
+            {workspaceType === "brand" ? "Rewards" : "Payout Split Nodes"}
           </span>
         </div>
 
