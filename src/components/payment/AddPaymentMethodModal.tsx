@@ -171,36 +171,36 @@ export function AddPaymentMethodModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-md p-4 animate-in fade-in duration-200">
-      <div className="relative w-full max-w-[540px] rounded-3xl border border-white/20 bg-[#0A0A0A] shadow-2xl overflow-hidden">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 sm:p-6 overflow-y-auto animate-in fade-in duration-200">
+      <div className="relative w-full max-w-[500px] my-auto rounded-2xl border border-white/20 light:border-black/15 bg-[#0A0A0A] light:bg-white shadow-2xl overflow-hidden">
         
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-white/10 px-8 py-5 bg-[#0D0D0D]">
+        <div className="flex items-center justify-between border-b border-white/10 light:border-black/10 px-6 sm:px-8 py-5 bg-[#0D0D0D] light:bg-[#F8FAFC]">
           <div className="flex items-center gap-2.5">
-            <ShieldCheck className="w-5 h-5 text-emerald-400" />
-            <h2 className="text-base font-extrabold text-white tracking-tight">
+            <ShieldCheck className="w-5 h-5 text-[#70ff9e]" />
+            <h2 className="text-base font-extrabold text-white light:text-[#0F172A] tracking-tight">
               Add new payment method
             </h2>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-full text-[#8f8f8f] hover:bg-white/10 hover:text-white transition-colors cursor-pointer"
+            className="flex h-8 w-8 items-center justify-center rounded-full text-[#8f8f8f] hover:bg-white/10 light:hover:bg-black/5 hover:text-white light:hover:text-[#0F172A] transition-colors cursor-pointer"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
 
         {/* Bilt-Style Top Tab Switcher */}
-        <div className="px-8 pt-6">
-          <div className="grid grid-cols-2 p-1.5 rounded-2xl bg-white/[0.04] border border-white/10 text-xs font-semibold">
+        <div className="px-6 sm:px-8 pt-6">
+          <div className="grid grid-cols-2 p-1.5 rounded-2xl bg-white/[0.04] light:bg-black/5 border border-white/10 light:border-black/10 text-xs font-semibold">
             <button
               type="button"
               onClick={() => setActiveTab("card")}
               className={`py-3 rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer ${
                 activeTab === "card"
-                  ? "bg-white text-black font-bold shadow-md"
-                  : "text-[#8f8f8f] hover:text-white"
+                  ? "bg-white light:bg-[#0F172A] text-black light:text-white font-bold shadow-md"
+                  : "text-[#8f8f8f] light:text-[#475569] hover:text-white light:hover:text-[#0F172A]"
               }`}
             >
               <CreditCard className="w-4 h-4" />
@@ -211,8 +211,8 @@ export function AddPaymentMethodModal({
               onClick={() => setActiveTab("bank")}
               className={`py-3 rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer ${
                 activeTab === "bank"
-                  ? "bg-white text-black font-bold shadow-md"
-                  : "text-[#8f8f8f] hover:text-white"
+                  ? "bg-white light:bg-[#0F172A] text-black light:text-white font-bold shadow-md"
+                  : "text-[#8f8f8f] light:text-[#475569] hover:text-white light:hover:text-[#0F172A]"
               }`}
             >
               <Landmark className="w-4 h-4" />
@@ -222,15 +222,15 @@ export function AddPaymentMethodModal({
         </div>
 
         {/* Tab Body */}
-        <div className="p-8">
+        <div className="p-6 sm:px-8 pb-8">
           {activeTab === "card" ? (
             <form onSubmit={handleCardSubmit} className="space-y-5">
               
               {/* Add Card Box matching Bilt layout */}
-              <div className="p-5 rounded-2xl border border-white/10 bg-[#0D0D0D] space-y-4">
+              <div className="p-5 rounded-2xl border border-white/10 light:border-black/10 bg-[#0D0D0D] light:bg-[#F8FAFC] space-y-4">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-xs font-bold text-white">
-                    <CreditCard className="w-4 h-4 text-emerald-400" />
+                  <div className="flex items-center gap-2 text-xs font-bold text-white light:text-[#0F172A]">
+                    <CreditCard className="w-4 h-4 text-[#70ff9e]" />
                     <span>Add Card</span>
                   </div>
                   
@@ -238,13 +238,12 @@ export function AddPaymentMethodModal({
                     <button
                       type="button"
                       onClick={handleFillTestCard}
-                      className="px-2.5 py-1 rounded-full bg-white/10 hover:bg-white/20 text-[11px] font-bold text-white transition-all flex items-center gap-1 cursor-pointer border border-white/15"
+                      className="px-2.5 py-1 rounded-full bg-white/10 light:bg-black/5 hover:bg-white/20 light:hover:bg-black/10 text-[11px] font-bold text-white light:text-[#0F172A] transition-all flex items-center gap-1 cursor-pointer border border-white/15 light:border-black/10"
                     >
-                      <Sparkles className="w-3 h-3 text-emerald-400" />
                       Fill Test Card
                     </button>
-                    <div className="px-2.5 py-1 rounded-full bg-white/10 text-[11px] font-bold text-[#8f8f8f] flex items-center gap-1 border border-white/10">
-                      <Camera className="w-3 h-3 text-white" />
+                    <div className="px-2.5 py-1 rounded-full bg-white/10 light:bg-black/5 text-[11px] font-bold text-[#8f8f8f] light:text-[#475569] flex items-center gap-1 border border-white/10 light:border-black/10">
+                      <Camera className="w-3 h-3 text-white light:text-[#0F172A]" />
                       Scan Card
                     </div>
                   </div>
@@ -285,7 +284,7 @@ export function AddPaymentMethodModal({
                       placeholder="CVV"
                       value={cardCvv}
                       onChange={(e) => setCardCvv(e.target.value)}
-                      className="w-20 h-11 px-3 text-xs font-mono text-white placeholder-neutral-500 bg-transparent focus:outline-none focus:bg-white/10 transition-all text-center"
+                      className="w-20 h-11 px-3 text-xs font-mono text-white placeholder-neutral-500 bg-transparent focus:outline-none focus:bg-[#082315]/10 transition-all text-center"
                     />
                   </div>
 
@@ -375,10 +374,12 @@ export function AddPaymentMethodModal({
                   </button>
                 </div>
 
-                {/* Official Plaid Logo Badge */}
+                {/* Official Plaid Logo Badge wrapped in a dark tile badge */}
                 <div className="pt-2 flex items-center justify-center gap-2 text-[11px] text-[#8f8f8f]">
                   <span>Powered by</span>
-                  <img src="/plaid-logo.svg" alt="PLAID" className="h-3.5 w-auto object-contain brightness-0 invert opacity-90" />
+                  <div className="h-6 px-2.5 rounded-md border border-white/10 bg-black flex items-center justify-center shadow-sm">
+                    <img src="/plaid-logo.svg" alt="PLAID" className="h-3 w-auto object-contain brightness-0 invert" />
+                  </div>
                 </div>
               </div>
 
@@ -389,7 +390,7 @@ export function AddPaymentMethodModal({
         {/* Security Footer */}
         <div className="border-t border-white/10 px-8 py-4 bg-[#0D0D0D] flex items-center justify-between text-[11px] text-[#8f8f8f]">
           <span className="flex items-center gap-1.5">
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+            <ShieldCheck className="w-3.5 h-3.5 text-[#70ff9e]" />
             256-Bit SSL Encrypted
           </span>
           <span>AgncyPay Treasury Protocol</span>

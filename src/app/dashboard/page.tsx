@@ -461,10 +461,10 @@ function CatalogValuationPanel() {
         <Play className="ml-2 h-6 w-6 fill-current" />
       </Link>
 
-      <Panel className="p-4 sm:p-6">
+      <Panel className="p-4 sm:p-6 bg-[#050505] light:bg-white border-white/20 light:border-black/10">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-[1fr_1fr]">
-          <div className="flex min-h-[170px] flex-col items-center justify-center rounded-[14px] border border-[#242424] bg-[#171717] p-5 text-center">
-            <p className="text-[24px] leading-8 text-[#a7a7a7]">
+          <div className="flex min-h-[170px] flex-col items-center justify-center rounded-[14px] border border-[#242424] light:border-black/10 bg-[#171717] light:bg-slate-50 p-5 text-center">
+            <p className="text-[24px] leading-8 text-[#a7a7a7] light:text-[#475569]">
               Total Income
               <br />
               2026:
@@ -472,34 +472,34 @@ function CatalogValuationPanel() {
             <p className="mt-3 text-[36px] font-black leading-none text-[#13d463]">${liveTotalIncome.toLocaleString()}</p>
           </div>
 
-          <div className="flex min-h-[170px] flex-col justify-between rounded-[14px] border border-[#242424] bg-[#171717] p-5">
+          <div className="flex min-h-[170px] flex-col justify-between rounded-[14px] border border-[#242424] light:border-black/10 bg-[#171717] light:bg-slate-50 p-5">
             <div>
-              <p className="text-[20px] text-[#a7a7a7]">Payment Due</p>
-              <p className="mt-3 text-[31px] font-semibold leading-none text-white">1 Apr</p>
+              <p className="text-[20px] text-[#a7a7a7] light:text-[#475569]">Payment Due</p>
+              <p className="mt-3 text-[31px] font-semibold leading-none text-white light:text-[#0F172A]">1 Apr</p>
             </div>
             <button
               type="button"
-              className="h-10 rounded-[8px] border border-[#454545] bg-[#222] text-[18px] font-semibold text-white transition-colors hover:border-[#777]"
+              className="h-10 rounded-[8px] border border-[#454545] light:border-black/15 bg-[#222] light:bg-[#0F172A] text-[18px] font-semibold text-white light:text-white transition-colors hover:border-[#777] cursor-pointer"
             >
               Pay Early
             </button>
           </div>
         </div>
 
-        <div className="mt-4 rounded-[14px] border border-[#242424] bg-[#171717] px-5 py-6">
-          <p className="text-[20px] text-[#a7a7a7]">Yearly Activity</p>
+        <div className="mt-4 rounded-[14px] border border-[#242424] light:border-black/10 bg-[#171717] light:bg-slate-50 px-5 py-6">
+          <p className="text-[20px] text-[#a7a7a7] light:text-[#475569]">Yearly Activity</p>
           <div className="mt-5 grid h-[128px] grid-cols-12 items-end gap-3 overflow-visible">
             {yearlyActivity.map((month) => (
               <button
                 key={month.month}
                 type="button"
-                className="group relative flex h-full min-w-0 flex-col items-center justify-end gap-2 outline-none"
+                className="group relative flex h-full min-w-0 flex-col items-center justify-end gap-2 outline-none cursor-pointer"
                 aria-label={`${month.month}: ${month.revenue} revenue, ${month.streams} streams, ${month.growth} growth`}
               >
-                <span className="pointer-events-none absolute bottom-[calc(100%+10px)] left-1/2 z-10 w-[124px] -translate-x-1/2 translate-y-1 rounded-[7px] border border-[#2f2f2f] bg-[#0b0b0b] px-3 py-2 text-left opacity-0 shadow-2xl transition-all duration-200 group-hover:translate-y-0 group-hover:opacity-100 group-focus-visible:translate-y-0 group-focus-visible:opacity-100">
-                  <span className="block text-[11px] font-black text-white">{month.month}</span>
-                  <span className="mt-1 block text-[10px] font-semibold text-[#8f8f8f]">Revenue {month.revenue}</span>
-                  <span className="block text-[10px] font-semibold text-[#8f8f8f]">Streams {month.streams}</span>
+                <span className="pointer-events-none absolute bottom-[calc(100%+10px)] left-1/2 z-10 w-[124px] -translate-x-1/2 translate-y-1 rounded-[7px] border border-[#2f2f2f] light:border-black/15 bg-[#0b0b0b] light:bg-white px-3 py-2 text-left opacity-0 shadow-2xl transition-all duration-200 group-hover:translate-y-0 group-hover:opacity-100 group-focus-visible:translate-y-0 group-focus-visible:opacity-100">
+                  <span className="block text-[11px] font-black text-white light:text-[#0F172A]">{month.month}</span>
+                  <span className="mt-1 block text-[10px] font-semibold text-[#8f8f8f] light:text-[#475569]">Revenue {month.revenue}</span>
+                  <span className="block text-[10px] font-semibold text-[#8f8f8f] light:text-[#475569]">Streams {month.streams}</span>
                   <span className={cn("mt-1 block text-[10px] font-black", month.growth.startsWith("-") ? "text-[#ff6b5f]" : "text-[#13d463]")}>
                     {month.growth}
                   </span>
@@ -508,7 +508,7 @@ function CatalogValuationPanel() {
                   className="w-full max-w-[30px] rounded-t-[4px] bg-[#13d463] shadow-[0_0_0_rgba(19,212,99,0)] transition-all duration-300 ease-out group-hover:-translate-y-1 group-hover:bg-[#20f076] group-hover:shadow-[0_0_18px_rgba(19,212,99,0.45)] group-focus-visible:-translate-y-1 group-focus-visible:bg-[#20f076] group-focus-visible:shadow-[0_0_18px_rgba(19,212,99,0.45)]"
                   style={{ height: `${month.height}%` }}
                 />
-                <span className="text-[14px] font-semibold text-[#676767] transition-colors duration-200 group-hover:text-white group-focus-visible:text-white">
+                <span className="text-[14px] font-semibold text-[#676767] light:text-[#475569] transition-colors duration-200 group-hover:text-white light:group-hover:text-[#0F172A] group-focus-visible:text-white">
                   {month.label}
                 </span>
               </button>
@@ -614,34 +614,34 @@ function WalletContactsOverlay({
     <div className="fixed inset-0 z-40 bg-black/55 px-4 py-16 backdrop-blur-[1px]">
       <div className="mx-auto w-full max-w-[760px]">
         <div className="relative">
-          <Search className="pointer-events-none absolute left-5 top-1/2 h-5 w-5 -translate-y-1/2 text-[#8b8b8b]" />
+          <Search className="pointer-events-none absolute left-5 top-1/2 h-5 w-5 -translate-y-1/2 text-[#8b8b8b] light:text-[#64748B]" />
           <input
             autoFocus
             value={query}
             onChange={(event) => onQueryChange(event.target.value)}
             placeholder="Name, Agncy ID, email, mobile"
-            className="h-[58px] w-full rounded-full border border-[#555] bg-[#2b2929] pl-14 pr-14 text-[14px] font-black text-white outline-none placeholder:text-[#a7a7a7]"
+            className="h-[58px] w-full rounded-full border border-[#555] light:border-black/20 bg-[#2b2929] light:bg-white pl-14 pr-14 text-[14px] font-black text-white light:text-[#0F172A] outline-none placeholder:text-[#a7a7a7] light:placeholder:text-[#64748B] shadow-lg"
           />
           <button
             type="button"
             onClick={onClose}
-            className="absolute right-5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full text-white hover:bg-white/[0.08]"
+            className="absolute right-5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full text-white light:text-[#0F172A] hover:bg-white/[0.08] light:hover:bg-slate-200"
             aria-label="Close wallet contacts"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
-        <div className="mt-2 rounded-[7px] border border-[#343434] bg-black px-8 py-8">
-          <p className="text-[14px] font-black text-white">Recent searches</p>
+        <div className="mt-2 rounded-[7px] border border-[#343434] light:border-black/10 bg-black light:bg-white px-8 py-8 shadow-2xl">
+          <p className="text-[14px] font-black text-white light:text-[#0F172A]">Recent searches</p>
           <div className="mt-6 space-y-4">
             {filteredContacts.map((contact) => {
               const active = autosplitContactIds.includes(contact.id);
               return (
-                <div key={contact.id} className="flex items-center justify-between gap-4">
+                <div key={contact.id} className="flex items-center justify-between gap-4 p-2 rounded-lg light:bg-slate-50 light:border light:border-black/5">
                   <div className="min-w-0">
-                    <p className="truncate text-[20px] font-black text-white">{contact.name}</p>
-                    <p className="mt-1 truncate text-[13px] font-semibold text-[#9b9b9b]">{contact.handle}</p>
+                    <p className="truncate text-[18px] font-black text-white light:text-[#0F172A]">{contact.name}</p>
+                    <p className="mt-0.5 truncate text-[13px] font-semibold text-[#9b9b9b] light:text-[#475569]">{contact.handle}</p>
                   </div>
                   <AutoSplitToggle
                     active={active}
@@ -656,14 +656,14 @@ function WalletContactsOverlay({
             <button
               type="button"
               onClick={() => onQueryChange("")}
-              className="text-[13px] font-black text-[#22e03b] underline"
+              className="text-[13px] font-black text-[#22e03b] light:text-[#16a34a] underline cursor-pointer"
             >
               Clear all
             </button>
             <button
               type="button"
               onClick={onEnableAll}
-              className="h-10 rounded-[7px] border border-[#13e56d] bg-[#0d2b18] px-4 text-[13px] font-black text-white"
+              className="h-10 rounded-[7px] border border-[#13e56d] light:border-emerald-500 bg-[#0d2b18] light:bg-[#0F172A] px-4 text-[13px] font-black text-white light:text-white cursor-pointer"
             >
               Autosplit all talent invoices
             </button>
@@ -688,50 +688,50 @@ function CreativeBankingPanel({
   onNet0: () => void;
 }) {
   return (
-    <Panel className="p-5 relative overflow-hidden border-white/20">
+    <Panel className="p-5 relative overflow-hidden border-white/20 light:border-black/10 bg-[#050505] light:bg-white">
       <div>
-        <h2 className="text-[20px] font-bold text-white tracking-tight">Payout Balance</h2>
-        <p className="text-[12px] text-[#8E8E93] mt-1">Your available balances and earnings.</p>
+        <h2 className="text-[20px] font-bold text-white light:text-[#0F172A] tracking-tight">Payout Balance</h2>
+        <p className="text-[12px] text-[#8E8E93] light:text-[#475569] mt-1">Your available balances and earnings.</p>
       </div>
 
       <div className="mt-5 space-y-4">
         {/* Pending Balance Row */}
-        <div className="p-5 bg-[#050505] border border-white/10 rounded-xl flex items-center justify-between gap-4">
+        <div className="p-5 bg-[#050505] light:bg-slate-50 border border-white/10 light:border-black/10 rounded-xl flex items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#261a03] text-amber-500 border border-amber-500/20">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#261a03] light:bg-amber-100 text-amber-500 light:text-amber-700 border border-amber-500/20 light:border-amber-400">
               <Clock className="h-5 w-5" />
             </div>
             <div>
-              <span className="text-[12px] font-semibold text-neutral-400">Pending Balance</span>
-              <p className="mt-1 text-[26px] font-black text-white tracking-tight leading-none">
+              <span className="text-[12px] font-semibold text-neutral-400 light:text-[#475569]">Pending Balance</span>
+              <p className="mt-1 text-[26px] font-black text-white light:text-[#0F172A] tracking-tight leading-none">
                 ${pending.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
-              <p className="text-[11px] text-[#8E8E93] mt-1.5">Invoiced but awaiting brand payment.</p>
+              <p className="text-[11px] text-[#8E8E93] light:text-[#475569] mt-1.5">Invoiced but awaiting brand payment.</p>
             </div>
           </div>
-          <span className={`text-[11px] font-semibold px-3 py-1.5 rounded-lg shrink-0 ${pending > 0 ? "text-amber-400 bg-amber-500/10 border border-amber-500/20" : "text-neutral-600 bg-white/[0.02] border border-white/[0.06]"}`}>
+          <span className={`text-[11px] font-semibold px-3 py-1.5 rounded-lg shrink-0 ${pending > 0 ? "text-amber-400 bg-amber-500/10 border border-amber-500/20" : "text-neutral-600 light:text-slate-500 bg-white/[0.02] light:bg-slate-200 border border-white/[0.06] light:border-black/10"}`}>
             {pending > 0 ? "Awaiting" : "None"}
           </span>
         </div>
 
         {/* Liquidity Balance Row */}
-        <div className="p-5 bg-[#050505] border border-white/10 rounded-xl flex items-center justify-between gap-4">
+        <div className="p-5 bg-[#050505] light:bg-slate-50 border border-white/10 light:border-black/10 rounded-xl flex items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#0A2616] text-[#14C96B] border border-[#10b95f]/20">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#0A2616] light:bg-emerald-100 text-[#14C96B] light:text-emerald-700 border border-[#10b95f]/20 light:border-emerald-400">
               <Wallet className="h-5 w-5" />
             </div>
             <div>
-              <span className="text-[12px] font-semibold text-neutral-400">Liquidity Balance</span>
-              <p className="mt-1 text-[26px] font-black text-white tracking-tight leading-none">
+              <span className="text-[12px] font-semibold text-neutral-400 light:text-[#475569]">Liquidity Balance</span>
+              <p className="mt-1 text-[26px] font-black text-white light:text-[#0F172A] tracking-tight leading-none">
                 ${liquidity.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
-              <p className="text-[11px] text-[#8E8E93] mt-1.5">Available to send, withdraw, or spend anytime.</p>
+              <p className="text-[11px] text-[#8E8E93] light:text-[#475569] mt-1.5">Available to send, withdraw, or spend anytime.</p>
             </div>
           </div>
           <button
             onClick={onWithdraw}
             disabled={liquidity <= 0}
-            className="h-10 px-4 rounded-xl border border-white/20 hover:border-white/40 bg-black hover:bg-white/[0.02] text-white text-[12px] font-bold transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+            className="h-10 px-4 rounded-xl border border-white/20 light:border-black/15 hover:border-white/40 bg-black light:bg-[#0F172A] hover:bg-white/[0.02] text-white light:text-white text-[12px] font-bold transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
           >
             Withdraw
             <ChevronRight className="h-4 w-4" />
@@ -739,23 +739,23 @@ function CreativeBankingPanel({
         </div>
 
         {/* Crystallised Balance Row */}
-        <div className="p-5 bg-[#050505] border border-white/10 rounded-xl flex items-center justify-between gap-4">
+        <div className="p-5 bg-[#050505] light:bg-slate-50 border border-white/10 light:border-black/10 rounded-xl flex items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#1A0B2E] text-[#9b51e0] border border-[#8a2be2]/20">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#1A0B2E] light:bg-purple-100 text-[#9b51e0] light:text-purple-700 border border-[#8a2be2]/20 light:border-purple-400">
               <Lock className="h-5 w-5" />
             </div>
             <div>
-              <span className="text-[12px] font-semibold text-neutral-400">Crystallised Balance</span>
-              <p className="mt-1 text-[26px] font-black text-white tracking-tight leading-none">
+              <span className="text-[12px] font-semibold text-neutral-400 light:text-[#475569]">Crystallised Balance</span>
+              <p className="mt-1 text-[26px] font-black text-white light:text-[#0F172A] tracking-tight leading-none">
                 ${crystallised.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
-              <p className="text-[11px] text-[#8E8E93] mt-1.5">Earnings locked from completed settlements.</p>
+              <p className="text-[11px] text-[#8E8E93] light:text-[#475569] mt-1.5">Earnings locked from completed settlements.</p>
             </div>
           </div>
           <button
             onClick={onNet0}
             disabled={crystallised <= 0}
-            className="h-10 px-4 rounded-xl border border-white/20 hover:border-white/40 bg-black hover:bg-white/[0.02] text-white text-[12px] font-bold transition-all flex items-center gap-1 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+            className="h-10 px-4 rounded-xl border border-white/20 light:border-black/15 hover:border-white/40 bg-black light:bg-[#0F172A] hover:bg-white/[0.02] text-white light:text-white text-[12px] font-bold transition-all flex items-center gap-1 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
           >
             Early Payout
             <ChevronRight className="h-4 w-4" />
@@ -1347,7 +1347,7 @@ export default function DashboardHomePage() {
                 {quickActions.map((action) => {
                   const Icon = action.icon;
                   const baseClassName =
-                    "flex flex-col items-center gap-2 rounded-[10px] border border-[#3a3a3a] bg-[#090909] px-2 py-3 text-center transition-colors hover:border-[#666]";
+                    "flex flex-col items-center gap-2.5 rounded-[10px] border border-[#3a3a3a] light:border-black/15 bg-[#090909] light:bg-[#F8FAFC] px-2 py-3.5 text-center transition-colors hover:border-white/60 light:hover:border-black/40 group cursor-pointer";
 
                   if (action.label === "Wallet ID contacts") {
                     return (
@@ -1357,10 +1357,10 @@ export default function DashboardHomePage() {
                         onClick={() => setIsWalletContactsOpen(true)}
                         className={baseClassName}
                       >
-                        <span className="flex h-10 w-10 items-center justify-center rounded-[9px] border border-[#4a4a4a] bg-black">
-                          <Icon className="h-5 w-5 text-white" />
+                        <span className="flex h-10 w-10 items-center justify-center rounded-[9px] border border-[#4a4a4a] light:border-black/10 bg-black light:bg-[#0F172A] text-white group-hover:scale-105 transition-transform">
+                          <Icon className="h-5 w-5 text-white light:text-white" />
                         </span>
-                        <span className="text-[10px] leading-4 text-white">{action.label}</span>
+                        <span className="text-[10px] font-semibold leading-4 text-white light:text-[#0F172A]">{action.label}</span>
                       </button>
                     );
                   }
@@ -1371,10 +1371,10 @@ export default function DashboardHomePage() {
                       href={action.href}
                       className={baseClassName}
                     >
-                      <span className="flex h-10 w-10 items-center justify-center rounded-[9px] border border-[#4a4a4a] bg-black">
-                        <Icon className="h-5 w-5 text-white" />
+                      <span className="flex h-10 w-10 items-center justify-center rounded-[9px] border border-[#4a4a4a] light:border-black/10 bg-black light:bg-[#0F172A] text-white group-hover:scale-105 transition-transform">
+                        <Icon className="h-5 w-5 text-white light:text-white" />
                       </span>
-                      <span className="text-[10px] leading-4 text-white">{action.label}</span>
+                      <span className="text-[10px] font-semibold leading-4 text-white light:text-[#0F172A]">{action.label}</span>
                     </Link>
                   );
                 })}

@@ -211,12 +211,12 @@ export function ModelIncomeList({ invoices = [] }: { invoices?: any[] }) {
               </div>
             </div>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-[13px] font-semibold text-white">{item.name}</p>
-              <p className="truncate text-[11px] text-[#7f7f7f]">{item.detail}</p>
+              <p className="truncate text-[13px] font-semibold text-white light:text-[#0F172A]">{item.name}</p>
+              <p className="truncate text-[11px] text-[#7f7f7f] light:text-[#475569]">{item.detail}</p>
             </div>
-            <div className="hidden text-right text-[11px] text-[#7f7f7f] sm:block">{item.date}</div>
-            <div className="min-w-[92px] text-right text-[13px] font-semibold text-white">{item.amount}</div>
-            <button className="flex h-8 w-8 items-center justify-center rounded-full text-[#7f7f7f] hover:text-white">
+            <div className="hidden text-right text-[11px] text-[#7f7f7f] light:text-[#475569] sm:block">{item.date}</div>
+            <div className="min-w-[92px] text-right text-[13px] font-semibold text-white light:text-[#0F172A]">{item.amount}</div>
+            <button className="flex h-8 w-8 items-center justify-center rounded-full text-[#7f7f7f] light:text-[#0F172A] hover:text-white light:hover:bg-slate-200">
               <EllipsisVertical className="h-4 w-4" />
             </button>
           </div>
@@ -266,12 +266,12 @@ export function ModelPayoutsList({ invoices = [] }: { invoices?: any[] }) {
               </div>
             </div>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-[13px] font-semibold text-white">{item.name}</p>
-              <p className="truncate text-[11px] text-[#7f7f7f]">{item.detail}</p>
+              <p className="truncate text-[13px] font-semibold text-white light:text-[#0F172A]">{item.name}</p>
+              <p className="truncate text-[11px] text-[#7f7f7f] light:text-[#475569]">{item.detail}</p>
             </div>
-            <div className="hidden text-right text-[11px] text-[#7f7f7f] sm:block">{item.date}</div>
-            <div className="min-w-[92px] text-right text-[13px] font-semibold text-white">{item.amount}</div>
-            <button className="flex h-8 w-8 items-center justify-center rounded-full text-[#7f7f7f] hover:text-white">
+            <div className="hidden text-right text-[11px] text-[#7f7f7f] light:text-[#475569] sm:block">{item.date}</div>
+            <div className="min-w-[92px] text-right text-[13px] font-semibold text-white light:text-[#0F172A]">{item.amount}</div>
+            <button className="flex h-8 w-8 items-center justify-center rounded-full text-[#7f7f7f] light:text-[#0F172A] hover:text-white light:hover:bg-slate-200">
               <EllipsisVertical className="h-4 w-4" />
             </button>
           </div>
@@ -526,12 +526,12 @@ export function ModelAgencyDashboard() {
                     </div>
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-[13px] font-semibold text-white">{item.name}</p>
-                    <p className="truncate text-[11px] text-[#7f7f7f]">{item.detail}</p>
+                    <p className="truncate text-[13px] font-semibold text-white light:text-[#0F172A]">{item.name}</p>
+                    <p className="truncate text-[11px] text-[#7f7f7f] light:text-[#475569]">{item.detail}</p>
                   </div>
-                  <div className="hidden text-right text-[11px] text-[#7f7f7f] sm:block">{item.date}</div>
-                  <div className="min-w-[92px] text-right text-[13px] font-semibold text-white">{item.amount}</div>
-                  <button className="flex h-8 w-8 items-center justify-center rounded-full text-[#7f7f7f] hover:text-white">
+                  <div className="hidden text-right text-[11px] text-[#7f7f7f] light:text-[#475569] sm:block">{item.date}</div>
+                  <div className="min-w-[92px] text-right text-[13px] font-semibold text-white light:text-[#0F172A]">{item.amount}</div>
+                  <button className="flex h-8 w-8 items-center justify-center rounded-full text-[#7f7f7f] light:text-[#0F172A] hover:text-white light:hover:bg-slate-200">
                     <EllipsisVertical className="h-4 w-4" />
                   </button>
                 </div>
@@ -543,12 +543,12 @@ export function ModelAgencyDashboard() {
           <Panel className="p-4 sm:p-5">
             <div className="flex items-center justify-between gap-4">
               <div>
-                <h2 className="text-[18px] font-semibold text-white">Recent Payouts</h2>
-                <p className="mt-1 text-[13px] text-[#8f8f8f]">Money sent to talent and agencies you owe a cut.</p>
+                <h2 className="text-[18px] font-semibold text-white light:text-[#0F172A]">Recent Payouts</h2>
+                <p className="mt-1 text-[13px] text-[#8f8f8f] light:text-[#475569]">Money sent to talent and agencies you owe a cut.</p>
               </div>
               <Link
                 href="/dashboard/payouts"
-                className="inline-flex items-center gap-2 rounded-[7px] border border-[#333] bg-[#0b0b0b] px-3 py-2 text-[12px] font-semibold text-white hover:border-[#555]"
+                className="inline-flex items-center gap-2 rounded-[7px] border border-[#333] light:border-black/15 bg-[#0b0b0b] light:bg-slate-100 px-3 py-2 text-[12px] font-semibold text-white light:text-[#0F172A] hover:border-[#555]"
               >
                 View All
                 <ChevronRight className="h-4 w-4" />
@@ -558,7 +558,7 @@ export function ModelAgencyDashboard() {
               {modelPayoutItems.map((item) => (
                 <div
                   key={`${item.name}-${item.date}`}
-                  className="flex items-center gap-3 rounded-[8px] border border-[#333] bg-black px-3 py-2 transition-colors hover:border-[#555] hover:bg-white/[0.04]"
+                  className="flex items-center gap-3 rounded-[8px] border border-[#333] light:border-black/10 bg-black light:bg-white px-3 py-2 transition-colors hover:border-[#555] hover:bg-white/[0.04]"
                 >
                   <div className={cn("flex h-12 w-12 shrink-0 items-center justify-center rounded-[10px] border border-[#303030] bg-[#060606] p-[3px]")}>
                     <div className={cn("h-full w-full overflow-hidden rounded-[8px] bg-white")}>
@@ -566,12 +566,12 @@ export function ModelAgencyDashboard() {
                     </div>
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-[13px] font-semibold text-white">{item.name}</p>
-                    <p className="truncate text-[11px] text-[#7f7f7f]">{item.detail}</p>
+                    <p className="truncate text-[13px] font-semibold text-white light:text-[#0F172A]">{item.name}</p>
+                    <p className="truncate text-[11px] text-[#7f7f7f] light:text-[#475569]">{item.detail}</p>
                   </div>
-                  <div className="hidden text-right text-[11px] text-[#7f7f7f] sm:block">{item.date}</div>
-                  <div className="min-w-[92px] text-right text-[13px] font-semibold text-white">{item.amount}</div>
-                  <button className="flex h-8 w-8 items-center justify-center rounded-full text-[#7f7f7f] hover:text-white">
+                  <div className="hidden text-right text-[11px] text-[#7f7f7f] light:text-[#475569] sm:block">{item.date}</div>
+                  <div className="min-w-[92px] text-right text-[13px] font-semibold text-white light:text-[#0F172A]">{item.amount}</div>
+                  <button className="flex h-8 w-8 items-center justify-center rounded-full text-[#7f7f7f] light:text-[#0F172A] hover:text-white light:hover:bg-slate-200">
                     <EllipsisVertical className="h-4 w-4" />
                   </button>
                 </div>

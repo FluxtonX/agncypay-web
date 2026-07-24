@@ -17,7 +17,10 @@ import {
   Moon,
   Loader2,
   Layers,
-  ArrowRight
+  ArrowRight,
+  RefreshCw,
+  Sparkles,
+  Landmark
 } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { subscribeInvoicesByBrand, subscribeInvoicesByAgency, updateInvoiceStatus, FirestoreInvoice } from "../../../lib/firebaseInvoices";
@@ -110,18 +113,13 @@ export default function NodesDashboardPage() {
                 <img
                   src="/agncypaybrand.png"
                   alt="AgncyPay"
-                  className="h-10 w-auto object-contain scale-[1.3] origin-left"
+                  className="h-12 w-auto object-contain scale-[1.56] origin-left transition-transform"
                 />
               </Link>
-              {(workspaceType === "brand" || workspaceType === "agency") && (
-                <span className="absolute -top-1.5 -right-4 translate-x-full rounded-full bg-white/[0.08] border border-white/[0.15] px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-[#A3A3A3]">
-                  {workspaceType === "brand" ? "Brand" : "Agency"}
-                </span>
-              )}
             </div>
             <span className="h-4 w-[1px] bg-white/20 hidden md:block" />
-            <div className="hidden md:flex items-center gap-2 px-3 py-1 rounded-full bg-white/[0.03] border border-white/20 text-[11px] font-bold uppercase tracking-wider text-[#A3A3A3]">
-              <Building2 className="h-3 w-3 text-white" />
+            <div className="hidden md:flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 light:bg-black/5 border border-white/20 light:border-black/10 text-[11px] font-bold uppercase tracking-wider text-white light:text-[#0F172A]">
+              <Building2 className="h-3 w-3 text-white light:text-[#0F172A]" />
               {workspaceType === "brand" ? "Brand Portal" : "Agency Portal"}
             </div>
           </div>
@@ -129,25 +127,25 @@ export default function NodesDashboardPage() {
           <nav className="hidden lg:flex items-center gap-1 bg-white/[0.03] p-1 rounded-full border border-white/20">
             <button 
               onClick={() => router.push("/agencydashboard")}
-              className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#8f8f8f] hover:text-white transition-all cursor-pointer"
+              className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#8f8f8f] light:text-[#475569] hover:text-white light:hover:text-[#0F172A] transition-all cursor-pointer"
             >
               Home
             </button>
             <button 
               onClick={() => router.push("/agencydashboard/invoices")}
-              className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#8f8f8f] hover:text-white transition-all cursor-pointer"
+              className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#8f8f8f] light:text-[#475569] hover:text-white light:hover:text-[#0F172A] transition-all cursor-pointer"
             >
               {workspaceType === "brand" ? "Invoice Queue" : "Sent Invoices"}
             </button>
             <button 
               onClick={() => router.push("/agencydashboard/nodes")}
-              className="px-4 py-1.5 rounded-full text-xs font-semibold bg-white text-black shadow-sm transition-all cursor-pointer"
+              className="px-4 py-1.5 rounded-full text-xs font-bold bg-white light:bg-[#0F172A] text-black light:text-white shadow-sm border border-white/20 light:border-black/10 transition-all cursor-pointer"
             >
               {workspaceType === "brand" ? "Settlement Nodes" : "Payout Split Nodes"}
             </button>
             <button 
               onClick={() => router.push("/agencydashboard/analytics")}
-              className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#8f8f8f] hover:text-white transition-all cursor-pointer"
+              className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#8f8f8f] light:text-[#475569] hover:text-white light:hover:text-[#0F172A] transition-all cursor-pointer"
             >
               {workspaceType === "brand" ? "Analytics" : "Agency Earnings"}
             </button>
@@ -156,6 +154,14 @@ export default function NodesDashboardPage() {
           <div className="flex items-center gap-3">
             {workspaceType === "agency" && (
               <>
+                <button
+                  onClick={() => router.push("/agencydashboard/agencybanking")}
+                  className="px-3.5 py-1.5 rounded-full text-xs font-bold bg-white light:bg-[#0F172A] text-black light:text-white hover:bg-neutral-200 light:hover:bg-[#1E293B] border border-white/20 light:border-black/10 shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Landmark className="h-3.5 w-3.5" />
+                  Agency Banking
+                </button>
+                <div className="h-4 w-[1px] bg-white/20" />
                 <button
                   onClick={() => router.push("/dashboard")}
                   className="text-xs font-semibold text-[#8f8f8f] hover:text-white transition-colors flex items-center gap-1"
@@ -170,7 +176,7 @@ export default function NodesDashboardPage() {
               <div className="h-8 w-8 rounded-full bg-white/[0.05] border border-white/20 flex items-center justify-center font-bold text-xs text-white">
                 {state.user?.fullName ? state.user.fullName.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2) : "AD"}
               </div>
-              <span className="text-xs font-bold text-[#E5E5EA] hidden sm:inline">
+              <span className={`text-xs font-bold ${isLightTheme ? "text-[#0F172A]" : "text-[#E5E5EA]"} hidden sm:inline`}>
                 {state.workspaces.find(w => w.id === state.activeWorkspaceId)?.name || state.user?.fullName || "Adidas Corporate"}
               </span>
             </div>
@@ -282,21 +288,21 @@ export default function NodesDashboardPage() {
           </div>
         </div>
 
-        {/* Main Content Layout with Interactive Map */}
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-6 items-start">
+        {/* Main Content Layout */}
+        <div className="w-full">
           
           {/* Table Container */}
           <div className="glass-panel rounded-2xl border border-white/10 overflow-hidden">
             <div className="p-5 border-b border-white/10 flex justify-between items-center">
-              <h3 className="text-xs font-black uppercase tracking-wider text-white">
-                {workspaceType === "brand" ? "Settled Campaigns & Auto-Splits" : " represented Talent Splits Queue"}
+              <h3 className="text-xs font-black uppercase tracking-wider text-white light:text-[#0F172A]">
+                {workspaceType === "brand" ? "Settled Campaigns & Auto-Splits" : "Represented Talent Splits Queue"}
               </h3>
             </div>
 
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
-                  <tr className="border-b border-white/10 text-neutral-400 font-bold bg-white/[0.01]">
+                  <tr className="border-b border-white/10 text-neutral-400 light:text-[#475569] font-bold bg-white/[0.01]">
                     <th className="p-4">Invoice / Campaign</th>
                     <th className="p-4">Payer</th>
                     <th className="p-4">Split Pool</th>
@@ -307,7 +313,7 @@ export default function NodesDashboardPage() {
                 <tbody className="divide-y divide-white/10">
                   {paidInvoices.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="p-8 text-center text-neutral-500 font-medium">
+                      <td colSpan={5} className="p-8 text-center text-neutral-500 light:text-[#475569] font-medium">
                         No settled campaign nodes found in the database.
                       </td>
                     </tr>
@@ -318,53 +324,53 @@ export default function NodesDashboardPage() {
                       const isDisbursed = inv.talentPayoutStatus === "disbursed";
 
                       return (
-                        <tr key={inv.id} className="hover:bg-white/[0.01] transition-all">
+                        <tr key={inv.id} className="hover:bg-white/[0.01] light:hover:bg-black/[0.02] transition-all">
                           <td className="p-4">
-                            <div className="font-bold text-white">{inv.campaign}</div>
-                            <div className="text-[10px] text-neutral-500 font-semibold mt-0.5">{inv.id}</div>
+                            <div className="font-bold text-white light:text-[#0F172A]">{inv.campaign}</div>
+                            <div className="text-[10px] text-neutral-500 light:text-[#475569] font-semibold mt-0.5">{inv.id}</div>
                           </td>
                           <td className="p-4">
-                            <div className="font-semibold text-white">{inv.brandName}</div>
-                            <div className="text-[10px] text-neutral-500 mt-0.5">{inv.brandEmail}</div>
+                            <div className="font-semibold text-white light:text-[#0F172A]">{inv.brandName}</div>
+                            <div className="text-[10px] text-neutral-500 light:text-[#475569] mt-0.5">{inv.brandEmail}</div>
                           </td>
                           <td className="p-4">
-                            <div className="text-white">Agency Cut (15%): <span className="font-bold">${agencyCut.toLocaleString()}</span></div>
-                            <div className="text-[10px] text-neutral-500 mt-0.5">Talent Cut (85%): ${netTalentShare.toLocaleString()}</div>
+                            <div className="text-white light:text-[#0F172A]">Agency Cut (15%): <span className="font-bold">${agencyCut.toLocaleString()}</span></div>
+                            <div className="text-[10px] text-neutral-500 light:text-[#475569] mt-0.5">Talent Cut (85%): ${netTalentShare.toLocaleString()}</div>
                           </td>
-                          <td className="p-4 text-right font-black text-white">
+                          <td className="p-4 text-right font-black text-white light:text-[#0F172A]">
                             ${inv.amount.toLocaleString("en-US", { minimumFractionDigits: 2 })}
                           </td>
                           <td className="p-4 text-right">
                             {workspaceType === "agency" ? (
                               isDisbursed ? (
-                                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-400 bg-emerald-950/40 border border-emerald-900 px-2 py-1 rounded-md">
-                                  <CheckCircle2 className="h-3 w-3" />
+                                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-[#70ff9e] bg-[#082315] border border-[#10b95f]/30 px-2.5 py-1 rounded-full shadow-sm">
+                                  <CheckCircle2 className="h-3 w-3 text-[#70ff9e]" />
                                   Disbursed
                                 </span>
                               ) : (
                                 <button
                                   onClick={() => handleDisburse(inv.id)}
                                   disabled={processingId === inv.id}
-                                  className="bg-white text-black font-semibold text-[11px] px-3 py-1.5 rounded-lg shadow cursor-pointer hover:bg-neutral-200 transition-all inline-flex items-center gap-1.5 disabled:opacity-50"
+                                  className="bg-white light:bg-[#0F172A] text-black light:text-white font-semibold text-[11px] px-3 py-1.5 rounded-lg shadow cursor-pointer hover:bg-neutral-200 light:hover:bg-[#1E293B] transition-all inline-flex items-center gap-1.5 disabled:opacity-50"
                                 >
                                   {processingId === inv.id ? (
                                     <>
-                                      <Loader2 className="h-3 w-3 animate-spin animate-infinite" />
+                                      <RefreshCw className="h-3 w-3 animate-spin" />
                                       Routing...
                                     </>
                                   ) : (
                                     <>
-                                      Disburse splits
-                                      <ArrowRight className="h-3 w-3" />
+                                      <Sparkles className="h-3 w-3" />
+                                      Disburse Talent
                                     </>
                                   )}
                                 </button>
                               )
                             ) : (
-                              <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-md ${
+                              <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full border ${
                                 isDisbursed 
-                                  ? "text-emerald-400 bg-emerald-950/40 border border-emerald-900" 
-                                  : "text-amber-400 bg-amber-950/40 border border-amber-900"
+                                  ? "text-[#70ff9e] bg-[#082315] border-[#10b95f]/30" 
+                                  : "text-amber-400 bg-amber-950/40 border-amber-900"
                               }`}>
                                 {isDisbursed ? "Fully Routed" : "Escrow Lock"}
                               </span>
@@ -378,76 +384,6 @@ export default function NodesDashboardPage() {
               </table>
             </div>
           </div>
-
-          {/* Map Section */}
-          <div className="bg-[#050505] rounded-2xl border border-white/20 p-5 shadow-sm">
-            <h3 className="text-xs font-black uppercase tracking-wider text-[#8f8f8f] pb-3 border-b border-white/20">
-              Creative Node Network
-            </h3>
-
-            {/* Map representation */}
-            <div className="mt-4 h-48 rounded-xl border border-white/20 bg-black relative overflow-hidden flex flex-col justify-end p-4 shadow-inner">
-              {/* Dot grid back */}
-              <div className="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.05)_1px,transparent_1px)] [background-size:16px_16px] opacity-70" />
-
-              {/* Glowing active node lines */}
-              <svg className="absolute inset-0 h-full w-full pointer-events-none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M 50 50 L 150 100 L 250 60" fill="none" stroke="#ffffff" strokeWidth="1.5" strokeDasharray="4 4" className="animate-[dash_10s_linear_infinite]" />
-                <path d="M 150 100 L 80 150" fill="none" stroke="#ffffff" strokeWidth="1.5" strokeDasharray="4 4" className="animate-[dash_8s_linear_infinite]" />
-              </svg>
-
-              {/* Nodes */}
-              <div className="absolute top-10 left-12 flex flex-col items-center">
-                <div className="h-6 w-6 rounded-full bg-neutral-800 border-2 border-white flex items-center justify-center text-[8px] font-black text-white shadow">
-                  NY
-                </div>
-                <span className="text-[8px] font-bold text-[#8f8f8f] mt-1">Brand Node</span>
-              </div>
-
-              <div className="absolute top-20 right-16 flex flex-col items-center">
-                <div className="h-6 w-6 rounded-full bg-neutral-800 border-2 border-white flex items-center justify-center text-[8px] font-black text-white shadow">
-                  LDN
-                </div>
-                <span className="text-[8px] font-bold text-[#8f8f8f] mt-1">Talent Node</span>
-              </div>
-
-              <div className="absolute bottom-10 left-16 flex flex-col items-center">
-                <div className="h-6 w-6 rounded-full bg-neutral-800 border-2 border-white flex items-center justify-center text-[8px] font-black text-white shadow">
-                  PAR
-                </div>
-                <span className="text-[8px] font-bold text-[#8f8f8f] mt-1">Agency Node</span>
-              </div>
-
-              {/* Map Button indicator */}
-              <div className="relative z-10 bg-[#0A0A0A] border border-white/20 rounded-lg p-2.5 shadow-sm text-[11px]">
-                <div className="flex justify-between items-center">
-                  <span className="font-bold text-white flex items-center gap-1.5">
-                    <MapPin className="h-3.5 w-3.5 text-white" />
-                    3 Active Nodes Connected
-                  </span>
-                  <ArrowUpRight className="h-3.5 w-3.5 text-neutral-400" />
-                </div>
-              </div>
-            </div>
-
-            {/* General Info list */}
-            <div className="mt-4 space-y-2 text-xs">
-              <div className="flex justify-between items-center text-[#8f8f8f]">
-                <span>Routing Status</span>
-                <span className="font-bold text-emerald-400 flex items-center gap-1">
-                  <ShieldCheck className="h-3.5 w-3.5" />
-                  Secure (TLS)
-                </span>
-              </div>
-              <div className="flex justify-between items-center text-[#8f8f8f]">
-                <span>Escrow Address</span>
-                <span className="font-mono text-[9px] bg-white/[0.03] px-2 py-0.5 rounded border border-white/10 text-neutral-300">
-                  0x978F...4BA2
-                </span>
-              </div>
-            </div>
-          </div>
-
         </div>
 
       </div>

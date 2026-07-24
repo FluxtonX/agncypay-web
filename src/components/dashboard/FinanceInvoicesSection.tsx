@@ -161,17 +161,17 @@ export function FinanceInvoicesSection({
   showOpenInvoicesLink = true,
 }: FinanceInvoicesSectionProps) {
   return (
-    <Panel className="overflow-hidden">
-      <div className="flex items-center justify-between border-b border-[#333] p-4 sm:p-5">
+    <Panel className="overflow-hidden bg-[#050505] light:bg-white border-[#3a3a3a] light:border-black/10">
+      <div className="flex items-center justify-between border-b border-[#333] light:border-black/10 p-4 sm:p-5">
         <div>
-          <h2 className="text-[18px] font-semibold text-white">Invoices</h2>
-          <p className="mt-1 text-[13px] text-[#8f8f8f]">{subtitle}</p>
+          <h2 className="text-[18px] font-semibold text-white light:text-[#0F172A]">Invoices</h2>
+          <p className="mt-1 text-[13px] text-[#8f8f8f] light:text-[#475569]">{subtitle}</p>
         </div>
         {showOpenInvoicesLink && (
           <div className="flex items-center gap-2">
             <Link
               href="/dashboard/invoices"
-              className="inline-flex items-center gap-2 rounded-[7px] border border-[#333] bg-[#0b0b0b] px-3 py-2 text-[12px] font-semibold text-white"
+              className="inline-flex items-center gap-2 rounded-[7px] border border-[#333] light:border-black/15 bg-[#0b0b0b] light:bg-slate-100 px-3 py-2 text-[12px] font-semibold text-white light:text-[#0F172A]"
             >
               Open invoices
               <ArrowUpRight className="h-4 w-4" />
@@ -191,7 +191,7 @@ export function FinanceInvoicesSection({
             <col className="w-[260px]" />
           </colgroup>
           <thead>
-            <tr className="h-12 border-b border-[#333] text-[11px] font-semibold uppercase tracking-[0.12em] text-[#777]">
+            <tr className="h-12 border-b border-[#333] light:border-black/10 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#777] light:text-[#475569]">
               <th className="px-4">Invoice</th>
               <th className="px-0">Autosplit</th>
               <th className="px-0">Status</th>
@@ -213,10 +213,10 @@ export function FinanceInvoicesSection({
                 }}
                 role="button"
                 tabIndex={0}
-                className="h-[72px] cursor-pointer border-b border-[#2c2c2c] transition-colors hover:bg-white/[0.04] focus:bg-white/[0.05] focus:outline-none"
+                className="h-[72px] cursor-pointer border-b border-[#2c2c2c] light:border-black/10 transition-colors hover:bg-white/[0.04] light:hover:bg-slate-50 focus:bg-white/[0.05] light:focus:bg-slate-100 focus:outline-none"
               >
                 <td className="px-4">
-                  <span className="font-mono text-[13px] font-semibold text-white">{invoice.id}</span>
+                  <span className="font-mono text-[13px] font-semibold text-white light:text-[#0F172A]">{invoice.id}</span>
                 </td>
                 <td className="px-0">
                   <AutoSplitToggle
@@ -227,16 +227,16 @@ export function FinanceInvoicesSection({
                 <td className="px-0">
                   <InvoiceStatusPill invoice={invoice} />
                 </td>
-                <td className="px-0 text-[13px] text-[#bdbdbd]">{invoice.due}</td>
-                <td className="px-0 text-[13px] font-semibold text-white">
+                <td className="px-0 text-[13px] text-[#bdbdbd] light:text-[#475569]">{invoice.due}</td>
+                <td className="px-0 text-[13px] font-semibold text-white light:text-[#0F172A]">
                   {formatMainboardMoney(invoice.amount + invoice.fee)}
                 </td>
                 <td className="px-0">
                   <div className="flex min-w-0 items-center gap-3 pr-3">
                     <PayeeLogoTile invoice={invoice} size="sm" />
                     <div className="min-w-0">
-                      <p className="truncate text-[13px] font-semibold text-white">{getInvoiceClientName(invoice)}</p>
-                      <p className="truncate text-[11px] text-[#7f7f7f]">
+                      <p className="truncate text-[13px] font-semibold text-white light:text-[#0F172A]">{getInvoiceClientName(invoice)}</p>
+                      <p className="truncate text-[11px] text-[#7f7f7f] light:text-[#475569]">
                         {invoice.recipient} - {invoice.jobType}
                       </p>
                     </div>

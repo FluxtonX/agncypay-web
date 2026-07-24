@@ -146,10 +146,29 @@ export default function BrandDashboardPage() {
   const [newCardCVC, setNewCardCVC] = useState("");
   const [newCardZip, setNewCardZip] = useState("");
 
+  const [isLightTheme, setIsLightTheme] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setIsLightTheme(document.documentElement.classList.contains("light"));
+    }
+  }, []);
+
   const [linkedCards, setLinkedCards] = useState([
-    { id: "card-1", name: "Chase Ink Business Unlimited Visa", detail: "Visa ****86", fallback: "Chase" },
-    { id: "card-2", name: "Mercury Business IO Mastercard", detail: "Mastercard ****57", fallback: "Mercury" },
-    { id: "card-3", name: "Bank of America Business Debit", detail: "Debit ****88", fallback: "BoFA" }
+    {
+      id: "card-1",
+      name: "Chase Ink Business Unlimited Visa",
+      detail: "Visa ****86 • Primary Disbursement",
+      image: "/chase-ink-business-unlimited.png",
+      fallback: "Chase"
+    },
+    {
+      id: "card-2",
+      name: "Mercury Business IO Mastercard",
+      detail: "Mastercard ****57 • Instant Settlement",
+      image: "/mercurycard.png",
+      fallback: "Mercury"
+    }
   ]);
 
   // Plaid Connection State & Handlers
@@ -331,6 +350,7 @@ export default function BrandDashboardPage() {
       id: `card-${Date.now()}`,
       name: `${newCardHolder.trim()}'s Card`,
       detail: `Visa ****${last4}`,
+      image: "/visa-logo.svg",
       fallback: "Card"
     };
     setLinkedCards(prev => [...prev, newCardObj]);
@@ -510,9 +530,13 @@ export default function BrandDashboardPage() {
   }, [state.user]);
 
 
-  const [isLightTheme, setIsLightTheme] = useState(false);
 
-
+  // Role Guard: Redirect Agency users to /agencydashboard
+  useEffect(() => {
+    if (state.user && state.user.accountType === "agency") {
+      router.push("/agencydashboard");
+    }
+  }, [state.user, router]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -1121,52 +1145,48 @@ export default function BrandDashboardPage() {
       <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-white/[0.01] rounded-full blur-[100px] pointer-events-none" />
 
       {/* Header - Adaptive Theme */}
-      <header className="border-b border-border-custom bg-background/90 sticky top-0 z-50 shadow-sm backdrop-blur">
+      <header className="border-b border-white/25 light:border-black/15 bg-background/90 sticky top-0 z-50 shadow-sm backdrop-blur">
         <div className="max-w-[1520px] mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-6">
             <div className="relative flex items-center mr-12">
-              <Link href="/" className="flex items-center" aria-label="AgncyPay home">
+              <Link href="/branddashboard" className="flex items-center cursor-pointer z-50 hover:opacity-80 transition-opacity" aria-label="AgncyPay home">
                 <img
                   src="/agncypaybrand.png"
                   alt="AgncyPay"
-                  className="h-10 w-auto object-contain scale-[1.3] origin-left"
+                  className="h-12 w-auto object-contain scale-[1.56] origin-left transition-transform"
                 />
               </Link>
             </div>
             <span className="h-4 w-[1px] bg-white/20 hidden md:block" />
-            <div className="hidden md:flex items-center gap-2 px-3 py-1 rounded-full bg-white/[0.03] border border-white/20 text-[11px] font-bold uppercase tracking-wider text-[#A3A3A3]">
-              <Building2 className="h-3 w-3 text-white" />
-              {workspaceType === "brand" 
-                ? "Brand Portal" 
-                : workspaceType === "agency" 
-                ? "Agency Portal" 
-                : "Talent Portal"}
+            <div className="hidden md:flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 light:bg-black/5 border border-white/20 light:border-black/10 text-[11px] font-bold uppercase tracking-wider text-white light:text-[#0F172A]">
+              <Building2 className="h-3 w-3 text-white light:text-[#0F172A]" />
+              Brand Portal
             </div>
           </div>
 
-          {/* Center Navigation Tabs (Bilt Style, Dark Theme) */}
+          {/* Center Navigation Tabs (Bilt Style) */}
           <nav className="hidden lg:flex items-center gap-1 bg-white/[0.03] p-1 rounded-full border border-white/20">
             <button 
               onClick={() => router.push("/branddashboard")}
-              className="px-4 py-1.5 rounded-full text-xs font-semibold bg-white text-black shadow-sm transition-all cursor-pointer"
+              className="px-4 py-1.5 rounded-full text-xs font-bold bg-white light:bg-[#0F172A] text-black light:text-white shadow-sm border border-white/20 light:border-black/10 transition-all cursor-pointer"
             >
               Home
             </button>
             <button 
               onClick={() => router.push("/branddashboard/invoices")}
-              className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#8f8f8f] hover:text-white transition-all cursor-pointer"
+              className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#8f8f8f] light:text-[#475569] hover:text-white light:hover:text-[#0F172A] transition-all cursor-pointer"
             >
               {workspaceType === "brand" ? "Invoice Queue" : "Sent Invoices"}
             </button>
             <button 
               onClick={() => router.push("/branddashboard/nodes")}
-              className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#8f8f8f] hover:text-white transition-all cursor-pointer"
+              className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#8f8f8f] light:text-[#475569] hover:text-white light:hover:text-[#0F172A] transition-all cursor-pointer"
             >
               {workspaceType === "brand" ? "Settlement Nodes" : "Payout Split Nodes"}
             </button>
             <button 
               onClick={() => router.push("/branddashboard/analytics")}
-              className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#8f8f8f] hover:text-white transition-all cursor-pointer"
+              className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#8f8f8f] light:text-[#475569] hover:text-white light:hover:text-[#0F172A] transition-all cursor-pointer"
             >
               {workspaceType === "brand" ? "Analytics" : "Agency Earnings"}
             </button>
@@ -1197,22 +1217,22 @@ export default function BrandDashboardPage() {
               <div className="h-8 w-8 rounded-full bg-white/[0.05] border border-white/20 flex items-center justify-center font-bold text-xs text-white">
                 {state.user?.fullName ? state.user.fullName.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2) : "AD"}
               </div>
-              <span className="text-xs font-bold text-[#E5E5EA] hidden sm:inline">
+              <span className={`text-xs font-bold hidden sm:inline ${isLightTheme ? "text-[#0F172A]" : "text-[#E5E5EA]"}`}>
                 {state.workspaces.find(w => w.id === state.activeWorkspaceId)?.name || state.user?.fullName || "Adidas Corporate"}
               </span>
             </div>
 
             <button
               onClick={toggleTheme}
-              className="p-2 text-neutral-400 hover:text-white transition-colors cursor-pointer"
+              className={`p-2 transition-colors cursor-pointer ${isLightTheme ? "text-[#0F172A] hover:text-black" : "text-neutral-400 hover:text-white"}`}
               title="Toggle Theme"
             >
-              {isLightTheme ? <Moon className="h-4 w-4 text-neutral-400 hover:text-white" /> : <Sun className="h-4 w-4 text-neutral-400 hover:text-white" />}
+              {isLightTheme ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
             </button>
 
             <button
               onClick={handleLogout}
-              className="p-2 text-neutral-400 hover:text-white transition-colors"
+              className={`p-2 transition-colors ${isLightTheme ? "text-[#0F172A] hover:text-black" : "text-neutral-400 hover:text-white"}`}
               title="Log Out"
             >
               <LogOut className="h-4 w-4" />
@@ -1222,24 +1242,24 @@ export default function BrandDashboardPage() {
       </header>
 
       {/* Hero Header Space */}
-      <section className="bg-[#000000] border-b border-white/20 py-6 shadow-sm">
+      <section className={`border-b py-6 shadow-sm transition-colors ${isLightTheme ? "bg-[#F8FAFC] border-black/10" : "bg-[#000000] border-white/20"}`}>
         <div className="max-w-[1520px] mx-auto px-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
             {workspaceType === "brand" ? (
               <>
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-bold text-[#4B6BFB] bg-[#4B6BFB]/10 px-2 py-0.5 rounded">Active Campaign</span>
-                  <span className="text-xs text-neutral-400 font-mono">ID: ADIDAS-2026-Q3</span>
+                  <span className={`text-xs font-mono ${isLightTheme ? "text-[#475569]" : "text-neutral-400"}`}>ID: ADIDAS-2026-Q3</span>
                 </div>
-                <h1 className="text-2xl font-bold text-white mt-1 tracking-tight">Adidas Executive Billing</h1>
+                <h1 className={`text-2xl font-bold mt-1 tracking-tight ${isLightTheme ? "text-[#0F172A]" : "text-white"}`}>Adidas Executive Billing</h1>
               </>
             ) : (
               <>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-white bg-white/10 border border-white/20 px-2 py-0.5 rounded">Agency Account</span>
-                  <span className="text-xs text-neutral-400 font-mono">ID: {state.user?.agncyId || "AGNCY-9024"}</span>
+                  <span className={`text-xs font-bold px-2 py-0.5 rounded border ${isLightTheme ? "text-[#0F172A] bg-black/5 border-black/10" : "text-white bg-white/10 border-white/20"}`}>Agency Account</span>
+                  <span className={`text-xs font-mono ${isLightTheme ? "text-[#475569]" : "text-neutral-400"}`}>ID: {state.user?.agncyId || "AGNCY-9024"}</span>
                 </div>
-                <h1 className="text-2xl font-bold text-white mt-1 tracking-tight">
+                <h1 className={`text-2xl font-bold mt-1 tracking-tight ${isLightTheme ? "text-[#0F172A]" : "text-white"}`}>
                   {state.workspaces.find(w => w.id === state.activeWorkspaceId)?.name || state.user?.fullName || "Agency"} Revenue Portal
                 </h1>
               </>
@@ -1250,9 +1270,8 @@ export default function BrandDashboardPage() {
           {workspaceType === "agency" && (
             <button
               onClick={() => setIsNewInvoiceOpen(true)}
-              className="h-10 px-5 rounded-lg bg-white hover:bg-neutral-200 text-black text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md shrink-0 animate-fade-in"
+              className={`h-10 px-5 rounded-lg text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md shrink-0 animate-fade-in ${isLightTheme ? "bg-[#0F172A] text-white hover:bg-[#1E293B]" : "bg-white text-black hover:bg-neutral-200"}`}
             >
-              <Sparkles className="h-4 w-4 text-black" />
               + New Invoice
             </button>
           )}
@@ -1436,15 +1455,15 @@ export default function BrandDashboardPage() {
             </div>
             
             {workspaceType === "brand" && selectedIds.length > 0 && (
-              <div className="p-4 bg-[#111] border-t border-white/20 flex justify-between items-center">
+              <div className="p-4 bg-[#111] light:bg-white border-t border-white/20 light:border-black/10 flex justify-between items-center">
                 <div>
-                  <p className="text-sm font-bold text-white">{selectedIds.length} invoice(s) selected</p>
-                  <p className="text-[11px] text-[#8f8f8f]">Ready for batch payment.</p>
+                  <p className="text-sm font-bold text-white light:text-[#0F172A]">{selectedIds.length} invoice(s) selected</p>
+                  <p className="text-[11px] text-[#8f8f8f] light:text-[#475569]">Ready for batch payment.</p>
                 </div>
                 <div className="flex gap-3">
-                  <button onClick={() => setSelectedIds([])} className="px-4 py-2 text-xs font-bold text-white hover:bg-white/10 rounded-lg transition-colors">Clear</button>
-                  <button onClick={() => setIsCheckoutOpen(true)} className="px-4 py-2 text-xs font-bold bg-white text-black hover:bg-neutral-200 rounded-lg flex items-center gap-2 transition-colors">
-                    <ShieldCheck className="w-4 h-4" /> Batch Pay
+                  <button onClick={() => setSelectedIds([])} className="px-4 py-2 text-xs font-bold text-white light:text-[#475569] hover:bg-white/10 light:hover:bg-black/5 rounded-lg transition-colors">Clear</button>
+                  <button onClick={() => setIsCheckoutOpen(true)} className="px-4 py-2 text-xs font-bold bg-white light:bg-[#0F172A] text-black light:text-white hover:bg-neutral-200 light:hover:bg-[#1E293B] border border-white/20 light:border-black/10 rounded-lg flex items-center gap-2 transition-all shadow-sm cursor-pointer">
+                    <ShieldCheck className="w-4 h-4 text-black light:text-white" /> Batch Pay
                   </button>
                 </div>
               </div>
@@ -1489,7 +1508,7 @@ export default function BrandDashboardPage() {
                         ${(inv.amount * (workspaceType === "brand" ? 1.015 : 1)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
                       <td className="py-4 pr-6 text-right">
-                        <span className="text-[10px] font-bold px-2.5 py-1 rounded-md bg-[#082315] text-[#10b95f] border border-[#10b95f]/20">Paid</span>
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase bg-[#082315] text-[#70ff9e] border border-[#10b95f]/30">Paid</span>
                       </td>
                     </tr>
                   ))}
@@ -2024,256 +2043,358 @@ export default function BrandDashboardPage() {
 
 
       {/* Brand Deposit Modal */}
-      {isDepositModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/75 backdrop-blur-md" onClick={() => !isProcessingDeposit && setIsDepositModalOpen(false)} />
-          
-          <div className="relative w-full max-w-lg bg-[#0A0A0A] border border-white/20 rounded-2xl shadow-2xl overflow-hidden text-white animate-in fade-in zoom-in-95 duration-200">
-            {/* Modal Header */}
-            <div className="p-6 border-b border-white/10 flex items-center justify-between bg-white/[0.02]">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center text-white">
-                  <Wallet className="h-5 w-5" />
+      {isDepositModalOpen && (() => {
+        const isLight = isLightTheme || (typeof document !== "undefined" && document.documentElement.classList.contains("light"));
+        return (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/75 backdrop-blur-md" onClick={() => !isProcessingDeposit && setIsDepositModalOpen(false)} />
+            
+            <div className={`relative w-full max-w-lg rounded-2xl border shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 ${
+              isLight 
+                ? "bg-white border-black/20 text-[#0F172A]" 
+                : "bg-[#0A0A0A] border-white/20 text-white"
+            }`}>
+              {/* Modal Header */}
+              <div className={`p-6 border-b flex items-center justify-between ${
+                isLight ? "border-black/10 bg-slate-50" : "border-white/10 bg-white/[0.02]"
+              }`}>
+                <div className="flex items-center gap-3">
+                  <div className={`h-10 w-10 rounded-xl border flex items-center justify-center ${
+                    isLight ? "bg-white border-black/20 text-[#0F172A] shadow-xs" : "bg-white/10 border-white/20 text-white"
+                  }`}>
+                    <Wallet className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className={`text-lg font-bold leading-tight ${isLight ? "text-[#0F172A]" : "text-white"}`}>Deposit Treasury Balance</h3>
+                    <p className={`text-xs font-medium ${isLight ? "text-[#475569]" : "text-neutral-400"}`}>Add funds to instant liquidity balance</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-lg font-bold text-white leading-tight">Deposit Treasury Balance</h3>
-                  <p className="text-xs text-neutral-400">Add funds to instant liquidity balance</p>
-                </div>
+                <button
+                  onClick={() => setIsDepositModalOpen(false)}
+                  className={`p-2 rounded-lg transition-colors cursor-pointer ${
+                    isLight ? "text-[#475569] hover:bg-slate-200 hover:text-[#0F172A]" : "text-neutral-400 hover:bg-white/10 hover:text-white"
+                  }`}
+                >
+                  <X className="h-5 w-5" />
+                </button>
               </div>
-              <button
-                onClick={() => setIsDepositModalOpen(false)}
-                className="p-2 rounded-lg text-neutral-400 hover:bg-white/10 hover:text-white transition-colors cursor-pointer"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
 
-            {/* Modal Body */}
-            <div className="p-6 space-y-6 max-h-[80vh] overflow-y-auto">
-              {depositSuccessMsg ? (
-                <div className="py-10 text-center space-y-4">
-                  <div className="h-16 w-16 rounded-full bg-emerald-500/20 border border-emerald-500 text-emerald-400 flex items-center justify-center mx-auto animate-bounce">
-                    <CheckCircle2 className="h-8 w-8" />
-                  </div>
-                  <h4 className="text-xl font-bold text-white">Deposit Successful</h4>
-                  <p className="text-sm text-neutral-300 max-w-[280px] mx-auto">{depositSuccessMsg}</p>
-                </div>
-              ) : isProcessingDeposit ? (
-                <div className="py-14 text-center space-y-4">
-                  <Loader2 className="h-10 w-10 text-white animate-spin mx-auto" />
-                  <div>
-                    <p className="text-lg font-bold text-white">Processing Deposit...</p>
-                    <p className="text-xs text-neutral-400 mt-1">Securing funds via selected payment channel.</p>
-                  </div>
-                </div>
-              ) : (
-                <form onSubmit={handleConfirmDeposit} className="space-y-6">
-                  {/* Step 1: Amount Selection */}
-                  <div>
-                    <label className="block text-xs font-bold text-neutral-300 uppercase tracking-wider mb-2">Deposit Amount ($USD)</label>
-                    <div className="relative">
-                      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-lg font-bold text-neutral-400">$</span>
-                      <input
-                        type="number"
-                        min="1"
-                        step="any"
-                        value={depositAmount}
-                        onChange={(e) => setDepositAmount(e.target.value)}
-                        placeholder="1000.00"
-                        className="w-full pl-8 pr-4 py-3 bg-black border border-white/20 rounded-xl text-lg font-bold text-white focus:outline-none focus:border-white font-mono"
-                        required
-                      />
+              {/* Modal Body */}
+              <div className="p-6 space-y-6 max-h-[80vh] overflow-y-auto">
+                {depositSuccessMsg ? (
+                  <div className="py-10 text-center space-y-4">
+                    <div className="h-16 w-16 rounded-full bg-emerald-500/20 border border-emerald-500 text-emerald-500 flex items-center justify-center mx-auto animate-bounce">
+                      <CheckCircle2 className="h-8 w-8" />
                     </div>
-                    
-                    {/* Quick Pills */}
-                    <div className="grid grid-cols-4 gap-2 mt-2.5">
-                      {["500", "1000", "2500", "5000"].map((preset) => (
-                        <button
-                          key={preset}
-                          type="button"
-                          onClick={() => setDepositAmount(preset)}
-                          className={`py-2 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
-                            depositAmount === preset
-                              ? "border-white bg-white text-black shadow"
-                              : "border-white/10 bg-white/[0.02] text-neutral-300 hover:border-white/20"
+                    <h4 className={`text-xl font-bold ${isLight ? "text-[#0F172A]" : "text-white"}`}>Deposit Successful</h4>
+                    <p className={`text-sm max-w-[280px] mx-auto font-medium ${isLight ? "text-[#475569]" : "text-neutral-300"}`}>{depositSuccessMsg}</p>
+                  </div>
+                ) : isProcessingDeposit ? (
+                  <div className="py-14 text-center space-y-4">
+                    <Loader2 className={`h-10 w-10 animate-spin mx-auto ${isLight ? "text-[#0F172A]" : "text-white"}`} />
+                    <div>
+                      <p className={`text-lg font-bold ${isLight ? "text-[#0F172A]" : "text-white"}`}>Processing Deposit...</p>
+                      <p className={`text-xs mt-1 font-medium ${isLight ? "text-[#475569]" : "text-neutral-400"}`}>Securing funds via selected payment channel.</p>
+                    </div>
+                  </div>
+                ) : (
+                  <form onSubmit={handleConfirmDeposit} className="space-y-6">
+                    {/* Step 1: Amount Selection */}
+                    <div>
+                      <label className={`block text-xs font-bold uppercase tracking-wider mb-2 ${isLight ? "text-[#0F172A]" : "text-neutral-300"}`}>
+                        Deposit Amount ($USD)
+                      </label>
+                      <div className="relative">
+                        <span className={`absolute left-3.5 top-1/2 -translate-y-1/2 text-lg font-extrabold ${isLight ? "text-[#0F172A]" : "text-neutral-400"}`}>$</span>
+                        <input
+                          type="number"
+                          min="1"
+                          step="any"
+                          value={depositAmount}
+                          onChange={(e) => setDepositAmount(e.target.value)}
+                          placeholder="1000.00"
+                          className={`w-full pl-8 pr-4 py-3 border rounded-xl text-lg font-extrabold focus:outline-none font-mono ${
+                            isLight 
+                              ? "bg-white border-black/20 text-[#0F172A] focus:border-black shadow-xs" 
+                              : "bg-black border-white/20 text-white focus:border-white"
                           }`}
-                        >
-                          +${parseInt(preset).toLocaleString()}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Step 2: Method Selection */}
-                  <div>
-                    <label className="block text-xs font-bold text-neutral-300 uppercase tracking-wider mb-2">Deposit Method</label>
-                    <div className="grid grid-cols-2 gap-2.5">
-                      {[
-                        { id: "card", label: "Linked Card", sub: "Instant • Standard Fee" },
-                        { id: "ach", label: "ACH Bank Transfer", sub: "1-2 Days • 0% Fee" },
-                        { id: "wire", label: "Wire Transfer", sub: "Same Day • $15 Fee" },
-                        { id: "rtp", label: "RTP Instant", sub: "Instant • $5 Fee" },
-                      ].map((m) => (
-                        <button
-                          key={m.id}
-                          type="button"
-                          onClick={() => setDepositMethod(m.id as any)}
-                          className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
-                            depositMethod === m.id
-                              ? "border-white bg-white/10"
-                              : "border-white/10 bg-black hover:border-white/20"
-                          }`}
-                        >
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs font-bold text-white">{m.label}</span>
-                            <div className={`h-3.5 w-3.5 rounded-full border flex items-center justify-center ${
-                              depositMethod === m.id ? "border-white bg-white text-black" : "border-white/30"
-                            }`}>
-                              {depositMethod === m.id && <div className="h-1.5 w-1.5 rounded-full bg-black" />}
-                            </div>
-                          </div>
-                          <span className="text-[10px] text-neutral-400 block mt-1">{m.sub}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Step 3: Card Selection if Linked Card chosen */}
-                  {depositMethod === "card" && (
-                    <div className="space-y-3">
-                      <div className="flex justify-between items-center">
-                        <label className="text-xs font-bold text-neutral-300 uppercase tracking-wider">Select Card</label>
-                        <button
-                          type="button"
-                          onClick={() => setShowAddCard(!showAddCard)}
-                          className="text-xs font-bold text-neutral-300 hover:text-white flex items-center gap-1 cursor-pointer"
-                        >
-                          <Plus className="h-3 w-3" />
-                          {showAddCard ? "Use Saved Card" : "Add New Card"}
-                        </button>
+                          required
+                        />
                       </div>
-
-                      {showAddCard ? (
-                        <div className="p-4 rounded-xl border border-white/20 bg-black space-y-3">
-                          <div>
-                            <label className="text-[10px] text-neutral-400 uppercase font-semibold">Cardholder Name</label>
-                            <input
-                              type="text"
-                              placeholder="Jane Doe"
-                              value={newCardHolder}
-                              onChange={(e) => setNewCardHolder(e.target.value)}
-                              className="w-full mt-1 bg-neutral-900 border border-white/20 rounded-lg p-2 text-white text-xs focus:outline-none focus:border-white"
-                            />
-                          </div>
-                          <div>
-                            <label className="text-[10px] text-neutral-400 uppercase font-semibold">Card Number</label>
-                            <input
-                              type="text"
-                              placeholder="4000 0000 0000 0000"
-                              value={newCardNumber}
-                              onChange={(e) => setNewCardNumber(e.target.value)}
-                              className="w-full mt-1 bg-neutral-900 border border-white/20 rounded-lg p-2 text-white text-xs focus:outline-none focus:border-white"
-                            />
-                          </div>
-                          <div className="grid grid-cols-3 gap-2">
-                            <div>
-                              <label className="text-[10px] text-neutral-400 uppercase font-semibold">Expires</label>
-                              <input
-                                type="text"
-                                placeholder="MM/YY"
-                                value={newCardExpiry}
-                                onChange={(e) => setNewCardExpiry(e.target.value)}
-                                className="w-full mt-1 bg-neutral-900 border border-white/20 rounded-lg p-2 text-white text-xs focus:outline-none focus:border-white"
-                              />
-                            </div>
-                            <div>
-                              <label className="text-[10px] text-neutral-400 uppercase font-semibold">CVC</label>
-                              <input
-                                type="text"
-                                placeholder="123"
-                                value={newCardCVC}
-                                onChange={(e) => setNewCardCVC(e.target.value)}
-                                className="w-full mt-1 bg-neutral-900 border border-white/20 rounded-lg p-2 text-white text-xs focus:outline-none focus:border-white"
-                              />
-                            </div>
-                            <div>
-                              <label className="text-[10px] text-neutral-400 uppercase font-semibold">ZIP</label>
-                              <input
-                                type="text"
-                                placeholder="10001"
-                                value={newCardZip}
-                                onChange={(e) => setNewCardZip(e.target.value)}
-                                className="w-full mt-1 bg-neutral-900 border border-white/20 rounded-lg p-2 text-white text-xs focus:outline-none focus:border-white"
-                              />
-                            </div>
-                          </div>
+                      
+                      {/* Quick Pills */}
+                      <div className="grid grid-cols-4 gap-2 mt-2.5">
+                        {["500", "1000", "2500", "5000"].map((preset) => (
                           <button
+                            key={preset}
                             type="button"
-                            onClick={handleAddNewCard}
-                            className="w-full py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-bold text-white text-xs mt-2 cursor-pointer transition-colors"
+                            onClick={() => setDepositAmount(preset)}
+                            className={`py-2 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
+                              depositAmount === preset
+                                ? isLight
+                                  ? "border-black bg-[#0F172A] text-white shadow-md font-extrabold"
+                                  : "border-white bg-white text-black shadow-md font-extrabold"
+                                : isLight
+                                  ? "border-black/20 bg-slate-50 text-[#0F172A] hover:bg-slate-100 hover:border-black/40 font-bold shadow-xs"
+                                  : "border-white/10 bg-white/[0.02] text-neutral-300 hover:border-white/20"
+                            }`}
                           >
-                            Save & Attach Card
+                            +${parseInt(preset).toLocaleString()}
                           </button>
-                        </div>
-                      ) : (
-                        <div className="space-y-2">
-                          {linkedCards.map((card) => {
-                            const isSelected = card.id === selectedCardId;
-                            return (
-                              <div
-                                key={card.id}
-                                onClick={() => setSelectedCardId(card.id)}
-                                className={`p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${
-                                  isSelected
-                                    ? "border-white bg-white/[0.08] shadow-sm"
-                                    : "border-white/10 hover:border-white/20 bg-black"
-                                }`}
-                              >
-                                <div className="flex items-center gap-3">
-                                  <div className="h-8 w-12 shrink-0 rounded bg-neutral-900 border border-white/10 flex items-center justify-center p-0.5">
-                                    <span className="text-[10px] font-bold text-white">{card.fallback}</span>
-                                  </div>
-                                  <div>
-                                    <p className="text-xs font-bold text-white">{card.name}</p>
-                                    <p className="text-[10px] text-neutral-400">{card.detail}</p>
-                                  </div>
-                                </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Step 2: Method Selection */}
+                    <div>
+                      <label className={`block text-xs font-bold uppercase tracking-wider mb-2 ${isLight ? "text-[#0F172A]" : "text-neutral-300"}`}>
+                        Deposit Method
+                      </label>
+                      <div className="grid grid-cols-2 gap-2.5">
+                        {[
+                          { id: "card", label: "Linked Card", sub: "Instant • Standard Fee" },
+                          { id: "ach", label: "ACH Bank Transfer", sub: "1-2 Days • 0% Fee" },
+                          { id: "wire", label: "Wire Transfer", sub: "Same Day • $15 Fee" },
+                          { id: "rtp", label: "RTP Instant", sub: "Instant • $5 Fee" },
+                        ].map((m) => {
+                          const isSelected = depositMethod === m.id;
+                          return (
+                            <button
+                              key={m.id}
+                              type="button"
+                              onClick={() => setDepositMethod(m.id as any)}
+                              className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
+                                isLight
+                                  ? isSelected
+                                    ? "border-black bg-[#0F172A] text-white shadow-md font-bold"
+                                    : "border-black/20 bg-slate-50 text-[#0F172A] hover:bg-slate-100 hover:border-black/40 font-semibold shadow-xs"
+                                  : isSelected
+                                    ? "border-white bg-white text-black shadow-md font-bold"
+                                    : "border-white/10 bg-white/5 text-white hover:border-white/20 font-semibold"
+                              }`}
+                            >
+                              <div className="flex items-center justify-between">
+                                <span className={`text-xs font-bold ${
+                                  isLight
+                                    ? isSelected ? "text-white" : "text-[#0F172A]"
+                                    : isSelected ? "text-black" : "text-white"
+                                }`}>{m.label}</span>
                                 <div className={`h-4 w-4 rounded-full border flex items-center justify-center ${
-                                  isSelected ? "border-white bg-white text-black" : "border-white/30"
+                                  isLight
+                                    ? isSelected
+                                      ? "border-white bg-white text-black"
+                                      : "border-black/40 bg-transparent"
+                                    : isSelected
+                                      ? "border-black bg-black text-white"
+                                      : "border-white/30 bg-transparent"
                                 }`}>
-                                  {isSelected && <Check className="h-2.5 w-2.5 stroke-[3]" />}
+                                  {isSelected && (
+                                    <div className={`h-2 w-2 rounded-full ${isLight ? "bg-black" : "bg-white"}`} />
+                                  )}
                                 </div>
                               </div>
-                            );
-                          })}
-                        </div>
-                      )}
+                              <span className={`text-[10px] block mt-1.5 font-medium ${
+                                isLight
+                                  ? isSelected ? "text-slate-300" : "text-[#475569]"
+                                  : isSelected ? "text-neutral-700" : "text-neutral-400"
+                              }`}>{m.sub}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
-                  )}
 
-                  {/* Actions */}
-                  <div className="pt-2 flex items-center gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setIsDepositModalOpen(false)}
-                      className="flex-1 py-3 rounded-xl border border-white/20 text-xs font-bold text-neutral-300 hover:text-white hover:bg-white/5 transition-all cursor-pointer"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      className="flex-1 py-3 rounded-xl bg-white text-black text-xs font-bold hover:bg-neutral-200 transition-all flex items-center justify-center gap-2 shadow-lg cursor-pointer"
-                    >
-                      <Wallet className="h-4 w-4" />
-                      Confirm Deposit
-                    </button>
-                  </div>
-                </form>
-              )}
+                    {/* Step 3: Card Selection if Linked Card chosen */}
+                    {depositMethod === "card" && (
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center">
+                          <label className={`text-xs font-bold uppercase tracking-wider ${isLight ? "text-[#0F172A]" : "text-neutral-300"}`}>
+                            Select Card
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => setShowAddCard(!showAddCard)}
+                            className={`text-xs font-bold flex items-center gap-1 cursor-pointer ${
+                              isLight ? "text-[#475569] hover:text-[#0F172A]" : "text-neutral-300 hover:text-white"
+                            }`}
+                          >
+                            <Plus className="h-3 w-3" />
+                            {showAddCard ? "Use Saved Card" : "Add New Card"}
+                          </button>
+                        </div>
+
+                        {showAddCard ? (
+                          <div className={`p-4 rounded-xl border space-y-3 ${
+                            isLight ? "bg-slate-50 border-black/20" : "bg-black border-white/20"
+                          }`}>
+                            <div>
+                              <label className={`text-[10px] uppercase font-bold ${isLight ? "text-[#475569]" : "text-neutral-400"}`}>Cardholder Name</label>
+                              <input
+                                type="text"
+                                placeholder="Jane Doe"
+                                value={newCardHolder}
+                                onChange={(e) => setNewCardHolder(e.target.value)}
+                                className={`w-full mt-1 border rounded-lg p-2 text-xs font-semibold focus:outline-none ${
+                                  isLight ? "bg-white border-black/20 text-[#0F172A] focus:border-black" : "bg-neutral-900 border-white/20 text-white focus:border-white"
+                                }`}
+                              />
+                            </div>
+                            <div>
+                              <label className={`text-[10px] uppercase font-bold ${isLight ? "text-[#475569]" : "text-neutral-400"}`}>Card Number</label>
+                              <input
+                                type="text"
+                                placeholder="4000 0000 0000 0000"
+                                value={newCardNumber}
+                                onChange={(e) => setNewCardNumber(e.target.value)}
+                                className={`w-full mt-1 border rounded-lg p-2 text-xs font-semibold focus:outline-none ${
+                                  isLight ? "bg-white border-black/20 text-[#0F172A] focus:border-black" : "bg-neutral-900 border-white/20 text-white focus:border-white"
+                                }`}
+                              />
+                            </div>
+                            <div className="grid grid-cols-3 gap-2">
+                              <div>
+                                <label className={`text-[10px] uppercase font-bold ${isLight ? "text-[#475569]" : "text-neutral-400"}`}>Expires</label>
+                                <input
+                                  type="text"
+                                  placeholder="MM/YY"
+                                  value={newCardExpiry}
+                                  onChange={(e) => setNewCardExpiry(e.target.value)}
+                                  className={`w-full mt-1 border rounded-lg p-2 text-xs font-semibold focus:outline-none ${
+                                    isLight ? "bg-white border-black/20 text-[#0F172A] focus:border-black" : "bg-neutral-900 border-white/20 text-white focus:border-white"
+                                  }`}
+                                />
+                              </div>
+                              <div>
+                                <label className={`text-[10px] uppercase font-bold ${isLight ? "text-[#475569]" : "text-neutral-400"}`}>CVC</label>
+                                <input
+                                  type="text"
+                                  placeholder="123"
+                                  value={newCardCVC}
+                                  onChange={(e) => setNewCardCVC(e.target.value)}
+                                  className={`w-full mt-1 border rounded-lg p-2 text-xs font-semibold focus:outline-none ${
+                                    isLight ? "bg-white border-black/20 text-[#0F172A] focus:border-black" : "bg-neutral-900 border-white/20 text-white focus:border-white"
+                                  }`}
+                                />
+                              </div>
+                              <div>
+                                <label className={`text-[10px] uppercase font-bold ${isLight ? "text-[#475569]" : "text-neutral-400"}`}>ZIP</label>
+                                <input
+                                  type="text"
+                                  placeholder="10001"
+                                  value={newCardZip}
+                                  onChange={(e) => setNewCardZip(e.target.value)}
+                                  className={`w-full mt-1 border rounded-lg p-2 text-xs font-semibold focus:outline-none ${
+                                    isLight ? "bg-white border-black/20 text-[#0F172A] focus:border-black" : "bg-neutral-900 border-white/20 text-white focus:border-white"
+                                  }`}
+                                />
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={handleAddNewCard}
+                              className={`w-full py-2 font-bold text-xs rounded-lg mt-2 cursor-pointer transition-colors shadow-sm ${
+                                isLight ? "bg-[#0F172A] text-white hover:bg-black" : "bg-white/10 hover:bg-white/20 text-white border border-white/20"
+                              }`}
+                            >
+                              Save & Attach Card
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="space-y-2.5">
+                            {linkedCards.map((card: any) => {
+                              const isSelected = card.id === selectedCardId;
+                              const isChase = card.id.includes("1") || card.id.includes("chase") || card.name.toLowerCase().includes("chase");
+                              const isMercury = card.id.includes("2") || card.id.includes("mercury") || card.name.toLowerCase().includes("mercury");
+
+                              return (
+                                <div
+                                  key={card.id}
+                                  onClick={() => setSelectedCardId(card.id)}
+                                  className={`p-3.5 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${
+                                    isLight
+                                      ? isSelected
+                                        ? "border-black bg-[#0F172A] text-white shadow-md font-bold"
+                                        : "border-black/20 bg-white text-[#0F172A] hover:bg-slate-100 hover:border-black/40 font-semibold shadow-xs"
+                                      : isSelected
+                                        ? "border-white bg-white text-black shadow-md font-bold"
+                                        : "border-white/10 bg-white/5 text-white hover:border-white/20 font-semibold"
+                                  }`}
+                                >
+                                  <div className="flex items-center gap-3">
+                                    <div className="h-9 w-14 shrink-0 rounded-lg border border-black/20 bg-white p-0.5 flex items-center justify-center shadow-xs overflow-hidden">
+                                      <img
+                                        src={
+                                          card.image 
+                                            || (isChase ? "/chase-ink-business-unlimited.png" : isMercury ? "/mercurycard.png" : "/visa-logo.svg")
+                                        }
+                                        alt={card.name}
+                                        className="h-full w-full object-contain"
+                                      />
+                                    </div>
+                                    <div>
+                                      <p className={`text-xs font-bold ${
+                                        isLight
+                                          ? isSelected ? "text-white" : "text-[#0F172A]"
+                                          : isSelected ? "text-black" : "text-white"
+                                      }`}>{card.name}</p>
+                                      <p className={`text-[10px] font-medium ${
+                                        isLight
+                                          ? isSelected ? "text-slate-300" : "text-[#475569]"
+                                          : isSelected ? "text-neutral-700" : "text-neutral-400"
+                                      }`}>{card.detail}</p>
+                                    </div>
+                                  </div>
+                                  <div className={`h-4 w-4 rounded-full border flex items-center justify-center ${
+                                    isLight
+                                      ? isSelected
+                                        ? "border-white bg-white text-black"
+                                        : "border-black/40 bg-transparent"
+                                      : isSelected
+                                        ? "border-black bg-black text-white"
+                                        : "border-white/30 bg-transparent"
+                                  }`}>
+                                    {isSelected && <Check className="h-2.5 w-2.5 stroke-[3]" />}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Actions */}
+                    <div className="pt-2 flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setIsDepositModalOpen(false)}
+                        className={`flex-1 py-3 rounded-xl border text-xs font-bold transition-all cursor-pointer shadow-xs ${
+                          isLight 
+                            ? "bg-white border-black/20 text-[#0F172A] hover:bg-slate-100" 
+                            : "border-white/20 text-neutral-300 hover:bg-white/5 hover:text-white"
+                        }`}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        className={`flex-1 py-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-md cursor-pointer ${
+                          isLight 
+                            ? "bg-[#0F172A] text-white hover:bg-black" 
+                            : "bg-white text-black hover:bg-neutral-200"
+                        }`}
+                      >
+                        <Wallet className="h-4 w-4 text-current" />
+                        Confirm Deposit
+                      </button>
+                    </div>
+                  </form>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </main>
 
   );

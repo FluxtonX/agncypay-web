@@ -132,31 +132,30 @@ export function BanksAndCardsPanel({ onConnectAccount }: BanksAndCardsPanelProps
   }, [plaidAccounts]);
 
   return (
-    <div className="bg-[#0D0D0D] rounded-2xl border border-white/20 overflow-hidden shadow-xl flex flex-col space-y-0">
+    <div className="bg-[#0D0D0D] light:bg-white rounded-2xl border border-white/20 light:border-black/10 overflow-hidden shadow-xl flex flex-col space-y-0">
       {/* Header */}
-      <div className="p-6 border-b border-white/10 bg-white/[0.01] flex items-center justify-between">
+      <div className="p-6 border-b border-white/10 light:border-black/10 bg-white/[0.01] flex items-center justify-between">
         <div>
-          <h3 className="text-xs font-extrabold uppercase tracking-wider text-[#8f8f8f] flex items-center gap-2">
-            <Building2 className="w-4 h-4 text-emerald-400" />
+          <h3 className="text-xs font-extrabold uppercase tracking-wider text-[#8f8f8f] light:text-[#475569] flex items-center gap-2">
+            <Building2 className="w-4 h-4 text-emerald-500 light:text-emerald-600" />
             CONNECTED BANKING FEEDS
           </h3>
-          <p className="text-xs text-[#8f8f8f] mt-1">Real-time balances & float verified via Plaid API</p>
         </div>
         <button
           type="button"
           onClick={handleConnectPlaid}
           disabled={isPlaidLoading}
-          className="px-4 py-2 rounded-xl bg-white text-black hover:bg-neutral-200 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm disabled:opacity-50"
+          className="px-4 py-2 rounded-xl bg-white light:bg-[#0F172A] text-black light:text-white hover:bg-neutral-200 light:hover:bg-black text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm disabled:opacity-50"
         >
           {isPlaidLoading ? (
             <>
-              <Loader2 className="h-3.5 w-3.5 animate-spin text-black" />
-              <span>Connecting...</span>
+              <Loader2 className="h-3.5 w-3.5 animate-spin text-black light:text-white" />
+              <span className="light:text-white">Connecting...</span>
             </>
           ) : (
             <>
-              <Plus className="h-3.5 w-3.5 text-black" />
-              <span>+ Connect Bank (Plaid)</span>
+              <Plus className="h-3.5 w-3.5 text-black light:text-white" />
+              <span className="light:text-white">+ Connect Bank (Plaid)</span>
             </>
           )}
         </button>
@@ -172,40 +171,40 @@ export function BanksAndCardsPanel({ onConnectAccount }: BanksAndCardsPanelProps
       )}
 
       {/* Main Body */}
-      <div className="p-6 flex flex-col gap-4 border-b border-white/10 bg-white/[0.02]">
+      <div className="p-6 flex flex-col gap-4 border-b border-white/10 light:border-black/10 bg-white/[0.02] light:bg-slate-50/50">
         {/* Dynamic Plaid Connected Accounts */}
         {plaidAccounts.length > 0 && plaidAccounts.map((acc) => (
           <div
             key={acc.id}
-            className="flex items-center justify-between p-4 rounded-xl border border-emerald-500/30 bg-emerald-950/20 hover:border-emerald-500/50 transition-all"
+            className="flex items-center justify-between p-4 rounded-xl border border-emerald-500/30 light:border-emerald-200 bg-emerald-950/20 light:bg-emerald-50 hover:border-emerald-500/50 transition-all"
           >
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl border border-emerald-500/30 bg-emerald-500/10 flex items-center justify-center shrink-0">
-                <Building2 className="h-6 w-6 text-emerald-400" />
+              <div className="w-12 h-12 rounded-xl border border-emerald-500/30 light:border-emerald-300 bg-emerald-500/10 light:bg-emerald-100 flex items-center justify-center shrink-0">
+                <Building2 className="h-6 w-6 text-emerald-400 light:text-emerald-700" />
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <h4 className="text-xs font-bold text-white">{acc.institutionName} — {acc.name}</h4>
-                  <span className="px-2 py-0.5 rounded text-[9px] font-extrabold uppercase bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                  <h4 className="text-xs font-bold text-white light:text-[#0F172A]">{acc.institutionName} — {acc.name}</h4>
+                  <span className="px-2 py-0.5 rounded text-[9px] font-extrabold uppercase bg-emerald-500/20 light:bg-emerald-100 text-emerald-400 light:text-emerald-800 border border-emerald-500/30 light:border-emerald-300">
                     Plaid Verified
                   </span>
                 </div>
-                <p className="text-[11px] font-medium text-[#8f8f8f] mt-0.5">
+                <p className="text-[11px] font-medium text-[#8f8f8f] light:text-[#475569] mt-0.5">
                   {acc.subtype?.toUpperCase()} ••••{acc.mask}
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-4">
               <div className="text-right">
-                <span className="text-xs font-bold text-white block">
+                <span className="text-xs font-bold text-white light:text-[#0F172A] block">
                   ${acc.availableBalance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
-                <span className="text-[10px] text-emerald-400 font-semibold">Available Float</span>
+                <span className="text-[10px] text-emerald-400 light:text-emerald-700 font-semibold">Available Float</span>
               </div>
               <button
                 onClick={() => handleDisconnectPlaidAccount(acc.id)}
                 title="Disconnect Bank Feed"
-                className="p-1.5 rounded-lg border border-white/10 bg-black/40 text-[#8f8f8f] hover:text-red-400 hover:border-red-500/30 transition-all cursor-pointer"
+                className="p-1.5 rounded-lg border border-white/10 light:border-black/10 bg-black/40 light:bg-white text-[#8f8f8f] light:text-[#475569] hover:text-red-400 hover:border-red-500/30 transition-all cursor-pointer"
               >
                 <X className="h-3.5 w-3.5" />
               </button>
@@ -214,52 +213,52 @@ export function BanksAndCardsPanel({ onConnectAccount }: BanksAndCardsPanelProps
         ))}
 
         {/* Default Verified Card Feeds */}
-        <div className="flex items-center gap-4 p-4 rounded-xl border border-white/10 bg-[#0A0A0A] cursor-pointer hover:border-white/20 transition-all">
-          <div className="w-16 h-11 rounded-lg shrink-0 border border-white/10 overflow-hidden bg-black flex items-center justify-center p-1">
+        <div className="flex items-center gap-4 p-4 rounded-xl border border-white/10 light:border-black/10 bg-[#0A0A0A] light:bg-white cursor-pointer hover:border-white/20 light:hover:border-black/20 transition-all shadow-xs">
+          <div className="w-16 h-11 rounded-lg shrink-0 border border-white/10 light:border-black/10 overflow-hidden bg-black light:bg-[#0F172A] flex items-center justify-center p-1">
             <span className="text-[10px] font-extrabold text-white tracking-wider">CHASE</span>
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <h4 className="text-xs font-bold text-white truncate">Chase Ink Business Unlimited Visa</h4>
-              <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold uppercase bg-emerald-950/60 text-emerald-400 border border-emerald-800/40">
+              <h4 className="text-xs font-bold text-white light:text-[#0F172A] truncate">Chase Ink Business Unlimited Visa</h4>
+              <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold uppercase bg-emerald-950/60 light:bg-emerald-100 text-emerald-400 light:text-emerald-800 border border-emerald-800/40 light:border-emerald-300">
                 Verified
               </span>
             </div>
-            <p className="text-[11px] font-medium text-[#8f8f8f] mt-0.5">Visa •••• 4892 • Primary Disbursement Account</p>
+            <p className="text-[11px] font-medium text-[#8f8f8f] light:text-[#475569] mt-0.5">Visa •••• 4892 • Primary Disbursement Account</p>
           </div>
           <div className="text-right">
-            <span className="text-xs font-bold text-white block">$35,000.00</span>
-            <span className="text-[10px] text-emerald-400 font-semibold">Float Limit</span>
+            <span className="text-xs font-bold text-white light:text-[#0F172A] block">$35,000.00</span>
+            <span className="text-[10px] text-emerald-400 light:text-emerald-700 font-semibold">Float Limit</span>
           </div>
         </div>
 
-        <div className="flex items-center gap-4 p-4 rounded-xl border border-white/10 bg-[#0A0A0A] cursor-pointer hover:border-white/20 transition-all">
-          <div className="w-16 h-11 rounded-lg shrink-0 border border-white/10 overflow-hidden bg-black flex items-center justify-center p-1">
+        <div className="flex items-center gap-4 p-4 rounded-xl border border-white/10 light:border-black/10 bg-[#0A0A0A] light:bg-white cursor-pointer hover:border-white/20 light:hover:border-black/20 transition-all shadow-xs">
+          <div className="w-16 h-11 rounded-lg shrink-0 border border-white/10 light:border-black/10 overflow-hidden bg-black light:bg-[#0F172A] flex items-center justify-center p-1">
             <span className="text-[10px] font-extrabold text-white tracking-wider">MERCURY</span>
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <h4 className="text-xs font-bold text-white truncate">Mercury Business IO Mastercard</h4>
-              <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold uppercase bg-emerald-950/60 text-emerald-400 border border-emerald-800/40">
+              <h4 className="text-xs font-bold text-white light:text-[#0F172A] truncate">Mercury Business IO Mastercard</h4>
+              <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold uppercase bg-emerald-950/60 light:bg-emerald-100 text-emerald-400 light:text-emerald-800 border border-emerald-800/40 light:border-emerald-300">
                 Active
               </span>
             </div>
-            <p className="text-[11px] font-medium text-[#8f8f8f] mt-0.5">Mastercard •••• 1094 • Card Settlement Feed</p>
+            <p className="text-[11px] font-medium text-[#8f8f8f] light:text-[#475569] mt-0.5">Mastercard •••• 1094 • Card Settlement Feed</p>
           </div>
           <div className="text-right">
-            <span className="text-xs font-bold text-white block">$13,950.00</span>
-            <span className="text-[10px] text-emerald-400 font-semibold">Float Limit</span>
+            <span className="text-xs font-bold text-white light:text-[#0F172A] block">$13,950.00</span>
+            <span className="text-[10px] text-emerald-400 light:text-emerald-700 font-semibold">Float Limit</span>
           </div>
         </div>
       </div>
 
       {/* Footer */}
       <div className="p-6 bg-white/[0.01] flex justify-between items-center text-xs">
-        <span className="font-semibold text-[#8f8f8f] flex items-center gap-1.5">
-          <ShieldCheck className="w-4 h-4 text-emerald-400" />
+        <span className="font-semibold text-[#8f8f8f] light:text-[#475569] flex items-center gap-1.5">
+          <ShieldCheck className="w-4 h-4 text-emerald-500 light:text-emerald-600" />
           Plaid Available Verified Float
         </span>
-        <span className="text-sm font-extrabold text-white">
+        <span className="text-sm font-extrabold text-white light:text-[#0F172A]">
           ${totalPlaidFloat.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
         </span>
       </div>

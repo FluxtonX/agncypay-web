@@ -15,7 +15,8 @@ import {
   Sun,
   Moon,
   HelpCircle,
-  FileText
+  FileText,
+  Landmark
 } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { subscribeInvoicesByBrand, subscribeInvoicesByAgency, FirestoreInvoice } from "../../../lib/firebaseInvoices";
@@ -93,18 +94,13 @@ export default function AnalyticsDashboardPage() {
                 <img
                   src="/agncypaybrand.png"
                   alt="AgncyPay"
-                  className="h-10 w-auto object-contain scale-[1.3] origin-left"
+                  className="h-12 w-auto object-contain scale-[1.56] origin-left transition-transform"
                 />
               </Link>
-              {(workspaceType === "brand" || workspaceType === "agency") && (
-                <span className="absolute -top-1.5 -right-4 translate-x-full rounded-full bg-white/[0.08] border border-white/[0.15] px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-[#A3A3A3]">
-                  {workspaceType === "brand" ? "Brand" : "Agency"}
-                </span>
-              )}
             </div>
             <span className="h-4 w-[1px] bg-white/20 hidden md:block" />
-            <div className="hidden md:flex items-center gap-2 px-3 py-1 rounded-full bg-white/[0.03] border border-white/20 text-[11px] font-bold uppercase tracking-wider text-[#A3A3A3]">
-              <Building2 className="h-3 w-3 text-white" />
+            <div className="hidden md:flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 light:bg-black/5 border border-white/20 light:border-black/10 text-[11px] font-bold uppercase tracking-wider text-white light:text-[#0F172A]">
+              <Building2 className="h-3 w-3 text-white light:text-[#0F172A]" />
               {workspaceType === "brand" ? "Brand Portal" : "Agency Portal"}
             </div>
           </div>
@@ -112,25 +108,25 @@ export default function AnalyticsDashboardPage() {
           <nav className="hidden lg:flex items-center gap-1 bg-white/[0.03] p-1 rounded-full border border-white/20">
             <button 
               onClick={() => router.push("/agencydashboard")}
-              className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#8f8f8f] hover:text-white transition-all cursor-pointer"
+              className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#8f8f8f] light:text-[#475569] hover:text-white light:hover:text-[#0F172A] transition-all cursor-pointer"
             >
               Home
             </button>
             <button 
               onClick={() => router.push("/agencydashboard/invoices")}
-              className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#8f8f8f] hover:text-white transition-all cursor-pointer"
+              className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#8f8f8f] light:text-[#475569] hover:text-white light:hover:text-[#0F172A] transition-all cursor-pointer"
             >
               {workspaceType === "brand" ? "Invoice Queue" : "Sent Invoices"}
             </button>
             <button 
               onClick={() => router.push("/agencydashboard/nodes")}
-              className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#8f8f8f] hover:text-white transition-all cursor-pointer"
+              className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#8f8f8f] light:text-[#475569] hover:text-white light:hover:text-[#0F172A] transition-all cursor-pointer"
             >
               {workspaceType === "brand" ? "Settlement Nodes" : "Payout Split Nodes"}
             </button>
             <button 
               onClick={() => router.push("/agencydashboard/analytics")}
-              className="px-4 py-1.5 rounded-full text-xs font-semibold bg-white text-black shadow-sm transition-all cursor-pointer"
+              className="px-4 py-1.5 rounded-full text-xs font-bold bg-white light:bg-[#0F172A] text-black light:text-white shadow-sm border border-white/20 light:border-black/10 transition-all cursor-pointer"
             >
               {workspaceType === "brand" ? "Analytics" : "Agency Earnings"}
             </button>
@@ -139,6 +135,14 @@ export default function AnalyticsDashboardPage() {
           <div className="flex items-center gap-3">
             {workspaceType === "agency" && (
               <>
+                <button
+                  onClick={() => router.push("/agencydashboard/agencybanking")}
+                  className="px-3.5 py-1.5 rounded-full text-xs font-bold bg-white light:bg-[#0F172A] text-black light:text-white hover:bg-neutral-200 light:hover:bg-[#1E293B] border border-white/20 light:border-black/10 shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Landmark className="h-3.5 w-3.5" />
+                  Agency Banking
+                </button>
+                <div className="h-4 w-[1px] bg-white/20" />
                 <button
                   onClick={() => router.push("/dashboard")}
                   className="text-xs font-semibold text-[#8f8f8f] hover:text-white transition-colors flex items-center gap-1"
@@ -153,7 +157,7 @@ export default function AnalyticsDashboardPage() {
               <div className="h-8 w-8 rounded-full bg-white/[0.05] border border-white/20 flex items-center justify-center font-bold text-xs text-white">
                 {state.user?.fullName ? state.user.fullName.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2) : "AD"}
               </div>
-              <span className="text-xs font-bold text-[#E5E5EA] hidden sm:inline">
+              <span className={`text-xs font-bold ${isLightTheme ? "text-[#0F172A]" : "text-[#E5E5EA]"} hidden sm:inline`}>
                 {state.workspaces.find(w => w.id === state.activeWorkspaceId)?.name || state.user?.fullName || "Adidas Corporate"}
               </span>
             </div>

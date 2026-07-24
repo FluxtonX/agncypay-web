@@ -252,6 +252,13 @@ h1, h2, h3, h4, h5, h6, .font-semibold, .font-bold, .font-extrabold, .font-black
   border-color: rgba(0, 0, 0, 0.15) !important;
 }
 
+:root.light ::placeholder,
+:root.light input::placeholder,
+:root.light textarea::placeholder {
+  color: #64748B !important;
+  opacity: 1 !important;
+}
+
 :root.light input:focus,
 :root.light select:focus,
 :root.light textarea:focus {
@@ -267,12 +274,44 @@ h1, h2, h3, h4, h5, h6, .font-semibold, .font-bold, .font-extrabold, .font-black
   background-color: #1E293B !important;
 }
 
+:root.light button.bg-slate-50,
+:root.light button.bg-\[\#F8FAFC\],
+:root.light button.bg-slate-100 {
+  background-color: #F8FAFC !important;
+  color: #0F172A !important;
+  border-color: rgba(0, 0, 0, 0.15) !important;
+}
+
+:root.light button.bg-slate-50:hover,
+:root.light button.bg-\[\#F8FAFC\]:hover,
+:root.light button.bg-slate-100:hover {
+  background-color: #F1F5F9 !important;
+  border-color: rgba(0, 0, 0, 0.3) !important;
+}
+
 :root.light button.text-black {
   color: #FFFFFF !important;
 }
 
 :root.light .text-white {
   color: #0A0A0A !important;
+}
+
+/* Explicit white text override for dark cards/buttons selected in light mode */
+:root.light .force-white-text,
+:root.light .force-white-text *,
+:root.light .bg-\[\#0F172A\],
+:root.light .bg-\[\#0F172A\] *,
+:root.light button.bg-\[\#0F172A\],
+:root.light button.bg-\[\#0F172A\] *,
+:root.light span.bg-\[\#0F172A\] svg,
+:root.light button.bg-black svg {
+  color: #FFFFFF !important;
+}
+
+:root.light .bg-\[\#0F172A\] .text-slate-300,
+:root.light button.bg-\[\#0F172A\] .text-slate-300 {
+  color: #CBD5E1 !important;
 }
 
 :root.light .bg-black {
@@ -283,16 +322,56 @@ h1, h2, h3, h4, h5, h6, .font-semibold, .font-bold, .font-extrabold, .font-black
   background-color: #FFFFFF !important;
 }
 
-:root.light .bg-\[\#0A0A0A\] {
+:root.light .bg-\[\#060606\] {
+  background-color: #FFFFFF !important;
+}
+
+:root.light .bg-\[\#080808\] {
+  background-color: #FFFFFF !important;
+}
+
+:root.light .bg-\[\#090909\] {
+  background-color: #FFFFFF !important;
+}
+
+:root.light .bg-\[\#0a0a0a\] {
+  background-color: #FFFFFF !important;
+}
+
+:root.light .bg-\[\#0b0b0b\] {
+  background-color: #FFFFFF !important;
+}
+
+:root.light .bg-\[\#0c0c0c\] {
+  background-color: #FFFFFF !important;
+}
+
+:root.light .bg-\[\#000000\] {
   background-color: #F8FAFC !important;
 }
 
-:root.light .border-white\/10 {
-  border-color: rgba(0, 0, 0, 0.08) !important;
+:root.light .bg-\[\#0A0A0A\] {
+  background-color: #FFFFFF !important;
 }
 
-:root.light .border-white\/20 {
-  border-color: rgba(0, 0, 0, 0.15) !important;
+:root.light .bg-\[\#0D0D0D\] {
+  background-color: #FFFFFF !important;
+}
+
+:root.light .bg-\[\#111\] {
+  background-color: #FFFFFF !important;
+}
+
+:root.light .border-white\/10,
+:root.light .border-white\/15,
+:root.light .border-white\/20,
+:root.light .border-white\/30,
+:root.light .border-\[\#3a3a3a\],
+:root.light .border-\[\#4a4a4a\],
+:root.light .border-\[\#303030\],
+:root.light .border-\[\#333\],
+:root.light .border-\[\#2f2f2f\] {
+  border-color: rgba(0, 0, 0, 0.12) !important;
 }
 
 :root.light .text-neutral-400 {
@@ -307,6 +386,14 @@ h1, h2, h3, h4, h5, h6, .font-semibold, .font-bold, .font-extrabold, .font-black
   background-color: rgba(0, 0, 0, 0.03) !important;
 }
 
+:root.light .bg-white\/\[0\.04\] {
+  background-color: rgba(0, 0, 0, 0.04) !important;
+}
+
+:root.light .bg-white\/\[0\.02\] {
+  background-color: rgba(0, 0, 0, 0.02) !important;
+}
+
 :root.light .bg-white\/5 {
   background-color: rgba(0, 0, 0, 0.03) !important;
 }
@@ -315,9 +402,25 @@ h1, h2, h3, h4, h5, h6, .font-semibold, .font-bold, .font-extrabold, .font-black
   background-color: rgba(0, 0, 0, 0.06) !important;
 }
 
-/* Invert white agncypay logo to dark black in light mode */
-:root.light img[src*="agncypaybrand.png"] {
+:root.light .bg-white\/15 {
+  background-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+/* Invert white agncypay logos to dark black in light mode */
+:root.light img[src*="agncypaybrand.png"],
+:root.light img[src*="agncypayLogo.png"] {
   filter: invert(1) brightness(0.2);
+}
+
+/* Ensure payment brand SVG logos render with high contrast in Light Mode */
+:root.light img[src*="plaid-logo.svg"] {
+  filter: none !important;
+  opacity: 1 !important;
+}
+
+:root.light img[src*="visa-logo.svg"] {
+  filter: none !important;
+  opacity: 1 !important;
 }
 
 /* Color adjustments for specific grey texts to improve legibility */
@@ -333,8 +436,41 @@ h1, h2, h3, h4, h5, h6, .font-semibold, .font-bold, .font-extrabold, .font-black
   color: #475569 !important;
 }
 
+:root.light .text-\[\#9b9b9b\] {
+  color: #475569 !important;
+}
+
+:root.light .text-neutral-300 {
+  color: #334155 !important;
+}
+
 :root.light .text-neutral-400 {
   color: #334155 !important;
+}
+
+:root.light .rewards-box {
+  background-color: rgba(16, 185, 129, 0.1) !important;
+  border-color: rgba(16, 185, 129, 0.3) !important;
+}
+
+:root.light .rewards-text {
+  color: #0F172A !important;
+}
+
+/* Ensure dark buttons in Light Mode retain white text and icons */
+:root.light button.bg-white span,
+:root.light button.bg-white svg {
+  color: #FFFFFF !important;
+}
+
+:root.light button.bg-black {
+  background-color: #0F172A !important;
+  color: #FFFFFF !important;
+}
+
+:root.light button.bg-black span,
+:root.light button.bg-black svg {
+  color: #FFFFFF !important;
 }
 
 /* Light mode specific Creative Node Network overrides */
@@ -379,3 +515,4 @@ h1, h2, h3, h4, h5, h6, .font-semibold, .font-bold, .font-extrabold, .font-black
 :root.light .h-10.w-10.rounded-xl.bg-\[\#111\] text-neutral-400 {
   color: #0F172A !important;
 }
+

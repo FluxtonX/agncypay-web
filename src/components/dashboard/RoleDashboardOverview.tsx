@@ -144,7 +144,7 @@ const overviewData: Record<Exclude<WorkspaceType, "brand">, {
 
 function Panel({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <section className={cn("rounded-[13px] border border-[#676767] bg-black", className)}>
+    <section className={cn("rounded-[13px] border border-[#676767] light:border-black/15 bg-black light:bg-white", className)}>
       {children}
     </section>
   );
@@ -156,10 +156,10 @@ export function RoleDashboardOverview({ workspaceType }: { workspaceType: Exclud
   return (
     <div className="w-full max-w-[1048px]">
       <div>
-        <h1 className="text-[34px] font-semibold leading-none text-white">
+        <h1 className="text-[34px] font-semibold leading-none text-white light:text-[#0F172A]">
           {data.title}
         </h1>
-        <p className="mt-[18px] text-[20px] leading-6 text-[#939393]">
+        <p className="mt-[18px] text-[20px] leading-6 text-[#939393] light:text-[#475569]">
           {data.subtitle}
         </p>
       </div>
@@ -168,14 +168,14 @@ export function RoleDashboardOverview({ workspaceType }: { workspaceType: Exclud
         {data.metrics.map((metric) => (
           <Panel key={metric.title} className="flex min-h-[178px] flex-col justify-between px-4 py-[23px]">
             <div>
-              <h2 className="text-[18px] font-normal leading-6 text-[#7d7d7d]">
+              <h2 className="text-[18px] font-normal leading-6 text-[#7d7d7d] light:text-[#475569]">
                 {metric.title}
               </h2>
-              <p className="mt-[22px] break-words text-[33px] font-semibold leading-tight text-white">
+              <p className="mt-[22px] break-words text-[33px] font-semibold leading-tight text-white light:text-[#0F172A]">
                 {metric.value}
               </p>
             </div>
-            <p className="mt-5 text-[15px] leading-5 text-[#949494]">
+            <p className="mt-5 text-[15px] leading-5 text-[#949494] light:text-[#64748B]">
               {metric.detail}
             </p>
           </Panel>
@@ -186,10 +186,10 @@ export function RoleDashboardOverview({ workspaceType }: { workspaceType: Exclud
         <Panel className="px-[25px] py-[29px]">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <h2 className="text-[29px] font-semibold leading-none text-white">
+              <h2 className="text-[29px] font-semibold leading-none text-white light:text-[#0F172A]">
                 Priority Work
               </h2>
-              <p className="mt-[14px] text-[17px] leading-6 text-[#777]">
+              <p className="mt-[14px] text-[17px] leading-6 text-[#777] light:text-[#475569]">
                 Operational items that need attention.
               </p>
             </div>
@@ -198,10 +198,10 @@ export function RoleDashboardOverview({ workspaceType }: { workspaceType: Exclud
                 <Link
                   key={action.label}
                   href={action.href}
-                  className="inline-flex h-9 items-center gap-2 rounded-[7px] border border-[#555] bg-[#0c0c0c] px-3 text-[14px] font-semibold text-white transition-colors hover:border-[#777]"
+                  className="inline-flex h-9 items-center gap-2 rounded-[7px] border border-[#555] light:border-black/15 bg-[#0c0c0c] light:bg-[#0F172A] px-3 text-[14px] font-semibold text-white light:text-white transition-colors hover:border-[#777] light:hover:bg-black"
                 >
                   {action.icon}
-                  {action.label}
+                  <span className="light:text-white">{action.label}</span>
                 </Link>
               ))}
             </div>
@@ -211,21 +211,21 @@ export function RoleDashboardOverview({ workspaceType }: { workspaceType: Exclud
             {data.work.map((item) => (
               <div
                 key={item.title}
-                className="flex flex-col gap-4 rounded-[8px] border border-[#303030] bg-[#050505] px-5 py-4 sm:flex-row sm:items-center sm:justify-between"
+                className="flex flex-col gap-4 rounded-[8px] border border-[#303030] light:border-black/10 bg-[#050505] light:bg-slate-50 px-5 py-4 sm:flex-row sm:items-center sm:justify-between"
               >
                 <div className="min-w-0">
-                  <p className="truncate text-[18px] font-semibold leading-6 text-white">
+                  <p className="truncate text-[18px] font-semibold leading-6 text-white light:text-[#0F172A]">
                     {item.title}
                   </p>
-                  <p className="mt-1 text-[14px] leading-5 text-[#858585]">
+                  <p className="mt-1 text-[14px] leading-5 text-[#858585] light:text-[#475569]">
                     {item.detail}
                   </p>
                 </div>
                 <div className="flex shrink-0 items-center justify-between gap-3 sm:flex-col sm:items-end">
-                  <p className="text-[18px] font-semibold leading-none text-white">
+                  <p className="text-[18px] font-semibold leading-none text-white light:text-[#0F172A]">
                     {item.amount}
                   </p>
-                  <span className="inline-flex h-7 items-center rounded-[7px] border border-[#444] bg-[#111] px-3 text-[13px] font-semibold text-[#d7d7d7]">
+                  <span className="inline-flex h-7 items-center rounded-[7px] border border-[#444] light:border-black/15 bg-[#111] light:bg-slate-200 px-3 text-[13px] font-semibold text-[#d7d7d7] light:text-[#0F172A]">
                     {item.status}
                   </span>
                 </div>
@@ -235,10 +235,10 @@ export function RoleDashboardOverview({ workspaceType }: { workspaceType: Exclud
         </Panel>
 
         <Panel className="px-[25px] py-[29px]">
-          <h2 className="text-[29px] font-semibold leading-none text-white">
+          <h2 className="text-[29px] font-semibold leading-none text-white light:text-[#0F172A]">
             Workspace Readiness
           </h2>
-          <p className="mt-[14px] text-[17px] leading-6 text-[#777]">
+          <p className="mt-[14px] text-[17px] leading-6 text-[#777] light:text-[#475569]">
             Verification and operating setup.
           </p>
 
@@ -248,12 +248,12 @@ export function RoleDashboardOverview({ workspaceType }: { workspaceType: Exclud
                 <span
                   className={cn(
                     "flex h-8 w-8 shrink-0 items-center justify-center rounded-full border",
-                    item.done ? "border-white bg-white text-black" : "border-[#444] text-[#777]"
+                    item.done ? "border-white light:border-black bg-white light:bg-[#0F172A] text-black light:text-white" : "border-[#444] light:border-slate-300 text-[#777] light:text-[#64748B]"
                   )}
                 >
-                  {item.done ? <CheckCircle2 className="h-4 w-4" /> : <Clock3 className="h-4 w-4" />}
+                  {item.done ? <CheckCircle2 className="h-4 w-4 light:text-white" /> : <Clock3 className="h-4 w-4" />}
                 </span>
-                <p className="text-[16px] font-semibold leading-5 text-white">
+                <p className="text-[16px] font-semibold leading-5 text-white light:text-[#0F172A]">
                   {item.label}
                 </p>
               </div>

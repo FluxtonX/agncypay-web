@@ -102,7 +102,8 @@ export default function NodesDashboardPage() {
       <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-white/[0.01] rounded-full blur-[100px] pointer-events-none" />
 
       {/* Header */}
-      <header className="border-b border-border-custom bg-background/90 sticky top-0 z-50 shadow-sm backdrop-blur">
+      {/* Header */}
+      <header className="border-b border-white/25 light:border-black/15 bg-background/90 sticky top-0 z-50 shadow-sm backdrop-blur">
         <div className="max-w-[1520px] mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-6">
             <div className="relative flex items-center mr-12">
@@ -110,46 +111,41 @@ export default function NodesDashboardPage() {
                 <img
                   src="/agncypaybrand.png"
                   alt="AgncyPay"
-                  className="h-10 w-auto object-contain scale-[1.3] origin-left"
+                  className="h-12 w-auto object-contain scale-[1.56] origin-left transition-transform"
                 />
               </Link>
-              {(workspaceType === "brand" || workspaceType === "agency") && (
-                <span className="absolute -top-1.5 -right-4 translate-x-full rounded-full bg-white/[0.08] border border-white/[0.15] px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-[#A3A3A3]">
-                  {workspaceType === "brand" ? "Brand" : "Agency"}
-                </span>
-              )}
             </div>
             <span className="h-4 w-[1px] bg-white/20 hidden md:block" />
-            <div className="hidden md:flex items-center gap-2 px-3 py-1 rounded-full bg-white/[0.03] border border-white/20 text-[11px] font-bold uppercase tracking-wider text-[#A3A3A3]">
-              <Building2 className="h-3 w-3 text-white" />
-              {workspaceType === "brand" ? "Brand Portal" : "Agency Portal"}
+            <div className="hidden md:flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 light:bg-black/5 border border-white/20 light:border-black/10 text-[11px] font-bold uppercase tracking-wider text-white light:text-[#0F172A]">
+              <Building2 className="h-3 w-3 text-white light:text-[#0F172A]" />
+              Brand Portal
             </div>
           </div>
 
           <nav className="hidden lg:flex items-center gap-1 bg-white/[0.03] p-1 rounded-full border border-white/20">
             <button 
               onClick={() => router.push("/branddashboard")}
-              className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#8f8f8f] hover:text-white transition-all cursor-pointer"
+              className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#8f8f8f] light:text-[#475569] hover:text-white light:hover:text-[#0F172A] transition-all cursor-pointer"
             >
               Home
             </button>
             <button 
               onClick={() => router.push("/branddashboard/invoices")}
-              className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#8f8f8f] hover:text-white transition-all cursor-pointer"
+              className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#8f8f8f] light:text-[#475569] hover:text-white light:hover:text-[#0F172A] transition-all cursor-pointer"
             >
-              {workspaceType === "brand" ? "Invoice Queue" : "Sent Invoices"}
+              Invoice Queue
             </button>
             <button 
               onClick={() => router.push("/branddashboard/nodes")}
-              className="px-4 py-1.5 rounded-full text-xs font-semibold bg-white text-black shadow-sm transition-all cursor-pointer"
+              className="px-4 py-1.5 rounded-full text-xs font-bold bg-white light:bg-[#0F172A] text-black light:text-white shadow-sm border border-white/20 light:border-black/10 transition-all cursor-pointer"
             >
-              {workspaceType === "brand" ? "Settlement Nodes" : "Payout Split Nodes"}
+              Settlement Nodes
             </button>
             <button 
               onClick={() => router.push("/branddashboard/analytics")}
-              className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#8f8f8f] hover:text-white transition-all cursor-pointer"
+              className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#8f8f8f] light:text-[#475569] hover:text-white light:hover:text-[#0F172A] transition-all cursor-pointer"
             >
-              {workspaceType === "brand" ? "Analytics" : "Agency Earnings"}
+              Analytics
             </button>
           </nav>
 
@@ -282,8 +278,8 @@ export default function NodesDashboardPage() {
           </div>
         </div>
 
-        {/* Main Content Layout with Interactive Map */}
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-6 items-start">
+        {/* Main Content Layout */}
+        <div className="w-full">
           
           {/* Table Container */}
           <div className="glass-panel rounded-2xl border border-white/10 overflow-hidden">
@@ -361,10 +357,10 @@ export default function NodesDashboardPage() {
                                 </button>
                               )
                             ) : (
-                              <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-md ${
+                              <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-md ${
                                 isDisbursed 
-                                  ? "text-emerald-400 bg-emerald-950/40 border border-emerald-900" 
-                                  : "text-amber-400 bg-amber-950/40 border border-amber-900"
+                                  ? (isLightTheme ? "text-emerald-900 bg-emerald-100 border border-emerald-300 font-bold" : "text-emerald-400 bg-emerald-950/40 border border-emerald-900 font-bold") 
+                                  : (isLightTheme ? "text-amber-900 bg-amber-100 border border-amber-300 font-bold" : "text-amber-400 bg-amber-950/40 border border-amber-900 font-bold")
                               }`}>
                                 {isDisbursed ? "Fully Routed" : "Escrow Lock"}
                               </span>
@@ -376,75 +372,6 @@ export default function NodesDashboardPage() {
                   )}
                 </tbody>
               </table>
-            </div>
-          </div>
-
-          {/* Map Section */}
-          <div className="bg-[#050505] rounded-2xl border border-white/20 p-5 shadow-sm">
-            <h3 className="text-xs font-black uppercase tracking-wider text-[#8f8f8f] pb-3 border-b border-white/20">
-              Creative Node Network
-            </h3>
-
-            {/* Map representation */}
-            <div className="mt-4 h-48 rounded-xl border border-white/20 bg-black relative overflow-hidden flex flex-col justify-end p-4 shadow-inner">
-              {/* Dot grid back */}
-              <div className="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.05)_1px,transparent_1px)] [background-size:16px_16px] opacity-70" />
-
-              {/* Glowing active node lines */}
-              <svg className="absolute inset-0 h-full w-full pointer-events-none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M 50 50 L 150 100 L 250 60" fill="none" stroke="#ffffff" strokeWidth="1.5" strokeDasharray="4 4" className="animate-[dash_10s_linear_infinite]" />
-                <path d="M 150 100 L 80 150" fill="none" stroke="#ffffff" strokeWidth="1.5" strokeDasharray="4 4" className="animate-[dash_8s_linear_infinite]" />
-              </svg>
-
-              {/* Nodes */}
-              <div className="absolute top-10 left-12 flex flex-col items-center">
-                <div className="h-6 w-6 rounded-full bg-neutral-800 border-2 border-white flex items-center justify-center text-[8px] font-black text-white shadow">
-                  NY
-                </div>
-                <span className="text-[8px] font-bold text-[#8f8f8f] mt-1">Brand Node</span>
-              </div>
-
-              <div className="absolute top-20 right-16 flex flex-col items-center">
-                <div className="h-6 w-6 rounded-full bg-neutral-800 border-2 border-white flex items-center justify-center text-[8px] font-black text-white shadow">
-                  LDN
-                </div>
-                <span className="text-[8px] font-bold text-[#8f8f8f] mt-1">Talent Node</span>
-              </div>
-
-              <div className="absolute bottom-10 left-16 flex flex-col items-center">
-                <div className="h-6 w-6 rounded-full bg-neutral-800 border-2 border-white flex items-center justify-center text-[8px] font-black text-white shadow">
-                  PAR
-                </div>
-                <span className="text-[8px] font-bold text-[#8f8f8f] mt-1">Agency Node</span>
-              </div>
-
-              {/* Map Button indicator */}
-              <div className="relative z-10 bg-[#0A0A0A] border border-white/20 rounded-lg p-2.5 shadow-sm text-[11px]">
-                <div className="flex justify-between items-center">
-                  <span className="font-bold text-white flex items-center gap-1.5">
-                    <MapPin className="h-3.5 w-3.5 text-white" />
-                    3 Active Nodes Connected
-                  </span>
-                  <ArrowUpRight className="h-3.5 w-3.5 text-neutral-400" />
-                </div>
-              </div>
-            </div>
-
-            {/* General Info list */}
-            <div className="mt-4 space-y-2 text-xs">
-              <div className="flex justify-between items-center text-[#8f8f8f]">
-                <span>Routing Status</span>
-                <span className="font-bold text-emerald-400 flex items-center gap-1">
-                  <ShieldCheck className="h-3.5 w-3.5" />
-                  Secure (TLS)
-                </span>
-              </div>
-              <div className="flex justify-between items-center text-[#8f8f8f]">
-                <span>Escrow Address</span>
-                <span className="font-mono text-[9px] bg-white/[0.03] px-2 py-0.5 rounded border border-white/10 text-neutral-300">
-                  0x978F...4BA2
-                </span>
-              </div>
             </div>
           </div>
 

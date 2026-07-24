@@ -100,6 +100,41 @@ export default function AgencyBankingDashboardPage() {
   const userEmail = state.user?.email || "agency@elite.com";
   const agencyName = state.workspaces.find((w) => w.id === state.activeWorkspaceId)?.name || state.user?.fullName || "Agency Treasury";
 
+  const [isLightTheme, setIsLightTheme] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const savedTheme = localStorage.getItem("agncypay_theme") || localStorage.getItem("theme");
+      if (savedTheme === "light" || document.documentElement.classList.contains("light")) {
+        setIsLightTheme(true);
+        document.documentElement.classList.add("light");
+      } else if (savedTheme === "dark") {
+        setIsLightTheme(false);
+        document.documentElement.classList.remove("light");
+      } else {
+        setIsLightTheme(document.documentElement.classList.contains("light"));
+      }
+    }
+  }, []);
+
+  const toggleTheme = () => {
+    setIsLightTheme((prev) => {
+      const next = !prev;
+      if (typeof window !== "undefined") {
+        if (next) {
+          document.documentElement.classList.add("light");
+          localStorage.setItem("agncypay_theme", "light");
+          localStorage.setItem("theme", "light");
+        } else {
+          document.documentElement.classList.remove("light");
+          localStorage.setItem("agncypay_theme", "dark");
+          localStorage.setItem("theme", "dark");
+        }
+      }
+      return next;
+    });
+  };
+
   // Firestore Real-Time Balances & Invoices
   const [depositBalance, setDepositBalance] = useState<number>(0);
   const [invoices, setInvoices] = useState<any[]>([]);
@@ -115,7 +150,7 @@ export default function AgencyBankingDashboardPage() {
   // Brand-Exact Deposit Form State
   const [depositAmount, setDepositAmount] = useState<string>("1000");
   const [depositMethod, setDepositMethod] = useState<"card" | "ach" | "wire" | "rtp">("card");
-  const [selectedCardId, setSelectedCardId] = useState<string>("chase-4892");
+  const [selectedCardId, setSelectedCardId] = useState<string>("chase-86");
   const [showAddCard, setShowAddCard] = useState<boolean>(false);
   const [newCardHolder, setNewCardHolder] = useState<string>("");
   const [newCardNumber, setNewCardNumber] = useState<string>("");
@@ -127,8 +162,8 @@ export default function AgencyBankingDashboardPage() {
 
   // Saved Linked Cards (Brand-Exact)
   const [linkedCards, setLinkedCards] = useState<LinkedCard[]>([
-    { id: "chase-4892", name: "Chase Business Checking", detail: "•••• 4892 • Primary Disbursement", fallback: "Chase" },
-    { id: "bofa-1094", name: "Corporate Treasury Card", detail: "•••• 1094 • Card Settlement", fallback: "BofA" }
+    { id: "chase-86", name: "Chase Ink Business Unlimited Visa", detail: "Visa ••••86 • Primary Disbursement", fallback: "CHASE" },
+    { id: "mercury-57", name: "Mercury Business IO Mastercard", detail: "Mastercard ••••57 • Instant Settlement", fallback: "MERCURY" }
   ]);
 
   // Read-only Payout View Modal
@@ -278,22 +313,22 @@ export default function AgencyBankingDashboardPage() {
       <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-emerald-500/[0.04] rounded-full blur-[140px] pointer-events-none" />
 
       {/* Header Navigation */}
-      <header className="border-b border-border-custom bg-background/90 sticky top-0 z-50 shadow-sm backdrop-blur">
+      <header className="border-b border-white/25 light:border-black/15 bg-background/90 sticky top-0 z-50 shadow-sm backdrop-blur">
         <div className="max-w-[1520px] mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-6">
             <div className="relative flex items-center mr-12">
-              <Link href="/" className="flex items-center" aria-label="AgncyPay home">
+              <Link href="/agencydashboard" className="flex items-center cursor-pointer z-50 hover:opacity-80 transition-opacity" aria-label="AgncyPay home">
                 <img
                   src="/agncypaybrand.png"
                   alt="AgncyPay"
-                  className="h-10 w-auto object-contain scale-[1.3] origin-left"
+                  className="h-12 w-auto object-contain scale-[1.56] origin-left transition-transform"
                 />
               </Link>
             </div>
             <span className="h-4 w-[1px] bg-white/20 hidden md:block" />
-            <div className="hidden md:flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[11px] font-bold uppercase tracking-wider text-emerald-400">
-              <Building2 className="h-3.5 w-3.5 text-emerald-400" />
-              Agency Banking Portal
+            <div className="hidden md:flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 light:bg-black/5 border border-white/20 light:border-black/10 text-[11px] font-bold uppercase tracking-wider text-white light:text-[#0F172A]">
+              <Building2 className="h-3.5 w-3.5 text-white light:text-[#0F172A]" />
+              Agency Portal
             </div>
           </div>
 
@@ -301,31 +336,31 @@ export default function AgencyBankingDashboardPage() {
           <nav className="hidden lg:flex items-center gap-1 bg-white/[0.03] p-1 rounded-full border border-white/20">
             <button
               onClick={() => router.push("/agencydashboard")}
-              className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#8f8f8f] hover:text-white transition-all cursor-pointer"
+              className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#8f8f8f] light:text-[#475569] hover:text-white light:hover:text-[#0F172A] transition-all cursor-pointer"
             >
               Home
             </button>
             <button
               onClick={() => router.push("/agencydashboard/invoices")}
-              className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#8f8f8f] hover:text-white transition-all cursor-pointer"
+              className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#8f8f8f] light:text-[#475569] hover:text-white light:hover:text-[#0F172A] transition-all cursor-pointer"
             >
               Sent Invoices
             </button>
             <button
               onClick={() => router.push("/agencydashboard/nodes")}
-              className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#8f8f8f] hover:text-white transition-all cursor-pointer"
+              className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#8f8f8f] light:text-[#475569] hover:text-white light:hover:text-[#0F172A] transition-all cursor-pointer"
             >
               Payout Split Nodes
             </button>
             <button
               onClick={() => router.push("/agencydashboard/analytics")}
-              className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#8f8f8f] hover:text-white transition-all cursor-pointer"
+              className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#8f8f8f] light:text-[#475569] hover:text-white light:hover:text-[#0F172A] transition-all cursor-pointer"
             >
               Agency Earnings
             </button>
             <button
               onClick={() => router.push("/agencydashboard/agencybanking")}
-              className="px-4 py-1.5 rounded-full text-xs font-bold bg-emerald-500 text-black shadow-sm transition-all cursor-pointer"
+              className="px-4 py-1.5 rounded-full text-xs font-bold bg-white light:bg-[#0F172A] text-black light:text-white shadow-sm border border-white/20 light:border-black/10 transition-all cursor-pointer"
             >
               Agency Banking
             </button>
@@ -341,10 +376,10 @@ export default function AgencyBankingDashboardPage() {
             </button>
             <div className="h-4 w-[1px] bg-white/20" />
             <div className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center font-bold text-xs text-emerald-300">
+              <div className="h-8 w-8 rounded-full bg-[#082315] border border-[#10b95f]/30 flex items-center justify-center font-bold text-xs text-[#70ff9e]">
                 {state.user?.fullName ? state.user.fullName.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2) : "AB"}
               </div>
-              <span className="text-xs font-bold text-[#E5E5EA] hidden sm:inline">
+              <span className="text-xs font-bold text-[#E5E5EA] light:text-[#0F172A] hidden sm:inline">
                 {agencyName}
               </span>
             </div>
@@ -356,17 +391,17 @@ export default function AgencyBankingDashboardPage() {
       <div className="max-w-[1520px] mx-auto px-6 py-8 w-full space-y-8">
         
         {/* Executive Page Title & Header Actions */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[#0D0D0D] border border-white/10 rounded-2xl p-6 shadow-2xl relative overflow-hidden">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[#0D0D0D] light:bg-[#F8FAFC] border border-white/10 light:border-black/10 rounded-2xl p-6 shadow-2xl relative overflow-hidden">
           <div className="absolute top-0 right-0 w-80 h-80 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
           <div className="space-y-1 z-10">
             <div className="flex items-center gap-2">
-              <Landmark className="h-6 w-6 text-emerald-400" />
-              <h1 className="text-2xl font-extrabold text-white tracking-tight">Agency Banking Dashboard</h1>
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-950/80 text-emerald-400 border border-emerald-800/40">
+              <Landmark className="h-6 w-6 text-white light:text-[#0F172A]" />
+              <h1 className="text-2xl font-extrabold text-white light:text-[#0F172A] tracking-tight">Agency Banking Dashboard</h1>
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#082315] text-[#70ff9e] border border-[#10b95f]/30">
                 Live Liquidity Active
               </span>
             </div>
-            <p className="text-xs text-[#8f8f8f]">
+            <p className="text-xs text-[#8f8f8f] light:text-[#475569]">
               Executive financial ledger, liquidity reserves, corporate bank accounts, and talent disbursement control for {agencyName}
             </p>
           </div>
@@ -375,18 +410,18 @@ export default function AgencyBankingDashboardPage() {
             <button
               onClick={() => sync()}
               disabled={syncing}
-              className="px-4 py-2 rounded-xl text-xs font-semibold bg-white/5 hover:bg-white/10 text-white border border-white/15 transition-all flex items-center gap-2 disabled:opacity-50"
+              className="px-4 py-2 rounded-xl text-xs font-semibold bg-white/5 light:bg-black/5 hover:bg-white/10 text-white light:text-[#0F172A] border border-white/15 light:border-black/15 transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer"
             >
-              <RefreshCw className={`h-3.5 w-3.5 text-emerald-400 ${syncing ? "animate-spin" : ""}`} />
+              <RefreshCw className={`h-3.5 w-3.5 text-white light:text-[#0F172A] ${syncing ? "animate-spin" : ""}`} />
               <span>{syncing ? "Syncing ERP..." : "Sync Accounting"}</span>
             </button>
 
             {/* Brand-Exact "+ Deposit Funds" Button */}
             <button
               onClick={() => setIsDepositModalOpen(true)}
-              className="px-5 py-2 rounded-xl text-xs font-bold bg-white text-black hover:bg-neutral-200 shadow-lg transition-all flex items-center gap-2 cursor-pointer"
+              className="px-5 py-2 rounded-xl text-xs font-bold bg-white light:bg-[#0F172A] text-black light:text-white hover:bg-neutral-200 light:hover:bg-[#1E293B] shadow-lg transition-all flex items-center gap-2 cursor-pointer"
             >
-              <Plus className="h-4 w-4 text-black" />
+              <Plus className="h-4 w-4 text-black light:text-white" />
               <span>+ Deposit Funds</span>
             </button>
           </div>
@@ -394,55 +429,55 @@ export default function AgencyBankingDashboardPage() {
 
         {/* HERO TWO-COLUMN SECTION */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Left Column: Exact Promo Banner Card ("For Those Who Create") (7 cols) */}
-          <div className="lg:col-span-7 bg-[#050505] border border-white/20 rounded-2xl overflow-hidden shadow-2xl flex items-center justify-center">
+          {/* Left Column: Banner Card ("For Those Who Create") (7 cols) */}
+          <div className="lg:col-span-7 bg-[#050505] light:bg-white border border-white/20 light:border-black/10 rounded-2xl overflow-hidden shadow-2xl flex items-center justify-center h-full max-h-[400px]">
             <img
               src="/dashboard-app-promo.png"
               alt="For Those Who Create — AgncyPay"
-              className="block w-full h-auto object-cover rounded-2xl"
+              className="w-full h-full object-cover object-left rounded-2xl"
               loading="lazy"
             />
           </div>
 
-          {/* Right Column: Exact Talent Side Action Bar & Operations (5 cols) */}
-          <div className="lg:col-span-5 bg-[#050505] border border-white/20 rounded-2xl p-5 shadow-2xl flex flex-col justify-between">
+          {/* Right Column: Talent Side Action Bar & Operations (5 cols) */}
+          <div className="lg:col-span-5 bg-[#050505] light:bg-white border border-white/20 light:border-black/10 rounded-2xl p-5 shadow-2xl flex flex-col justify-between">
             <div className="space-y-4">
-              {/* 4 Square Action Buttons with White Icons & White Text */}
+              {/* 4 Square Action Buttons */}
               <div className="grid grid-cols-4 gap-2.5">
                 {/* 1. Send / Request */}
                 <button
                   type="button"
                   onClick={() => router.push("/dashboard/send-request")}
-                  className="flex flex-col items-center gap-2.5 rounded-[10px] border border-[#3a3a3a] bg-[#090909] px-2 py-3.5 text-center transition-colors hover:border-white/60 group cursor-pointer"
+                  className="flex flex-col items-center gap-2.5 rounded-[10px] border border-[#3a3a3a] light:border-black/15 bg-[#090909] light:bg-[#F8FAFC] px-2 py-3.5 text-center transition-colors hover:border-white/60 light:hover:border-black/40 group cursor-pointer"
                 >
-                  <span className="flex h-10 w-10 items-center justify-center rounded-[9px] border border-[#4a4a4a] bg-black text-white group-hover:scale-105 transition-transform">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-[9px] border border-[#4a4a4a] light:border-black/10 bg-black light:bg-[#0F172A] text-white group-hover:scale-105 transition-transform">
                     <Send className="h-5 w-5 text-white" />
                   </span>
-                  <span className="text-[10px] font-semibold leading-4 text-white">Send / Request</span>
+                  <span className="text-[10px] font-semibold leading-4 text-white light:text-[#0F172A]">Send / Request</span>
                 </button>
 
                 {/* 2. Analytics */}
                 <button
                   type="button"
                   onClick={() => router.push("/agencydashboard/analytics")}
-                  className="flex flex-col items-center gap-2.5 rounded-[10px] border border-[#3a3a3a] bg-[#090909] px-2 py-3.5 text-center transition-colors hover:border-white/60 group cursor-pointer"
+                  className="flex flex-col items-center gap-2.5 rounded-[10px] border border-[#3a3a3a] light:border-black/15 bg-[#090909] light:bg-[#F8FAFC] px-2 py-3.5 text-center transition-colors hover:border-white/60 light:hover:border-black/40 group cursor-pointer"
                 >
-                  <span className="flex h-10 w-10 items-center justify-center rounded-[9px] border border-[#4a4a4a] bg-black text-white group-hover:scale-105 transition-transform">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-[9px] border border-[#4a4a4a] light:border-black/10 bg-black light:bg-[#0F172A] text-white group-hover:scale-105 transition-transform">
                     <BarChart3 className="h-5 w-5 text-white" />
                   </span>
-                  <span className="text-[10px] font-semibold leading-4 text-white">Analytics</span>
+                  <span className="text-[10px] font-semibold leading-4 text-white light:text-[#0F172A]">Analytics</span>
                 </button>
 
                 {/* 3. Wallet ID Contacts */}
                 <button
                   type="button"
                   onClick={() => setIsWalletContactsOpen(true)}
-                  className="flex flex-col items-center gap-2.5 rounded-[10px] border border-[#3a3a3a] bg-[#090909] px-2 py-3.5 text-center transition-colors hover:border-white/60 group cursor-pointer"
+                  className="flex flex-col items-center gap-2.5 rounded-[10px] border border-[#3a3a3a] light:border-black/15 bg-[#090909] light:bg-[#F8FAFC] px-2 py-3.5 text-center transition-colors hover:border-white/60 light:hover:border-black/40 group cursor-pointer"
                 >
-                  <span className="flex h-10 w-10 items-center justify-center rounded-[9px] border border-[#4a4a4a] bg-black text-white group-hover:scale-105 transition-transform">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-[9px] border border-[#4a4a4a] light:border-black/10 bg-black light:bg-[#0F172A] text-white group-hover:scale-105 transition-transform">
                     <Users className="h-5 w-5 text-white" />
                   </span>
-                  <span className="text-[10px] font-semibold leading-4 text-white">Wallet ID contacts</span>
+                  <span className="text-[10px] font-semibold leading-4 text-white light:text-[#0F172A]">Wallet ID contacts</span>
                 </button>
 
                 {/* 4. More */}
@@ -450,50 +485,50 @@ export default function AgencyBankingDashboardPage() {
                   type="button"
                   onClick={() => sync()}
                   disabled={syncing}
-                  className="flex flex-col items-center gap-2.5 rounded-[10px] border border-[#3a3a3a] bg-[#090909] px-2 py-3.5 text-center transition-colors hover:border-white/60 group cursor-pointer disabled:opacity-50"
+                  className="flex flex-col items-center gap-2.5 rounded-[10px] border border-[#3a3a3a] light:border-black/15 bg-[#090909] light:bg-[#F8FAFC] px-2 py-3.5 text-center transition-colors hover:border-white/60 light:hover:border-black/40 group cursor-pointer disabled:opacity-50"
                 >
-                  <span className="flex h-10 w-10 items-center justify-center rounded-[9px] border border-[#4a4a4a] bg-black text-white group-hover:scale-105 transition-transform">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-[9px] border border-[#4a4a4a] light:border-black/10 bg-black light:bg-[#0F172A] text-white group-hover:scale-105 transition-transform">
                     <MoreVertical className={`h-5 w-5 text-white ${syncing ? "animate-spin" : ""}`} />
                   </span>
-                  <span className="text-[10px] font-semibold leading-4 text-white">More</span>
+                  <span className="text-[10px] font-semibold leading-4 text-white light:text-[#0F172A]">More</span>
                 </button>
               </div>
 
               {/* Recent Agency Income Summary Tile */}
-              <div className="p-4 rounded-[10px] border border-[#3a3a3a] bg-[#090909] space-y-2">
+              <div className="p-4 rounded-[10px] border border-[#3a3a3a] light:border-black/15 bg-[#090909] light:bg-[#F8FAFC] space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-white">Recent Income</span>
+                  <span className="text-xs font-bold text-white light:text-[#0F172A]">Recent Income</span>
                   <button
                     onClick={() => router.push("/agencydashboard/invoices")}
-                    className="text-[11px] font-semibold text-[#8f8f8f] hover:text-white flex items-center gap-1 cursor-pointer"
+                    className="text-[11px] font-semibold text-[#8f8f8f] light:text-[#475569] hover:text-white light:hover:text-[#0F172A] flex items-center gap-1 cursor-pointer"
                   >
                     View All <ChevronRight className="w-3 h-3" />
                   </button>
                 </div>
-                <p className="text-[11px] text-[#8f8f8f]">Money received from Brands and other agencies.</p>
-                <div className="p-3 rounded-lg bg-black border border-white/10 flex items-center justify-between">
+                <p className="text-[11px] text-[#8f8f8f] light:text-[#475569]">Money received from Brands and other agencies.</p>
+                <div className="p-3 rounded-lg bg-black light:bg-white border border-white/10 light:border-black/10 flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center font-bold text-xs text-white">
+                    <div className="w-8 h-8 rounded-lg bg-white/10 light:bg-black/5 flex items-center justify-center font-bold text-xs text-white light:text-[#0F172A]">
                       AD
                     </div>
                     <div>
-                      <div className="text-xs font-bold text-white">Adidas Corporate HQ</div>
-                      <div className="text-[10px] text-[#8f8f8f]">Winter Editorial 2026</div>
+                      <div className="text-xs font-bold text-white light:text-[#0F172A]">Adidas Corporate HQ</div>
+                      <div className="text-[10px] text-[#8f8f8f] light:text-[#475569]">Winter Editorial 2026</div>
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-xs font-extrabold text-white">$15,000.00</div>
-                    <span className="text-[10px] text-emerald-400 font-semibold">Recent ✓</span>
+                    <div className="text-xs font-extrabold text-white light:text-[#0F172A]">$15,000.00</div>
+                    <span className="text-[10px] text-emerald-400 light:text-[#0F172A] font-bold">Recent ✓</span>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="pt-3 border-t border-white/10 flex items-center justify-between text-[11px] text-[#8f8f8f]">
+            <div className="pt-3 border-t border-white/10 light:border-black/10 flex items-center justify-between text-[11px] text-[#8f8f8f] light:text-[#475569]">
               <span>Role: Agency Director</span>
               <button
                 onClick={() => router.push("/dashboard/send-request")}
-                className="text-white font-bold hover:underline flex items-center gap-1"
+                className="text-white light:text-[#0F172A] font-bold hover:underline flex items-center gap-1"
               >
                 Open Full Send / Request Workspace →
               </button>
@@ -812,16 +847,16 @@ export default function AgencyBankingDashboardPage() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="w-full max-w-2xl bg-[#0D0D0D] border border-white/20 rounded-2xl p-6 shadow-2xl space-y-5"
+              className="w-full max-w-2xl bg-[#0D0D0D] light:bg-white border border-white/20 light:border-black/10 rounded-2xl p-6 shadow-2xl space-y-5"
             >
-              <div className="flex items-center justify-between border-b border-white/10 pb-4">
+              <div className="flex items-center justify-between border-b border-white/10 light:border-black/10 pb-4">
                 <div className="flex items-center gap-2">
-                  <Users className="w-5 h-5 text-emerald-400" />
-                  <h3 className="text-base font-bold text-white">Wallet ID Contacts & Split Network</h3>
+                  <Users className="w-5 h-5 text-emerald-500 light:text-emerald-600" />
+                  <h3 className="text-base font-bold text-white light:text-[#0F172A]">Wallet ID Contacts & Split Network</h3>
                 </div>
                 <button
                   onClick={() => setIsWalletContactsOpen(false)}
-                  className="p-1 rounded-lg text-[#8f8f8f] hover:text-white hover:bg-white/10"
+                  className="p-1 rounded-lg text-[#8f8f8f] light:text-[#475569] hover:text-white light:hover:text-[#0F172A] hover:bg-white/10 light:hover:bg-black/5"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -829,13 +864,13 @@ export default function AgencyBankingDashboardPage() {
 
               {/* Search Bar */}
               <div className="relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8f8f8f]" />
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8f8f8f] light:text-[#64748B]" />
                 <input
                   type="text"
                   value={contactQuery}
                   onChange={(e) => setContactQuery(e.target.value)}
                   placeholder="Search by name (e.g. John Adams), Agncy ID (@agncy11174), role..."
-                  className="w-full pl-11 pr-4 py-3 bg-black border border-white/20 rounded-xl text-xs font-semibold text-white focus:outline-none focus:border-emerald-500"
+                  className="w-full pl-11 pr-4 py-3 bg-black light:bg-white border border-white/20 light:border-black/20 rounded-xl text-xs font-semibold text-white light:text-[#0F172A] focus:outline-none focus:border-emerald-500"
                 />
               </div>
 
@@ -844,14 +879,14 @@ export default function AgencyBankingDashboardPage() {
                 {filteredContacts.map((contact) => {
                   const isAutosplit = autosplitContactIds.includes(contact.id);
                   return (
-                    <div key={contact.id} className="p-3.5 rounded-xl border border-white/10 bg-white/5 flex items-center justify-between gap-4">
+                    <div key={contact.id} className="p-3.5 rounded-xl border border-white/10 light:border-black/10 bg-white/5 light:bg-slate-50 flex items-center justify-between gap-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center font-bold text-xs text-emerald-400">
+                        <div className="w-9 h-9 rounded-full bg-emerald-500/10 light:bg-emerald-50 border border-emerald-500/20 light:border-emerald-200 flex items-center justify-center font-bold text-xs text-emerald-400 light:text-emerald-700">
                           {contact.name.split(" ").map((n) => n[0]).join("")}
                         </div>
                         <div>
-                          <div className="text-xs font-bold text-white">{contact.name}</div>
-                          <div className="text-[11px] text-[#8f8f8f]">{contact.handle} • {contact.role}</div>
+                          <div className="text-xs font-bold text-white light:text-[#0F172A]">{contact.name}</div>
+                          <div className="text-[11px] text-[#8f8f8f] light:text-[#475569]">{contact.handle} • {contact.role}</div>
                         </div>
                       </div>
 
@@ -862,18 +897,18 @@ export default function AgencyBankingDashboardPage() {
                             setIsWalletContactsOpen(false);
                             router.push("/dashboard/send-request");
                           }}
-                          className="px-3 py-1.5 rounded-lg bg-white hover:bg-neutral-200 text-black text-xs font-bold transition-all shadow-sm flex items-center gap-1 cursor-pointer"
+                          className="px-3 py-1.5 rounded-lg bg-white light:bg-[#0F172A] hover:bg-neutral-200 light:hover:bg-black text-black light:text-white text-xs font-bold transition-all shadow-sm flex items-center gap-1 cursor-pointer"
                         >
-                          <Send className="w-3.5 h-3.5 text-black" />
-                          <span>Send / Request</span>
+                          <Send className="w-3.5 h-3.5 text-black light:text-white" />
+                          <span className="light:text-white">Send / Request</span>
                         </button>
                         <button
                           type="button"
                           onClick={() => toggleAutosplitContact(contact.id)}
                           className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
                             isAutosplit
-                              ? "bg-emerald-950/60 text-emerald-400 border-emerald-800/40"
-                              : "bg-white/5 text-[#8f8f8f] border-white/10 hover:text-white"
+                              ? "bg-emerald-950/60 light:bg-emerald-100 text-emerald-400 light:text-emerald-800 border-emerald-800/40 light:border-emerald-300 font-bold"
+                              : "bg-white/5 light:bg-white text-[#8f8f8f] light:text-[#475569] border-white/10 light:border-black/15 hover:text-white light:hover:text-[#0F172A]"
                           }`}
                         >
                           {isAutosplit ? "Autosplit On" : "Autosplit Off"}
@@ -884,11 +919,11 @@ export default function AgencyBankingDashboardPage() {
                 })}
               </div>
 
-              <div className="pt-3 border-t border-white/10 flex items-center justify-between text-xs">
-                <span className="text-[#8f8f8f]">Direct agency role split configuration</span>
+              <div className="pt-3 border-t border-white/10 light:border-black/10 flex items-center justify-between text-xs">
+                <span className="text-[#8f8f8f] light:text-[#475569]">Direct agency role split configuration</span>
                 <button
                   onClick={() => setIsWalletContactsOpen(false)}
-                  className="px-4 py-2 rounded-xl bg-white/10 text-white font-semibold hover:bg-white/20 transition-colors"
+                  className="px-4 py-2 rounded-xl bg-white/10 light:bg-slate-200 text-white light:text-[#0F172A] font-semibold hover:bg-white/20 light:hover:bg-slate-300 transition-colors"
                 >
                   Close Network
                 </button>
@@ -978,256 +1013,358 @@ export default function AgencyBankingDashboardPage() {
 
       {/* EXACT BRAND DEPOSIT MODAL */}
       <AnimatePresence>
-        {isDepositModalOpen && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <div className="absolute inset-0 bg-black/75 backdrop-blur-md" onClick={() => !isProcessingDeposit && setIsDepositModalOpen(false)} />
-            
-            <div className="relative w-full max-w-lg bg-[#0A0A0A] border border-white/20 rounded-2xl shadow-2xl overflow-hidden text-white animate-in fade-in zoom-in-95 duration-200">
-              {/* Modal Header */}
-              <div className="p-6 border-b border-white/10 flex items-center justify-between bg-white/[0.02]">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center text-white">
-                    <Wallet className="h-5 w-5" />
+        {isDepositModalOpen && (() => {
+          const isLight = isLightTheme || (typeof document !== "undefined" && document.documentElement.classList.contains("light"));
+          return (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+              <div className="absolute inset-0 bg-black/75 backdrop-blur-md" onClick={() => !isProcessingDeposit && setIsDepositModalOpen(false)} />
+              
+              <div className={`relative w-full max-w-lg rounded-2xl border shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 ${
+                isLight 
+                  ? "bg-white border-black/20 text-[#0F172A]" 
+                  : "bg-[#0A0A0A] border-white/20 text-white"
+              }`}>
+                {/* Modal Header */}
+                <div className={`p-6 border-b flex items-center justify-between ${
+                  isLight ? "border-black/10 bg-slate-50" : "border-white/10 bg-white/[0.02]"
+                }`}>
+                  <div className="flex items-center gap-3">
+                    <div className={`h-10 w-10 rounded-xl border flex items-center justify-center ${
+                      isLight ? "bg-white border-black/20 text-[#0F172A] shadow-xs" : "bg-white/10 border-white/20 text-white"
+                    }`}>
+                      <Wallet className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <h3 className={`text-lg font-bold leading-tight ${isLight ? "text-[#0F172A]" : "text-white"}`}>Deposit Treasury Balance</h3>
+                      <p className={`text-xs font-medium ${isLight ? "text-[#475569]" : "text-neutral-400"}`}>Add funds to instant liquidity balance</p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="text-lg font-bold text-white leading-tight">Deposit Treasury Balance</h3>
-                    <p className="text-xs text-neutral-400">Add funds to instant liquidity balance</p>
-                  </div>
+                  <button
+                    onClick={() => setIsDepositModalOpen(false)}
+                    className={`p-2 rounded-lg transition-colors cursor-pointer ${
+                      isLight ? "text-[#475569] hover:bg-slate-200 hover:text-[#0F172A]" : "text-neutral-400 hover:bg-white/10 hover:text-white"
+                    }`}
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
                 </div>
-                <button
-                  onClick={() => setIsDepositModalOpen(false)}
-                  className="p-2 rounded-lg text-neutral-400 hover:bg-white/10 hover:text-white transition-colors cursor-pointer"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
 
-              {/* Modal Body */}
-              <div className="p-6 space-y-6 max-h-[80vh] overflow-y-auto">
-                {depositSuccessMsg ? (
-                  <div className="py-10 text-center space-y-4">
-                    <div className="h-16 w-16 rounded-full bg-emerald-500/20 border border-emerald-500 text-emerald-400 flex items-center justify-center mx-auto animate-bounce">
-                      <CheckCircle2 className="h-8 w-8" />
-                    </div>
-                    <h4 className="text-xl font-bold text-white">Deposit Successful</h4>
-                    <p className="text-sm text-neutral-300 max-w-[280px] mx-auto">{depositSuccessMsg}</p>
-                  </div>
-                ) : isProcessingDeposit ? (
-                  <div className="py-14 text-center space-y-4">
-                    <Loader2 className="h-10 w-10 text-white animate-spin mx-auto" />
-                    <div>
-                      <p className="text-lg font-bold text-white">Processing Deposit...</p>
-                      <p className="text-xs text-neutral-400 mt-1">Securing funds via selected payment channel.</p>
-                    </div>
-                  </div>
-                ) : (
-                  <form onSubmit={handleConfirmDeposit} className="space-y-6">
-                    {/* Step 1: Amount Selection */}
-                    <div>
-                      <label className="block text-xs font-bold text-neutral-300 uppercase tracking-wider mb-2">Deposit Amount ($USD)</label>
-                      <div className="relative">
-                        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-lg font-bold text-neutral-400">$</span>
-                        <input
-                          type="number"
-                          min="1"
-                          step="any"
-                          value={depositAmount}
-                          onChange={(e) => setDepositAmount(e.target.value)}
-                          placeholder="1000.00"
-                          className="w-full pl-8 pr-4 py-3 bg-black border border-white/20 rounded-xl text-lg font-bold text-white focus:outline-none focus:border-white font-mono"
-                          required
-                        />
+                {/* Modal Body */}
+                <div className="p-6 space-y-6 max-h-[80vh] overflow-y-auto">
+                  {depositSuccessMsg ? (
+                    <div className="py-10 text-center space-y-4">
+                      <div className="h-16 w-16 rounded-full bg-emerald-500/20 border border-emerald-500 text-emerald-500 flex items-center justify-center mx-auto animate-bounce">
+                        <CheckCircle2 className="h-8 w-8" />
                       </div>
-                      
-                      {/* Quick Pills */}
-                      <div className="grid grid-cols-4 gap-2 mt-2.5">
-                        {["500", "1000", "2500", "5000"].map((preset) => (
-                          <button
-                            key={preset}
-                            type="button"
-                            onClick={() => setDepositAmount(preset)}
-                            className={`py-2 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
-                              depositAmount === preset
-                                ? "border-white bg-white text-black shadow"
-                                : "border-white/10 bg-white/[0.02] text-neutral-300 hover:border-white/20"
+                      <h4 className={`text-xl font-bold ${isLight ? "text-[#0F172A]" : "text-white"}`}>Deposit Successful</h4>
+                      <p className={`text-sm max-w-[280px] mx-auto font-medium ${isLight ? "text-[#475569]" : "text-neutral-300"}`}>{depositSuccessMsg}</p>
+                    </div>
+                  ) : isProcessingDeposit ? (
+                    <div className="py-14 text-center space-y-4">
+                      <Loader2 className={`h-10 w-10 animate-spin mx-auto ${isLight ? "text-[#0F172A]" : "text-white"}`} />
+                      <div>
+                        <p className={`text-lg font-bold ${isLight ? "text-[#0F172A]" : "text-white"}`}>Processing Deposit...</p>
+                        <p className={`text-xs mt-1 font-medium ${isLight ? "text-[#475569]" : "text-neutral-400"}`}>Securing funds via selected payment channel.</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <form onSubmit={handleConfirmDeposit} className="space-y-6">
+                      {/* Step 1: Amount Selection */}
+                      <div>
+                        <label className={`block text-xs font-bold uppercase tracking-wider mb-2 ${isLight ? "text-[#0F172A]" : "text-neutral-300"}`}>
+                          Deposit Amount ($USD)
+                        </label>
+                        <div className="relative">
+                          <span className={`absolute left-3.5 top-1/2 -translate-y-1/2 text-lg font-extrabold ${isLight ? "text-[#0F172A]" : "text-neutral-400"}`}>$</span>
+                          <input
+                            type="number"
+                            min="1"
+                            step="any"
+                            value={depositAmount}
+                            onChange={(e) => setDepositAmount(e.target.value)}
+                            placeholder="1000.00"
+                            className={`w-full pl-8 pr-4 py-3 border rounded-xl text-lg font-extrabold focus:outline-none font-mono ${
+                              isLight 
+                                ? "bg-white border-black/20 text-[#0F172A] focus:border-black shadow-xs" 
+                                : "bg-black border-white/20 text-white focus:border-white"
                             }`}
-                          >
-                            +${parseInt(preset).toLocaleString()}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Step 2: Method Selection */}
-                    <div>
-                      <label className="block text-xs font-bold text-neutral-300 uppercase tracking-wider mb-2">Deposit Method</label>
-                      <div className="grid grid-cols-2 gap-2.5">
-                        {[
-                          { id: "card", label: "Linked Card", sub: "Instant • Standard Fee" },
-                          { id: "ach", label: "ACH Bank Transfer", sub: "1-2 Days • 0% Fee" },
-                          { id: "wire", label: "Wire Transfer", sub: "Same Day • $15 Fee" },
-                          { id: "rtp", label: "RTP Instant", sub: "Instant • $5 Fee" },
-                        ].map((m) => (
-                          <button
-                            key={m.id}
-                            type="button"
-                            onClick={() => setDepositMethod(m.id as any)}
-                            className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
-                              depositMethod === m.id
-                                ? "border-white bg-white/10"
-                                : "border-white/10 bg-black hover:border-white/20"
-                            }`}
-                          >
-                            <div className="flex items-center justify-between">
-                              <span className="text-xs font-bold text-white">{m.label}</span>
-                              <div className={`h-3.5 w-3.5 rounded-full border flex items-center justify-center ${
-                                depositMethod === m.id ? "border-white bg-white text-black" : "border-white/30"
-                              }`}>
-                                {depositMethod === m.id && <div className="h-1.5 w-1.5 rounded-full bg-black" />}
-                              </div>
-                            </div>
-                            <span className="text-[10px] text-neutral-400 block mt-1">{m.sub}</span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Step 3: Card Selection if Linked Card chosen */}
-                    {depositMethod === "card" && (
-                      <div className="space-y-3">
-                        <div className="flex justify-between items-center">
-                          <label className="text-xs font-bold text-neutral-300 uppercase tracking-wider">Select Card</label>
-                          <button
-                            type="button"
-                            onClick={() => setShowAddCard(!showAddCard)}
-                            className="text-xs font-bold text-neutral-300 hover:text-white flex items-center gap-1 cursor-pointer"
-                          >
-                            <Plus className="h-3 w-3" />
-                            {showAddCard ? "Use Saved Card" : "Add New Card"}
-                          </button>
+                            required
+                          />
                         </div>
-
-                        {showAddCard ? (
-                          <div className="p-4 rounded-xl border border-white/20 bg-black space-y-3">
-                            <div>
-                              <label className="text-[10px] text-neutral-400 uppercase font-semibold">Cardholder Name</label>
-                              <input
-                                type="text"
-                                placeholder="Jane Doe"
-                                value={newCardHolder}
-                                onChange={(e) => setNewCardHolder(e.target.value)}
-                                className="w-full mt-1 bg-neutral-900 border border-white/20 rounded-lg p-2 text-white text-xs focus:outline-none focus:border-white"
-                              />
-                            </div>
-                            <div>
-                              <label className="text-[10px] text-neutral-400 uppercase font-semibold">Card Number</label>
-                              <input
-                                type="text"
-                                placeholder="4000 0000 0000 0000"
-                                value={newCardNumber}
-                                onChange={(e) => setNewCardNumber(e.target.value)}
-                                className="w-full mt-1 bg-neutral-900 border border-white/20 rounded-lg p-2 text-white text-xs focus:outline-none focus:border-white"
-                              />
-                            </div>
-                            <div className="grid grid-cols-3 gap-2">
-                              <div>
-                                <label className="text-[10px] text-neutral-400 uppercase font-semibold">Expires</label>
-                                <input
-                                  type="text"
-                                  placeholder="MM/YY"
-                                  value={newCardExpiry}
-                                  onChange={(e) => setNewCardExpiry(e.target.value)}
-                                  className="w-full mt-1 bg-neutral-900 border border-white/20 rounded-lg p-2 text-white text-xs focus:outline-none focus:border-white"
-                                />
-                              </div>
-                              <div>
-                                <label className="text-[10px] text-neutral-400 uppercase font-semibold">CVC</label>
-                                <input
-                                  type="text"
-                                  placeholder="123"
-                                  value={newCardCVC}
-                                  onChange={(e) => setNewCardCVC(e.target.value)}
-                                  className="w-full mt-1 bg-neutral-900 border border-white/20 rounded-lg p-2 text-white text-xs focus:outline-none focus:border-white"
-                                />
-                              </div>
-                              <div>
-                                <label className="text-[10px] text-neutral-400 uppercase font-semibold">ZIP</label>
-                                <input
-                                  type="text"
-                                  placeholder="10001"
-                                  value={newCardZip}
-                                  onChange={(e) => setNewCardZip(e.target.value)}
-                                  className="w-full mt-1 bg-neutral-900 border border-white/20 rounded-lg p-2 text-white text-xs focus:outline-none focus:border-white"
-                                />
-                              </div>
-                            </div>
+                        
+                        {/* Quick Pills */}
+                        <div className="grid grid-cols-4 gap-2 mt-2.5">
+                          {["500", "1000", "2500", "5000"].map((preset) => (
                             <button
+                              key={preset}
                               type="button"
-                              onClick={handleAddNewCard}
-                              className="w-full py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg font-bold text-white text-xs mt-2 cursor-pointer transition-colors"
+                              onClick={() => setDepositAmount(preset)}
+                              className={`py-2 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
+                                depositAmount === preset
+                                  ? isLight
+                                    ? "border-black bg-[#0F172A] text-white shadow-md font-extrabold"
+                                    : "border-white bg-white text-black shadow-md font-extrabold"
+                                  : isLight
+                                    ? "border-black/20 bg-slate-50 text-[#0F172A] hover:bg-slate-100 hover:border-black/40 font-bold shadow-xs"
+                                    : "border-white/10 bg-white/[0.02] text-neutral-300 hover:border-white/20"
+                              }`}
                             >
-                              Save & Attach Card
+                              +${parseInt(preset).toLocaleString()}
                             </button>
-                          </div>
-                        ) : (
-                          <div className="space-y-2">
-                            {linkedCards.map((card) => {
-                              const isSelected = card.id === selectedCardId;
-                              return (
-                                <div
-                                  key={card.id}
-                                  onClick={() => setSelectedCardId(card.id)}
-                                  className={`p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${
-                                    isSelected
-                                      ? "border-white bg-white/[0.08] shadow-sm"
-                                      : "border-white/10 hover:border-white/20 bg-black"
-                                  }`}
-                                >
-                                  <div className="flex items-center gap-3">
-                                    <div className="h-8 w-12 shrink-0 rounded bg-neutral-900 border border-white/10 flex items-center justify-center p-0.5">
-                                      <span className="text-[10px] font-bold text-white">{card.fallback}</span>
-                                    </div>
-                                    <div>
-                                      <p className="text-xs font-bold text-white">{card.name}</p>
-                                      <p className="text-[10px] text-neutral-400">{card.detail}</p>
-                                    </div>
-                                  </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Step 2: Method Selection */}
+                      <div>
+                        <label className={`block text-xs font-bold uppercase tracking-wider mb-2 ${isLight ? "text-[#0F172A]" : "text-neutral-300"}`}>
+                          Deposit Method
+                        </label>
+                        <div className="grid grid-cols-2 gap-2.5">
+                          {[
+                            { id: "card", label: "Linked Card", sub: "Instant • Standard Fee" },
+                            { id: "ach", label: "ACH Bank Transfer", sub: "1-2 Days • 0% Fee" },
+                            { id: "wire", label: "Wire Transfer", sub: "Same Day • $15 Fee" },
+                            { id: "rtp", label: "RTP Instant", sub: "Instant • $5 Fee" },
+                          ].map((m) => {
+                            const isSelected = depositMethod === m.id;
+                            return (
+                              <button
+                                key={m.id}
+                                type="button"
+                                onClick={() => setDepositMethod(m.id as any)}
+                                className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
+                                  isLight
+                                    ? isSelected
+                                      ? "border-black bg-[#0F172A] text-white shadow-md font-bold"
+                                      : "border-black/20 bg-slate-50 text-[#0F172A] hover:bg-slate-100 hover:border-black/40 font-semibold shadow-xs"
+                                    : isSelected
+                                      ? "border-white bg-white text-black shadow-md font-bold"
+                                      : "border-white/10 bg-white/5 text-white hover:border-white/20 font-semibold"
+                                }`}
+                              >
+                                <div className="flex items-center justify-between">
+                                  <span className={`text-xs font-bold ${
+                                    isLight
+                                      ? isSelected ? "text-white" : "text-[#0F172A]"
+                                      : isSelected ? "text-black" : "text-white"
+                                  }`}>{m.label}</span>
                                   <div className={`h-4 w-4 rounded-full border flex items-center justify-center ${
-                                    isSelected ? "border-white bg-white text-black" : "border-white/30"
+                                    isLight
+                                      ? isSelected
+                                        ? "border-white bg-white text-black"
+                                        : "border-black/40 bg-transparent"
+                                      : isSelected
+                                        ? "border-black bg-black text-white"
+                                        : "border-white/30 bg-transparent"
                                   }`}>
-                                    {isSelected && <Check className="h-2.5 w-2.5 stroke-[3]" />}
+                                    {isSelected && (
+                                      <div className={`h-2 w-2 rounded-full ${isLight ? "bg-black" : "bg-white"}`} />
+                                    )}
                                   </div>
                                 </div>
-                              );
-                            })}
-                          </div>
-                        )}
+                                <span className={`text-[10px] block mt-1.5 font-medium ${
+                                  isLight
+                                    ? isSelected ? "text-slate-300" : "text-[#475569]"
+                                    : isSelected ? "text-neutral-700" : "text-neutral-400"
+                                }`}>{m.sub}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
                       </div>
-                    )}
 
-                    {/* Actions */}
-                    <div className="pt-2 flex items-center gap-3">
-                      <button
-                        type="button"
-                        onClick={() => setIsDepositModalOpen(false)}
-                        className="flex-1 py-3 rounded-xl border border-white/20 text-xs font-bold text-neutral-300 hover:text-white hover:bg-white/5 transition-all cursor-pointer"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        type="submit"
-                        className="flex-1 py-3 rounded-xl bg-white text-black text-xs font-bold hover:bg-neutral-200 transition-all flex items-center justify-center gap-2 shadow-lg cursor-pointer"
-                      >
-                        <Wallet className="h-4 w-4" />
-                        Confirm Deposit
-                      </button>
-                    </div>
-                  </form>
-                )}
+                      {/* Step 3: Card Selection if Linked Card chosen */}
+                      {depositMethod === "card" && (
+                        <div className="space-y-3">
+                          <div className="flex justify-between items-center">
+                            <label className={`text-xs font-bold uppercase tracking-wider ${isLight ? "text-[#0F172A]" : "text-neutral-300"}`}>
+                              Select Card
+                            </label>
+                            <button
+                              type="button"
+                              onClick={() => setShowAddCard(!showAddCard)}
+                              className={`text-xs font-bold flex items-center gap-1 cursor-pointer ${
+                                isLight ? "text-[#475569] hover:text-[#0F172A]" : "text-neutral-300 hover:text-white"
+                              }`}
+                            >
+                              <Plus className="h-3 w-3" />
+                              {showAddCard ? "Use Saved Card" : "Add New Card"}
+                            </button>
+                          </div>
+
+                          {showAddCard ? (
+                            <div className={`p-4 rounded-xl border space-y-3 ${
+                              isLight ? "bg-slate-50 border-black/20" : "bg-black border-white/20"
+                            }`}>
+                              <div>
+                                <label className={`text-[10px] uppercase font-bold ${isLight ? "text-[#475569]" : "text-neutral-400"}`}>Cardholder Name</label>
+                                <input
+                                  type="text"
+                                  placeholder="Jane Doe"
+                                  value={newCardHolder}
+                                  onChange={(e) => setNewCardHolder(e.target.value)}
+                                  className={`w-full mt-1 border rounded-lg p-2 text-xs font-semibold focus:outline-none ${
+                                    isLight ? "bg-white border-black/20 text-[#0F172A] focus:border-black" : "bg-neutral-900 border-white/20 text-white focus:border-white"
+                                  }`}
+                                />
+                              </div>
+                              <div>
+                                <label className={`text-[10px] uppercase font-bold ${isLight ? "text-[#475569]" : "text-neutral-400"}`}>Card Number</label>
+                                <input
+                                  type="text"
+                                  placeholder="4000 0000 0000 0000"
+                                  value={newCardNumber}
+                                  onChange={(e) => setNewCardNumber(e.target.value)}
+                                  className={`w-full mt-1 border rounded-lg p-2 text-xs font-semibold focus:outline-none ${
+                                    isLight ? "bg-white border-black/20 text-[#0F172A] focus:border-black" : "bg-neutral-900 border-white/20 text-white focus:border-white"
+                                  }`}
+                                />
+                              </div>
+                              <div className="grid grid-cols-3 gap-2">
+                                <div>
+                                  <label className={`text-[10px] uppercase font-bold ${isLight ? "text-[#475569]" : "text-neutral-400"}`}>Expires</label>
+                                  <input
+                                    type="text"
+                                    placeholder="MM/YY"
+                                    value={newCardExpiry}
+                                    onChange={(e) => setNewCardExpiry(e.target.value)}
+                                    className={`w-full mt-1 border rounded-lg p-2 text-xs font-semibold focus:outline-none ${
+                                      isLight ? "bg-white border-black/20 text-[#0F172A] focus:border-black" : "bg-neutral-900 border-white/20 text-white focus:border-white"
+                                    }`}
+                                  />
+                                </div>
+                                <div>
+                                  <label className={`text-[10px] uppercase font-bold ${isLight ? "text-[#475569]" : "text-neutral-400"}`}>CVC</label>
+                                  <input
+                                    type="text"
+                                    placeholder="123"
+                                    value={newCardCVC}
+                                    onChange={(e) => setNewCardCVC(e.target.value)}
+                                    className={`w-full mt-1 border rounded-lg p-2 text-xs font-semibold focus:outline-none ${
+                                      isLight ? "bg-white border-black/20 text-[#0F172A] focus:border-black" : "bg-neutral-900 border-white/20 text-white focus:border-white"
+                                    }`}
+                                  />
+                                </div>
+                                <div>
+                                  <label className={`text-[10px] uppercase font-bold ${isLight ? "text-[#475569]" : "text-neutral-400"}`}>ZIP</label>
+                                  <input
+                                    type="text"
+                                    placeholder="10001"
+                                    value={newCardZip}
+                                    onChange={(e) => setNewCardZip(e.target.value)}
+                                    className={`w-full mt-1 border rounded-lg p-2 text-xs font-semibold focus:outline-none ${
+                                      isLight ? "bg-white border-black/20 text-[#0F172A] focus:border-black" : "bg-neutral-900 border-white/20 text-white focus:border-white"
+                                    }`}
+                                  />
+                                </div>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={handleAddNewCard}
+                                className={`w-full py-2 font-bold text-xs rounded-lg mt-2 cursor-pointer transition-colors shadow-sm ${
+                                  isLight ? "bg-[#0F172A] text-white hover:bg-black" : "bg-white/10 hover:bg-white/20 text-white border border-white/20"
+                                }`}
+                              >
+                                Save & Attach Card
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="space-y-2.5">
+                              {linkedCards.map((card: any) => {
+                                const isSelected = card.id === selectedCardId;
+                                const isChase = card.id.includes("1") || card.id.includes("chase") || card.name.toLowerCase().includes("chase");
+                                const isMercury = card.id.includes("2") || card.id.includes("mercury") || card.name.toLowerCase().includes("mercury");
+
+                                return (
+                                  <div
+                                    key={card.id}
+                                    onClick={() => setSelectedCardId(card.id)}
+                                    className={`p-3.5 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${
+                                      isLight
+                                        ? isSelected
+                                          ? "border-black bg-[#0F172A] text-white shadow-md font-bold"
+                                          : "border-black/20 bg-white text-[#0F172A] hover:bg-slate-100 hover:border-black/40 font-semibold shadow-xs"
+                                        : isSelected
+                                          ? "border-white bg-white text-black shadow-md font-bold"
+                                          : "border-white/10 bg-white/5 text-white hover:border-white/20 font-semibold"
+                                    }`}
+                                  >
+                                    <div className="flex items-center gap-3">
+                                      <div className="h-9 w-14 shrink-0 rounded-lg border border-black/20 bg-white p-0.5 flex items-center justify-center shadow-xs overflow-hidden">
+                                        <img
+                                          src={
+                                            card.image 
+                                              || (isChase ? "/chase-ink-business-unlimited.png" : isMercury ? "/mercurycard.png" : "/visa-logo.svg")
+                                          }
+                                          alt={card.name}
+                                          className="h-full w-full object-contain"
+                                        />
+                                      </div>
+                                      <div>
+                                        <p className={`text-xs font-bold ${
+                                          isLight
+                                            ? isSelected ? "text-white" : "text-[#0F172A]"
+                                            : isSelected ? "text-black" : "text-white"
+                                        }`}>{card.name}</p>
+                                        <p className={`text-[10px] font-medium ${
+                                          isLight
+                                            ? isSelected ? "text-slate-300" : "text-[#475569]"
+                                            : isSelected ? "text-neutral-700" : "text-neutral-400"
+                                        }`}>{card.detail}</p>
+                                      </div>
+                                    </div>
+                                    <div className={`h-4 w-4 rounded-full border flex items-center justify-center ${
+                                      isLight
+                                        ? isSelected
+                                          ? "border-white bg-white text-black"
+                                          : "border-black/40 bg-transparent"
+                                        : isSelected
+                                          ? "border-black bg-black text-white"
+                                          : "border-white/30 bg-transparent"
+                                    }`}>
+                                      {isSelected && <Check className="h-2.5 w-2.5 stroke-[3]" />}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Actions */}
+                      <div className="pt-2 flex items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={() => setIsDepositModalOpen(false)}
+                          className={`flex-1 py-3 rounded-xl border text-xs font-bold transition-all cursor-pointer shadow-xs ${
+                            isLight 
+                              ? "bg-white border-black/20 text-[#0F172A] hover:bg-slate-100" 
+                              : "border-white/20 text-neutral-300 hover:bg-white/5 hover:text-white"
+                          }`}
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="submit"
+                          className={`flex-1 py-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-md cursor-pointer ${
+                            isLight 
+                              ? "bg-[#0F172A] text-white hover:bg-black" 
+                              : "bg-white text-black hover:bg-neutral-200"
+                          }`}
+                        >
+                          <Wallet className="h-4 w-4 text-current" />
+                          Confirm Deposit
+                        </button>
+                      </div>
+                    </form>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
       </AnimatePresence>
     </main>
   );

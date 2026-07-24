@@ -120,7 +120,7 @@ export function BatchPaymentCheckoutModal({
               <div>
                 <div className="flex items-center gap-2">
                   <h1 className="text-lg font-black text-white tracking-tight">Review & Authorize Batch Payment</h1>
-                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-[#082315] text-[#70ff9e] border border-[#10b95f]/30">
                     Bilt Settlement Protocol
                   </span>
                 </div>
@@ -130,7 +130,7 @@ export function BatchPaymentCheckoutModal({
 
             <div className="flex items-center gap-4">
               <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl border border-white/10 bg-white/5 text-xs text-[#8f8f8f]">
-                <Lock className="w-3.5 h-3.5 text-emerald-400" />
+                <Lock className="w-3.5 h-3.5 text-[#70ff9e]" />
                 <span>FDIC Insured • 256-Bit Encrypted</span>
               </div>
               <button
@@ -152,21 +152,31 @@ export function BatchPaymentCheckoutModal({
               {/* Section 1: Payment Method Section with Official SVG Logos */}
               <div className="space-y-5">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-[#8f8f8f] flex items-center gap-2">
-                  <CreditCard className="w-4 h-4 text-emerald-400" />
+                  <CreditCard className="w-4 h-4 text-[#70ff9e]" />
                   Payment Method
                 </h3>
 
                 {/* Bilt-style "+ Add Payment Method" Box with Official SVG Logos */}
                 <div className="p-8 rounded-2xl border border-white/10 bg-[#0D0D0D] text-center space-y-5">
                   
-                  {/* Official Brand Logo Images from Public Directory */}
-                  <div className="flex items-center justify-center gap-6 py-1">
-                    <img src="/visa-logo.svg" alt="Visa" className="h-4 w-auto object-contain brightness-0 invert opacity-90" />
-                    <img src="/mastercard-logo.svg" alt="Mastercard" className="h-5 w-auto object-contain" />
-                    <img src="/american-express-logo.svg" alt="Amex" className="h-5 w-auto object-contain" />
-                    <img src="/discover-logo.svg" alt="Discover" className="h-4 w-auto object-contain" />
-                    <span className="h-4 w-[1px] bg-white/20" />
-                    <img src="/plaid-logo.svg" alt="Plaid" className="h-4 w-auto object-contain brightness-0 invert opacity-90" />
+                  {/* Official Brand Logo Images wrapped in high-contrast tile badges */}
+                  <div className="flex items-center justify-center gap-3 py-1 flex-wrap">
+                    <div className="h-8 px-3 rounded-lg border border-white/10 bg-black flex items-center justify-center shrink-0 shadow-sm">
+                      <img src="/visa-logo.svg" alt="Visa" className="h-3.5 w-auto object-contain brightness-0 invert" />
+                    </div>
+                    <div className="h-8 px-3 rounded-lg border border-white/10 bg-black flex items-center justify-center shrink-0 shadow-sm">
+                      <img src="/mastercard-logo.svg" alt="Mastercard" className="h-4 w-auto object-contain" />
+                    </div>
+                    <div className="h-8 px-3 rounded-lg border border-white/10 bg-black flex items-center justify-center shrink-0 shadow-sm">
+                      <img src="/american-express-logo.svg" alt="Amex" className="h-4 w-auto object-contain" />
+                    </div>
+                    <div className="h-8 px-3 rounded-lg border border-white/10 bg-black flex items-center justify-center shrink-0 shadow-sm">
+                      <img src="/discover-logo.svg" alt="Discover" className="h-3.5 w-auto object-contain" />
+                    </div>
+                    <span className="h-4 w-[1px] bg-white/20 hidden sm:block" />
+                    <div className="h-8 px-3 rounded-lg border border-[#10b95f]/30 bg-black flex items-center justify-center shrink-0 shadow-sm">
+                      <img src="/plaid-logo.svg" alt="Plaid" className="h-3.5 w-auto object-contain brightness-0 invert" />
+                    </div>
                   </div>
 
                   <p className="text-xs font-medium text-[#8f8f8f] max-w-md mx-auto leading-relaxed">
@@ -328,12 +338,9 @@ export function BatchPaymentCheckoutModal({
                 </div>
 
                 {/* Rewards Estimation */}
-                <div className="p-4 rounded-xl border border-emerald-500/30 bg-emerald-950/30 flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-emerald-400 shrink-0" />
-                    <span className="text-emerald-300 font-semibold">AgncyPay Rewards</span>
-                  </div>
-                  <span className="font-extrabold text-white font-mono">+{estimatedPoints.toLocaleString()} pts</span>
+                <div className="p-4 rounded-xl border border-[#10b95f]/30 bg-[#082315]/60 flex items-center justify-between text-xs">
+                  <span className="font-bold text-[#70ff9e]">AgncyPay Rewards</span>
+                  <span className="font-extrabold text-[#70ff9e] font-mono">+{estimatedPoints.toLocaleString()} pts</span>
                 </div>
 
                 {/* Primary Authorization Action */}
