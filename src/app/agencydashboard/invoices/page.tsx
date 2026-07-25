@@ -226,7 +226,7 @@ export default function InvoicesQueuePage() {
                   className="px-3.5 py-1.5 rounded-full text-xs font-bold bg-white light:bg-[#0F172A] text-black light:text-white hover:bg-neutral-200 light:hover:bg-[#1E293B] border border-white/20 light:border-black/10 shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
                 >
                   <Landmark className="h-3.5 w-3.5" />
-                  Agency Banking
+                  Switch to Agency Banking
                 </button>
                 <div className="h-4 w-[1px] bg-white/20" />
                 <button

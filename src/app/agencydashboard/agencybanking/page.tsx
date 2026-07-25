@@ -327,20 +327,19 @@ export default function AgencyBankingDashboardPage() {
             </div>
             <span className="h-4 w-[1px] bg-white/20 hidden md:block" />
             <div className="hidden md:flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 light:bg-black/5 border border-white/20 light:border-black/10 text-[11px] font-bold uppercase tracking-wider text-white light:text-[#0F172A]">
-              <Building2 className="h-3.5 w-3.5 text-white light:text-[#0F172A]" />
-              Agency Portal
+              <Landmark className="h-3 w-3 text-white light:text-[#0F172A]" />
+              {workspaceType === "brand" ? "Brand Banking" : "Agency Banking"}
             </div>
           </div>
 
           {/* Navigation Tabs */}
           <nav className="hidden lg:flex items-center gap-1 bg-white/[0.03] p-1 rounded-full border border-white/20">
-            <button
-                  onClick={() => router.push("/agencydashboard")}
-                  className="px-3.5 py-1.5 rounded-full text-xs font-bold bg-white light:bg-[#0F172A] text-black light:text-white hover:bg-neutral-200 light:hover:bg-[#1E293B] border border-white/20 light:border-black/10 shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
-                >
-                  <Building2 className="h-3.5 w-3.5" />
-                  Agency Portal
-                </button>
+            <button 
+              onClick={() => router.push("/agencydashboard/agencybanking")}
+              className="px-4 py-1.5 rounded-full text-xs font-bold bg-white light:bg-[#0F172A] text-black light:text-white shadow-sm border border-white/20 light:border-black/10 transition-all cursor-pointer"
+            >
+              Agency Banking
+            </button>
             <button 
               onClick={() => router.push("/agencydashboard/nodes")}
               className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#8f8f8f] light:text-[#475569] hover:text-white light:hover:text-[#0F172A] transition-all cursor-pointer"
@@ -356,6 +355,18 @@ export default function AgencyBankingDashboardPage() {
           </nav>
 
           <div className="flex items-center gap-3">
+            {workspaceType === "agency" && (
+              <>
+                <button
+                  onClick={() => router.push("/agencydashboard")}
+                  className="px-3.5 py-1.5 rounded-full text-xs font-bold bg-white light:bg-[#0F172A] text-black light:text-white hover:bg-neutral-200 light:hover:bg-[#1E293B] border border-white/20 light:border-black/10 shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Building2 className="h-3.5 w-3.5" />
+                  Switch to Agency Portal
+                </button>
+                <div className="h-4 w-[1px] bg-white/20" />
+              </>
+            )}
             <button
               onClick={() => router.push("/dashboard")}
               className="text-xs font-semibold text-[#8f8f8f] hover:text-white transition-colors flex items-center gap-1"
