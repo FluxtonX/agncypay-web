@@ -1,4 +1,9 @@
-"use client";
+import os
+
+invoices_page_path = "src/app/branddashboard/invoices/page.tsx"
+detail_page_path = "src/app/branddashboard/invoices/[invoiceId]/page.tsx"
+
+merged_code = '''"use client";
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
@@ -188,41 +193,8 @@ export default function InvoicesQueuePage() {
                         invoices[0] ||
                         null;
 
-  const isAggregateView = selectedInvoiceId === null;
-  const settledSum = invoices.filter(i => i.status === "settled" || i.status === "talent_disbursed").reduce((acc, i) => acc + i.amount, 0);
-  const awaitingSum = invoices.filter(i => i.status === "awaiting_approval").reduce((acc, i) => acc + i.amount, 0);
-  const allSum = invoices.reduce((acc, i) => acc + i.amount, 0);
-
-  const displayLabel = !isAggregateView && activeInvoice
-    ? (activeInvoice.status === "settled" || activeInvoice.status === "talent_disbursed" ? "Balance paid" : "Balance due")
-    : activeFilter === "settled" 
-    ? "Balance paid" 
-    : activeFilter === "awaiting_approval" 
-    ? "Balance due" 
-    : "Total billed";
-
-  const displayAmount = !isAggregateView && activeInvoice
-    ? activeInvoice.amount
-    : activeFilter === "settled" 
-    ? settledSum 
-    : activeFilter === "awaiting_approval" 
-    ? awaitingSum 
-    : allSum;
-
-  const isAwaitingStatus = !isAggregateView && activeInvoice
-    ? activeInvoice.status === "awaiting_approval"
-    : activeFilter === "awaiting_approval" || (activeFilter === "all" && awaitingSum > 0);
-
   const handleApproveAndPay = () => {
-    if (!isAwaitingStatus) return;
-
-    const invoicesToApprove = !isAggregateView && activeInvoice
-      ? [activeInvoice]
-      : activeFilter === "awaiting_approval" || activeFilter === "all"
-      ? invoices.filter(inv => inv.status === "awaiting_approval")
-      : activeInvoice ? [activeInvoice] : [];
-
-    if (invoicesToApprove.length === 0) return;
+    if (!activeInvoice || activeInvoice.status !== "awaiting_approval") return;
     
     const userEmail = state.user?.email || "guest";
     const queueKey = `brand_queue_invoices_${userEmail}`;
@@ -238,21 +210,19 @@ export default function InvoicesQueuePage() {
         
         setTimeout(() => {
           setInvoices(prev => {
-            const approvedIds = new Set(invoicesToApprove.map(inv => inv.id));
             const next = prev.map(inv => 
-              approvedIds.has(inv.id) ? { ...inv, status: "settled" as const } : inv
+              inv.id === activeInvoice.id ? { ...inv, status: "settled" as const } : inv
             );
             localStorage.setItem(queueKey, JSON.stringify(next));
             return next;
           });
 
-          const totalApproved = invoicesToApprove.reduce((sum, inv) => sum + inv.amount, 0);
           // Add notification
           const localNotifs = localStorage.getItem(notifsKey);
           const notifs = localNotifs ? JSON.parse(localNotifs) : [];
           const newNotif = {
             id: `notif-${Date.now()}`,
-            message: `Brand approved & paid ${invoicesToApprove.length > 1 ? `${invoicesToApprove.length} invoices` : `invoice for ${invoicesToApprove[0].campaignName}`} ($${totalApproved.toLocaleString(undefined, { minimumFractionDigits: 2 })})`,
+            message: `Brand approved & paid main invoice for ${activeInvoice.campaignName} ($${activeInvoice.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })})`,
             timestamp: "Just now",
             unread: true,
           };
@@ -344,7 +314,23 @@ export default function InvoicesQueuePage() {
         {/* TOP SECTION: ACTIVE INVOICE BILLING DASHBOARD */}
         {activeInvoice && (
           <div className="space-y-6">
+            {/* Address & Campaign Hub Bar */}
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-[#050505] p-4 rounded-xl border border-white/20 shadow-lg">
+              <div className="flex flex-wrap items-baseline gap-2 text-white">
+                <h2 className="text-xl font-bold tracking-tight text-white">{activeInvoice.location},</h2>
+                <span className="text-xl font-extrabold text-[#4B6BFB]">{activeInvoice.costCenter}</span>
+                <span className="text-xs font-bold uppercase tracking-wider text-[#8f8f8f]/60 ml-2">
+                  {activeInvoice.brandName} • {activeInvoice.id}
+                </span>
+              </div>
 
+              <div className="flex items-center gap-1.5 bg-white/[0.03] p-1 rounded-full border border-white/20">
+                <div className="px-4 py-1.5 rounded-full text-xs font-bold bg-[#111111] border border-white/20 text-white flex items-center gap-1.5">
+                  <Home className="h-3.5 w-3.5 text-[#4B6BFB]" />
+                  Campaign Hub
+                </div>
+              </div>
+            </div>
 
             {/* 2-Column Grid: Left (7 cols) Balance Due, Right (5 cols) Direct Vendor Payment */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -359,9 +345,9 @@ export default function InvoicesQueuePage() {
 
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                   <div>
-                    <span className="text-xs font-bold text-[#8f8f8f] uppercase tracking-wider block">{displayLabel}</span>
+                    <span className="text-xs font-bold text-[#8f8f8f] uppercase tracking-wider block">Balance due</span>
                     <span className="text-4xl md:text-5xl font-black text-white tracking-tight mt-1.5 block">
-                      ${displayAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      ${activeInvoice.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
                     <div className="mt-4 flex items-center gap-2 text-xs text-neutral-400">
                       <Calendar className="h-4 w-4 text-[#8f8f8f]" />
@@ -375,16 +361,16 @@ export default function InvoicesQueuePage() {
                       {processingStage === "idle" && (
                         <button
                           onClick={handleApproveAndPay}
-                          disabled={!isAwaitingStatus}
+                          disabled={activeInvoice.status !== "awaiting_approval"}
                           className={`w-full h-12 px-6 rounded-xl text-xs font-black shadow-sm flex items-center justify-center gap-2 transition-all cursor-pointer ${
-                            isAwaitingStatus
+                            activeInvoice.status === "awaiting_approval"
                               ? "bg-white text-black hover:bg-neutral-200 shadow-white/10 shadow-lg"
                               : "bg-emerald-600 text-white cursor-default"
                           }`}
                         >
-                          {isAwaitingStatus ? (
+                          {activeInvoice.status === "awaiting_approval" ? (
                             <>
-                              Approve & Pay {isAggregateView && activeFilter === "awaiting_approval" && invoices.filter(i => i.status === "awaiting_approval").length > 1 ? `All (${invoices.filter(i => i.status === "awaiting_approval").length}) Invoices` : "Invoice"}
+                              Approve & Pay Invoice
                               <ChevronRight className="h-4 w-4" />
                             </>
                           ) : (
@@ -542,10 +528,7 @@ export default function InvoicesQueuePage() {
               ].map(tab => (
                 <button
                   key={tab.id}
-                  onClick={() => {
-                    setActiveFilter(tab.id as any);
-                    setSelectedInvoiceId(null);
-                  }}
+                  onClick={() => setActiveFilter(tab.id as any)}
                   className={`px-4 py-2 rounded-lg text-xs font-semibold tracking-tight transition-all cursor-pointer ${
                     activeFilter === tab.id
                       ? "bg-white text-black font-bold shadow-sm"
@@ -665,3 +648,22 @@ export default function InvoicesQueuePage() {
     </main>
   );
 }
+'''
+
+with open(invoices_page_path, "w") as f:
+    f.write(merged_code)
+
+print("Merged invoices page written successfully!")
+
+# Now redirect detail_page_path to /branddashboard/invoices
+detail_redirect_code = '''import { redirect } from "next/navigation";
+
+export default function InvoiceDetailPage() {
+  redirect("/branddashboard/invoices");
+}
+'''
+
+with open(detail_page_path, "w") as f:
+    f.write(detail_redirect_code)
+
+print("Detail page redirected successfully!")

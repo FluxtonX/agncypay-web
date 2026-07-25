@@ -1231,12 +1231,6 @@ export default function BrandDashboardPage() {
             >
               {workspaceType === "brand" ? "Rewards" : "Payout Split Nodes"}
             </button>
-            <button 
-              onClick={() => router.push("/branddashboard/analytics")}
-              className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#8f8f8f] light:text-[#475569] hover:text-white light:hover:text-[#0F172A] transition-all cursor-pointer"
-            >
-              {workspaceType === "brand" ? "Analytics" : "Agency Earnings"}
-            </button>
           </nav>
  
           <div className="flex items-center gap-3">
