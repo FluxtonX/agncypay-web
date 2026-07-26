@@ -50,6 +50,7 @@ import { useApp } from "../../context/AppContext";
 import { subscribeInvoicesByBrand, subscribeInvoicesByAgency, updateInvoiceStatus, createFirestoreInvoice, getRegisteredBrands, getRegisteredTalents, getRegisteredTalentsByAgency, recordFirestoreDeposit } from "../../lib/firebaseInvoices";
 import { FirestoreUser } from "../../lib/firebaseAuth";
 import { BatchPaymentCheckoutModal } from "../../components/payment/BatchPaymentCheckoutModal";
+import { IntegrationsPanel } from "../../components/dashboard/IntegrationsPanel";
 
 // Refactored Data Models
 interface SplitItem {
@@ -129,9 +130,7 @@ export default function BrandDashboardPage() {
   const [paymentTerm, setPaymentTerm] = useState("Pay Now");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
-  // Integrations modal state
-  const [isIntegrationsOpen, setIsIntegrationsOpen] = useState(false);
-  const [connectedIntegration, setConnectedIntegration] = useState<string | null>(null);
+  // QuickBooks / Xero sync status
   const [qbSyncStatus, setQbSyncStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [qbSyncMessage, setQbSyncMessage] = useState("");
 
@@ -470,7 +469,6 @@ export default function BrandDashboardPage() {
       const xeroError = searchParams.get("xero_error");
       
       if (qbConnected === "true") {
-        setConnectedIntegration("quickbooks");
         window.history.replaceState({}, document.title, window.location.pathname);
         fetchQbInvoices();
       } else if (qbError) {
@@ -478,7 +476,6 @@ export default function BrandDashboardPage() {
         setQbSyncMessage(`QuickBooks error: ${qbError.replace(/_/g, " ")}`);
         window.history.replaceState({}, document.title, window.location.pathname);
       } else if (xeroConnected === "true") {
-        setConnectedIntegration("xero");
         window.history.replaceState({}, document.title, window.location.pathname);
         fetchXeroInvoices();
       } else if (xeroError) {
@@ -490,10 +487,8 @@ export default function BrandDashboardPage() {
           .then(res => res.json())
           .then(data => {
             if (data.quickbooks) {
-              setConnectedIntegration("quickbooks");
               fetchQbInvoices();
             } else if (data.xero) {
-              setConnectedIntegration("xero");
               fetchXeroInvoices();
             }
           })
@@ -1078,123 +1073,8 @@ export default function BrandDashboardPage() {
     router.push("/auth/login");
   };
 
-  if (!mounted) return null;
-
-  // ───────────────────────────────────────────────────────────────────
-  // Accounting Integrations Modal
-  const INTEGRATIONS = [
-    { id: "quickbooks", name: "QuickBooks", desc: "Import invoices from QuickBooks company.", color: "#2CA01C", text: "#fff", label: "QB", path: "/api/auth/quickbooks/connect", available: true },
-    { id: "xero",       name: "Xero",       desc: "Sync invoices from your Xero organisation.", color: "#13B5EA", text: "#fff", label: "XE", path: "/api/auth/xero/connect",       available: true },
-    { id: "sage",       name: "Sage",       desc: "Pull from Sage 50 or Sage Business Cloud.", color: "#00DC00", text: "#033000", label: "SG", path: "/api/auth/sage/connect",   available: false },
-    { id: "mainboard", name: "Mainboard",  desc: "Import from Mainboard / ERP approval queue.", color: "#ffffff", text: "#000", label: "MB", path: "/api/auth/mainboard/connect", available: false },
-  ];
-
-  const AccountingModal = () => (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4 py-8 backdrop-blur-sm"
-      onClick={(e) => { if (e.target === e.currentTarget) setIsIntegrationsOpen(false); }}
-    >
-      <div className="w-full max-w-[520px] rounded-[16px] border border-[#2a2a2a] bg-[#0a0a0a] shadow-2xl overflow-hidden">
-        <div className="flex items-center justify-between border-b border-[#1e1e1e] px-6 py-5">
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-[9px] border border-[#333] bg-[#111]">
-              <Plug className="h-4 w-4 text-white" />
-            </div>
-            <div>
-              <h2 className="text-[17px] font-bold text-white">Connect Accounting</h2>
-              <p className="text-[12px] text-[#777] mt-0.5">Sync invoices from your accounting tool</p>
-            </div>
-          </div>
-          <button type="button" onClick={() => setIsIntegrationsOpen(false)} className="flex h-8 w-8 items-center justify-center rounded-full text-[#777] hover:bg-white/[0.06] hover:text-white transition-colors">
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-
-        <div className="p-5 space-y-3">
-          {INTEGRATIONS.map((ig) => {
-            const isConn = connectedIntegration === ig.id;
-            const isSoon = !ig.available;
-            return (
-              <div
-                key={ig.id}
-                className={`flex items-center gap-4 rounded-[12px] border p-4 transition-all ${
-                  isConn ? "border-[#2a2a2a] bg-[#0d160d]" :
-                  isSoon ? "border-[#1a1a1a] bg-[#060606] opacity-50" :
-                  "border-[#222] bg-[#0d0d0d] hover:border-[#444]"
-                }`}
-              >
-                <div
-                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] text-[13px] font-black shadow-sm"
-                  style={{ backgroundColor: ig.color, color: ig.text }}
-                >
-                  {ig.label}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="text-[14px] font-bold text-white">{ig.name}</p>
-                    {isConn && (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-[#082315] border border-[#10b95f]/40 px-2 py-0.5 text-[10px] font-bold text-[#4ade80]">
-                        <span className="h-1.5 w-1.5 rounded-full bg-[#4ade80] animate-pulse" />
-                        Connected
-                      </span>
-                    )}
-                    {isSoon && <span className="rounded-full bg-[#1a1a1a] border border-[#333] px-2 py-0.5 text-[10px] font-bold text-[#666]">Soon</span>}
-                  </div>
-                  <p className="text-[12px] text-[#666] mt-0.5 leading-4">{ig.desc}</p>
-                </div>
-                <div className="shrink-0">
-                  {isConn ? (
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        const integration = connectedIntegration;
-                        if (integration === "quickbooks") {
-                          await fetch("/api/auth/quickbooks/disconnect", { method: "POST" });
-                        } else if (integration === "xero") {
-                          await fetch("/api/auth/xero/disconnect", { method: "POST" });
-                        }
-                        setConnectedIntegration(null);
-                        setWidgetInvoices(prev => prev.filter(inv => inv._source !== integration));
-                        setIsIntegrationsOpen(false);
-                      }}
-                      className="flex items-center gap-1.5 h-8 rounded-[7px] border border-[#333] bg-[#111] px-3 text-[12px] font-semibold text-[#999] hover:border-red-900/50 hover:text-red-400 transition-colors"
-                    >
-                      <Link2Off className="h-3.5 w-3.5" />
-                      Disconnect
-                    </button>
-                  ) : isSoon ? (
-                    <span className="text-[11px] font-semibold text-[#444]">Coming Soon</span>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => { window.location.href = ig.path; }}
-                      className="flex items-center gap-1.5 h-8 rounded-[7px] border border-[#444] bg-[#111] px-3 text-[12px] font-semibold text-white hover:border-white/40 hover:bg-white/[0.04] transition-colors"
-                    >
-                      <Link2 className="h-3.5 w-3.5" />
-                      Connect
-                    </button>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        <div className="border-t border-[#1a1a1a] px-6 py-4">
-          <p className="text-[11px] text-[#555] leading-5">
-            Connecting an accounting tool imports your invoices into AgncyPay for payment and reconciliation. Only invoice read access is requested.
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-  // ───────────────────────────────────────────────────────────────────
-
   return (
     <main className="min-h-screen bg-background text-foreground flex flex-col font-sans antialiased relative transition-colors duration-200">
-      {/* Accounting Integrations Modal */}
-      {isIntegrationsOpen && <AccountingModal />}
-
       {/* Background radial gradient decoration */}
       <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-white/[0.01] rounded-full blur-[100px] pointer-events-none" />
 
@@ -1557,7 +1437,7 @@ export default function BrandDashboardPage() {
 
           {/* Bilt-Inspired Reward Points & CRM Invoice Section */}
           <div className="space-y-6 mt-6">
-            {/* Card 1: InvoicePay for Commercial Hero */}
+            {/* Card 1: Payments for Commercial Hero */}
             <div className={`rounded-2xl border p-6 shadow-sm transition-colors ${isLightTheme ? "bg-white border-black/10" : "bg-[#050505] border-white/20"}`}>
               <div className={`flex flex-col md:flex-row justify-between items-start md:items-center gap-6 pb-6 border-b ${isLightTheme ? "border-black/10" : "border-white/10"}`}>
                 <div className="space-y-2 max-w-lg">
@@ -1566,7 +1446,7 @@ export default function BrandDashboardPage() {
                       <Building2 className={`w-4 h-4 ${isLightTheme ? "text-black" : "text-white"}`} />
                     </div>
                     <h3 className={`text-base font-black tracking-tight ${isLightTheme ? "text-[#0F172A]" : "text-white"}`}>
-                      InvoicePay for Commercial™
+                      Payments for Commercial™
                     </h3>
                   </div>
                   <p className={`text-xs ${isLightTheme ? "text-slate-600" : "text-neutral-400"}`}>
@@ -1576,7 +1456,7 @@ export default function BrandDashboardPage() {
                     onClick={() => router.push("/branddashboard/wallet")}
                     className={`mt-3 px-5 py-2 rounded-xl text-xs font-black transition-all shadow-md flex items-center gap-2 cursor-pointer ${isLightTheme ? "bg-[#0F172A] text-white hover:bg-slate-800 force-white-text" : "bg-white text-black hover:bg-neutral-200"}`}
                   >
-                    <span>Get Started with InvoicePay</span>
+                    <span>Get Started with Payments for Commercial</span>
                     <ChevronRight className="w-3.5 h-3.5" />
                   </button>
                 </div>
@@ -1692,15 +1572,10 @@ export default function BrandDashboardPage() {
           
           {/* Brand Treasury Balance & Deposit Section (Brand Side Only) */}
           {workspaceType === "brand" && (
-            <div className="bg-[#050505] rounded-xl border border-white/10 p-5 shadow-sm space-y-4">
+            <div className="bg-[#050505] rounded-xl border border-white/10 p-5 shadow-sm">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-sm font-bold uppercase tracking-wider text-neutral-400">Brand Treasury Balance</h3>
-                    <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">
-                      Active Liquidity
-                    </span>
-                  </div>
+                  <h3 className="text-sm font-bold uppercase tracking-wider text-neutral-400">Brand Treasury Balance</h3>
                   <p className="text-2xl font-black text-white mt-1 font-mono">
                     ${depositedBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </p>
@@ -1714,97 +1589,19 @@ export default function BrandDashboardPage() {
                   Deposit Funds
                 </button>
               </div>
-
-              <div className="pt-3 border-t border-white/10 flex items-center justify-end gap-2 text-xs">
-                <span className="text-[11px] text-emerald-400 font-semibold flex items-center gap-1">
-                  <CheckCircle2 className="h-3.5 w-3.5" />
-                  100% FDIC Insured
-                </span>
-              </div>
             </div>
           )}
 
           {/* Integrations Widget */}
-          <div className="bg-[#050505] rounded-xl border border-white/10 p-5 shadow-sm">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h3 className="text-[15px] font-semibold text-white tracking-tight">Integrations</h3>
-                <p className="text-[12px] text-neutral-400 font-medium mt-1">Connect accounting tools to sync invoices automatically.</p>
-              </div>
-              {connectedIntegration && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-[#082315] border border-[#10b95f]/40 px-2 py-0.5 text-[10px] font-bold text-[#4ade80] shrink-0 mt-0.5">
-                  <span className="h-1.5 w-1.5 rounded-full bg-[#4ade80] animate-pulse" />
-                  Connected
-                </span>
-              )}
-            </div>
-            
-            {/* Sync Status Banner */}
-            {qbSyncStatus !== "idle" && (
-              <div className={`mt-4 px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 ${
-                qbSyncStatus === "loading" ? "bg-white/10 text-white" :
-                qbSyncStatus === "success" ? "bg-[#082315] text-[#4ade80] border border-[#10b95f]/30" :
-                "bg-red-950/30 text-red-400 border border-red-900/50"
-              }`}>
-                {qbSyncStatus === "loading" && <RefreshCw className="h-3 w-3 animate-spin" />}
-                {qbSyncStatus === "success" && <Check className="h-3 w-3" />}
-                {qbSyncStatus === "error" && <AlertCircle className="h-3 w-3" />}
-                {qbSyncMessage}
-              </div>
-            )}
-            
-            {(() => {
-              const connectedList: { id: string; name: string; logo: string; label: string }[] = [];
-              if (connectedIntegration === "quickbooks") {
-                connectedList.push({ id: "quickbooks", name: "QuickBooks", logo: "/quickbook.png", label: "QB ✓" });
-              }
-              if (connectedIntegration === "xero") {
-                connectedList.push({ id: "xero", name: "Xero", logo: "/xero.png", label: "Xero ✓" });
-              }
-              if (connectedIntegration === "sage") {
-                connectedList.push({ id: "sage", name: "Sage", logo: "/sage.png", label: "Sage ✓" });
-              }
-
-              const connectCount = Math.max(1, 5 - connectedList.length);
-
-              return (
-                <div className="grid grid-cols-5 gap-2 mt-6">
-                  {/* Connected Tiles */}
-                  {connectedList.map((item) => (
-                    <div
-                      key={item.id}
-                      onClick={() => setIsIntegrationsOpen(true)}
-                      className="flex flex-col items-center gap-1.5 group cursor-pointer"
-                    >
-                      <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl border border-emerald-500 bg-emerald-950/40 flex items-center justify-center p-2 transition-all shadow-md relative">
-                        <img src={item.logo} alt={item.name} className="w-8 h-8 object-contain" />
-                        <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-emerald-400 border-2 border-[#050505] animate-pulse" />
-                      </div>
-                      <span className="text-[11px] font-bold text-[#4ade80] truncate max-w-full">
-                        {item.label}
-                      </span>
-                    </div>
-                  ))}
-
-                  {/* + Connect Tiles (Fills remaining slots up to 5 total) */}
-                  {Array.from({ length: connectCount }).map((_, index) => (
-                    <div
-                      key={`connect-slot-${index}`}
-                      className="flex flex-col items-center gap-1.5 cursor-pointer group"
-                      onClick={() => setIsIntegrationsOpen(true)}
-                    >
-                      <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl border border-dashed border-white/30 flex items-center justify-center group-hover:bg-white/5 group-hover:border-white/60 transition-all shadow-md">
-                        <Plus className="w-5 h-5 text-neutral-400 group-hover:text-white transition-colors" />
-                      </div>
-                      <span className="text-[11px] font-semibold text-neutral-400 group-hover:text-white truncate max-w-full">
-                        Connect
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              );
-            })()}
-          </div>
+          <IntegrationsPanel
+            onSync={(provider) => {
+              if (provider === "quickbooks") fetchQbInvoices();
+              else if (provider === "xero") fetchXeroInvoices();
+            }}
+            onDisconnect={(provider) => {
+              setWidgetInvoices(prev => prev.filter(inv => inv._source !== provider));
+            }}
+          />
 
           {/* Connected Banking Feeds */}
           <div className="bg-[#050505] rounded-xl border border-white/10 overflow-hidden shadow-sm flex flex-col">
@@ -1912,19 +1709,7 @@ export default function BrandDashboardPage() {
               </span>
             </div>
           </div>
-
-          {/* Action Center */}
-          <div className="bg-[#050505] rounded-xl border border-white/10 overflow-hidden shadow-sm min-h-[200px] flex flex-col">
-            <div className="p-5 border-b border-white/10 bg-white/[0.01]">
-              <h3 className="text-[11px] font-bold uppercase tracking-wider text-[#8f8f8f]">ACTION CENTER</h3>
-            </div>
-            <div className="flex-1 flex items-center justify-center p-8 bg-white/[0.02]">
-              <p className="text-[13px] font-medium text-neutral-500">No pending alerts. You are all caught up!</p>
-            </div>
-          </div>
-
         </div>
-
       </div>
 
       {/* New Invoice Modal */}

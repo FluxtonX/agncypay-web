@@ -138,10 +138,10 @@ export default function InvoicesQueuePage() {
           defaultTerm: "Net-30",
           status: uiStatus,
           vendorFee: {
-            name: "Processing Fee",
+            name: inv.agency || "Agency Recipient",
             role: "Vendor",
             amount: inv.amount * 0.1,
-            walletId: "@agncypay",
+            walletId: inv.agencyEmail || "@agncypay",
             avatar: "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=80&auto=format&fit=crop&q=80"
           },
           splitPool: {
@@ -400,7 +400,7 @@ export default function InvoicesQueuePage() {
                           className={`w-full h-12 px-6 rounded-xl text-xs font-black shadow-sm flex items-center justify-center gap-2 transition-all cursor-pointer ${
                             isAwaitingStatus
                               ? "bg-white text-black hover:bg-neutral-200 shadow-white/10 shadow-lg"
-                              : "bg-emerald-600 text-white cursor-default"
+                              : "bg-white/10 text-neutral-400 cursor-default border border-white/10"
                           }`}
                         >
                           {isAwaitingStatus ? (
@@ -410,7 +410,7 @@ export default function InvoicesQueuePage() {
                             </>
                           ) : (
                             <>
-                              <CheckCircle2 className="h-4.5 w-4.5 text-white" />
+                              <CheckCircle2 className="h-4.5 w-4.5 text-neutral-400" />
                               Approved & Settled
                             </>
                           )}
@@ -419,7 +419,7 @@ export default function InvoicesQueuePage() {
 
                       {processingStage !== "idle" && (
                         <div className="w-full h-12 px-6 rounded-xl border border-white/20 bg-[#0A0A0A] text-[10px] font-bold text-[#8f8f8f] flex items-center justify-center gap-3 shadow-inner">
-                          <RefreshCw className="h-4 w-4 animate-spin text-[#4B6BFB]" />
+                          <RefreshCw className="h-4 w-4 animate-spin text-white" />
                           {processingStage === "verifying" && "Verifying corporate treasury..."}
                           {processingStage === "routing" && "Auto-routing splits..."}
                           {processingStage === "success" && "Settlement complete!"}
@@ -434,9 +434,9 @@ export default function InvoicesQueuePage() {
                   <div className="flex justify-between items-center py-1">
                     <span className="text-[#8f8f8f] font-semibold flex items-center gap-2">
                       <Layers className="h-4 w-4 text-neutral-500" />
-                      Auto-split Settlement Routing
+                      Automated Payee Routing
                     </span>
-                    <span className="font-bold text-emerald-400 bg-emerald-950/40 px-2.5 py-0.5 rounded border border-emerald-800/20 text-[10px] uppercase">
+                    <span className="font-mono font-semibold text-neutral-300 text-xs">
                       Active
                     </span>
                   </div>
@@ -444,9 +444,9 @@ export default function InvoicesQueuePage() {
                   <div className="flex justify-between items-center py-1">
                     <span className="text-[#8f8f8f] font-semibold flex items-center gap-2">
                       <Coins className="h-4 w-4 text-neutral-500" />
-                      Liquidity Guarantee (Net-0 Advance Payout)
+                      Same-Day Wire & ACH Settlement
                     </span>
-                    <span className="font-bold text-[#4B6BFB] bg-[#4B6BFB]/10 px-2.5 py-0.5 rounded border border-[#4B6BFB]/20 text-[10px] uppercase">
+                    <span className="font-mono font-semibold text-neutral-300 text-xs">
                       Eligible
                     </span>
                   </div>
@@ -454,10 +454,10 @@ export default function InvoicesQueuePage() {
                   <div className="flex justify-between items-center py-1">
                     <span className="text-[#8f8f8f] font-semibold flex items-center gap-2">
                       <ShieldCheck className="h-4 w-4 text-neutral-500" />
-                      Consolidated Processing Fee
+                      Bank Transaction Fee
                     </span>
-                    <span className="font-bold text-neutral-300 text-[10px] uppercase">
-                      $0 ACH Fee (Consolidated Rail)
+                    <span className="font-mono font-semibold text-neutral-300 text-xs">
+                      $0.00 (Waived)
                     </span>
                   </div>
                 </div>
@@ -468,10 +468,10 @@ export default function InvoicesQueuePage() {
                 <div>
                   <div className="flex justify-between items-center border-b border-white/20 pb-3">
                     <div className="flex items-center gap-2">
-                      <h4 className="text-xs font-black text-[#8f8f8f] uppercase tracking-wider">Direct Vendor Payment</h4>
-                      <span className="text-[10px] text-neutral-500 font-semibold">(Direct flat rate billing)</span>
+                      <h4 className="text-xs font-black text-[#8f8f8f] uppercase tracking-wider">Recipient Overview</h4>
+                      <span className="text-[10px] text-neutral-500 font-semibold">(Institutional Settlement)</span>
                     </div>
-                    <span className="text-[10px] text-neutral-500 font-bold">1 Node</span>
+                    <span className="text-[10px] text-neutral-500 font-bold">{selectedIds.length > 0 ? selectedIds.length : 1} Invoice{selectedIds.length > 1 ? "s" : ""} Selected</span>
                   </div>
 
                   <div className="mt-4">
@@ -480,27 +480,27 @@ export default function InvoicesQueuePage() {
                         <div className="flex items-center gap-3 min-w-0">
                           <img
                             src={(recentPendingInvoice || activeInvoice)?.vendorFee?.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80"}
-                            alt={(recentPendingInvoice || activeInvoice)?.vendorFee?.name || "Processing Fee"}
+                            alt={(recentPendingInvoice || activeInvoice)?.vendorFee?.name || "Payee"}
                             className="h-10 w-10 rounded-lg object-cover border border-white/20 bg-[#111] shrink-0"
                           />
                           <div className="min-w-0">
                             <p className="text-xs font-bold text-white truncate">
                               {selectedIds.length > 1 
-                                ? `Consolidated Vendor Pool (${selectedIds.length} Invoices)` 
-                                : (recentPendingInvoice || activeInvoice)?.vendorFee?.name || "Processing Fee"}
+                                ? `Selected Payee Batch (${selectedIds.length} Items)` 
+                                : (recentPendingInvoice || activeInvoice)?.vendorFee?.name || "Agency Recipient"}
                             </p>
                             <p className="text-[10px] text-neutral-500 font-mono">
                               {(recentPendingInvoice || activeInvoice)?.vendorFee?.walletId || "@agncypay"}
                             </p>
                           </div>
                         </div>
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-950/60 text-amber-300 border border-amber-800/30 shrink-0 uppercase tracking-wider">
-                          Vendor
+                        <span className="text-xs font-semibold text-neutral-400 shrink-0">
+                          Verified Recipient
                         </span>
                       </div>
 
                       <div className="mt-4 flex justify-between items-baseline pt-2 border-t border-white/10">
-                        <span className="text-xs font-semibold text-neutral-400">Direct Production Fee</span>
+                        <span className="text-xs font-semibold text-neutral-400">Total Disbursement Amount</span>
                         <span className="text-lg font-black text-white">
                           ${displayAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </span>
@@ -582,7 +582,7 @@ export default function InvoicesQueuePage() {
                 >
                   {tab.label}
                   {tab.id === "awaiting_approval" && (
-                    <span className="ml-1.5 px-1.5 py-0.5 rounded bg-[#4B6BFB]/10 text-[#4B6BFB] text-[10px] font-bold">
+                    <span className="ml-1.5 px-1.5 py-0.5 rounded bg-white/10 text-neutral-300 text-[10px] font-bold">
                       {invoices.filter(i => i.status === "awaiting_approval").length}
                     </span>
                   )}
@@ -591,7 +591,7 @@ export default function InvoicesQueuePage() {
               {selectedIds.length > 0 && (
                 <button
                   onClick={() => setSelectedIds([])}
-                  className="px-3 py-1.5 rounded-lg text-xs font-bold text-[#ff8a00] bg-[#ff8a00]/10 hover:bg-[#ff8a00]/20 border border-[#ff8a00]/30 transition-all cursor-pointer flex items-center gap-1.5"
+                  className="px-3 py-1.5 rounded-lg text-xs font-bold text-white bg-white/10 hover:bg-white/20 border border-white/20 transition-all cursor-pointer flex items-center gap-1.5"
                 >
                   <span>Clear ({selectedIds.length})</span>
                 </button>
@@ -631,8 +631,8 @@ export default function InvoicesQueuePage() {
                     </th>
                     <th className="p-4">Invoice ID</th>
                     <th className="p-4">Campaign / Project Name</th>
-                    <th className="p-4">Billing Office Location</th>
-                    <th className="p-4">Cost Center</th>
+                    <th className="p-4">Payee / Vendor</th>
+                    <th className="p-4">Payment Terms</th>
                     <th className="p-4 text-right">Invoice Amount</th>
                     {activeFilter !== "awaiting_approval" && <th className="p-4 text-center">Status</th>}
                     <th className="p-4"></th>
@@ -659,7 +659,7 @@ export default function InvoicesQueuePage() {
                           }}
                           className={`cursor-pointer transition-all group ${
                             isSelected || selectedIds.includes(inv.id)
-                              ? "bg-white/[0.07] border-l-4 border-l-[#4B6BFB]"
+                              ? "bg-white/[0.07] border-l-4 border-l-white"
                               : "hover:bg-white/[0.02]"
                           }`}
                         >
@@ -679,30 +679,26 @@ export default function InvoicesQueuePage() {
                           </td>
                           <td className="p-4 font-mono font-bold text-neutral-300">
                             {inv.id}
-                            {isSelected && <span className="ml-2 text-[9px] text-[#4B6BFB] font-bold uppercase">(Active)</span>}
+                            {isSelected && <span className="ml-2 text-[10px] text-neutral-400 font-normal">(Selected)</span>}
                           </td>
                           <td className="p-4">
                             <p className="text-white font-bold">{inv.campaignName}</p>
                             <p className="text-[10px] text-neutral-500 mt-0.5">{inv.brandName}</p>
                           </td>
-                          <td className="p-4 text-neutral-300">{inv.location}</td>
-                          <td className="p-4 text-neutral-400 font-mono">{inv.costCenter}</td>
+                          <td className="p-4 text-white font-semibold">{inv.vendorFee?.name || "Agency Recipient"}</td>
+                          <td className="p-4 text-neutral-400 font-mono">{inv.dueDate || "Net-30"}</td>
                           <td className="p-4 text-right font-black text-white">
                             ${inv.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </td>
                           {activeFilter !== "awaiting_approval" && (
                             <td className="p-4 text-center">
-                              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                                isAwaiting 
-                                  ? "bg-amber-950/60 text-amber-300 border border-amber-800/30 animate-pulse" 
-                                  : "bg-emerald-950/60 text-emerald-300 border border-emerald-800/30"
-                              }`}>
-                                {isAwaiting ? "Awaiting Approval" : "Settled"}
+                              <span className="text-xs font-semibold text-neutral-300">
+                                {isAwaiting ? "Pending Approval" : "Paid & Settled"}
                               </span>
                             </td>
                           )}
                           <td className="p-4 text-right pr-6">
-                            <ChevronRight className={`h-4 w-4 transition-transform ml-auto ${isSelected ? "text-[#4B6BFB] translate-x-1" : "text-neutral-600 group-hover:text-white"}`} />
+                            <ChevronRight className={`h-4 w-4 transition-transform ml-auto ${isSelected ? "text-white translate-x-1" : "text-neutral-600 group-hover:text-white"}`} />
                           </td>
                         </tr>
                       );
