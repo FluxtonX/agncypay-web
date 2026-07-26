@@ -28,7 +28,9 @@ import {
   Check,
   X,
   Sun,
-  Moon
+  Moon,
+  Loader2,
+  Link2
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -62,8 +64,7 @@ const INITIAL_CARDS: WalletItem[] = [
     subtitle: "Real Time, Everytime • Treasury Pool",
     last4: "POOL",
     brand: "treasury",
-    gradient: "from-[#334155] via-[#1e293b] to-[#0f172a] border-[#cbd5e1]/40 text-slate-100 force-white-text",
-    image: "/cards/agncy-card-silver.jpg"
+    gradient: "from-[#334155] via-[#1e293b] to-[#0f172a] border-[#cbd5e1]/40 text-slate-100 force-white-text"
   },
   {
     id: "card-mc",
@@ -126,8 +127,8 @@ export default function WalletDashboardPage() {
   const [activeTab, setActiveTab] = useState<"cards" | "accounts">("cards");
   const [cards, setCards] = useState<WalletItem[]>(INITIAL_CARDS);
   const [accounts, setAccounts] = useState<WalletItem[]>(INITIAL_ACCOUNTS);
-  const [selectedItemId, setSelectedItemId] = useState<string | null>("add");
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedItemId, setSelectedItemId] = useState<string | null>("card-treasury");
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   // New Card/Account Form State
   const [newTitle, setNewTitle] = useState("");
@@ -135,6 +136,43 @@ export default function WalletDashboardPage() {
   const [newType, setNewType] = useState<"mastercard" | "visa" | "amex" | "bank">("mastercard");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMsg, setSuccessMsg] = useState("");
+
+  // Deposit state for Treasury Pool Card
+  const [depositedBalance, setDepositedBalance] = useState(25000);
+  const [depositAmount, setDepositAmount] = useState("1000");
+  const [depositMethod, setDepositMethod] = useState<"card" | "ach" | "wire" | "rtp">("card");
+  const [isProcessingDeposit, setIsProcessingDeposit] = useState(false);
+  const [depositSuccessMsg, setDepositSuccessMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const userEmail = state.user?.email || "guest";
+      const savedBalance = localStorage.getItem(`brand_deposited_balance_${userEmail}`);
+      if (savedBalance) {
+        setDepositedBalance(parseFloat(savedBalance));
+      }
+    }
+  }, [state.user]);
+
+  const handleConfirmDeposit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const numericAmt = parseFloat(depositAmount);
+    if (isNaN(numericAmt) || numericAmt <= 0) return;
+
+    setIsProcessingDeposit(true);
+    setTimeout(() => {
+      const userEmail = state.user?.email || "guest";
+      const updated = depositedBalance + numericAmt;
+      setDepositedBalance(updated);
+      localStorage.setItem(`brand_deposited_balance_${userEmail}`, updated.toString());
+      setIsProcessingDeposit(false);
+      setDepositSuccessMsg(`Successfully deposited $${numericAmt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} into AGNCYPAY Treasury!`);
+      setTimeout(() => {
+        setDepositSuccessMsg(null);
+        setDepositAmount("1000");
+      }, 3000);
+    }, 1000);
+  };
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -167,7 +205,7 @@ export default function WalletDashboardPage() {
     }
   };
 
-  const items = activeTab === "cards" ? cards : accounts;
+  const items = activeTab === "cards" ? cards : activeTab === "accounts" ? accounts : cards.filter(c => c.brand === "treasury");
   const selectedItem = items.find(i => i.id === selectedItemId);
 
   const handleAddItem = (e: React.FormEvent) => {
@@ -199,7 +237,6 @@ export default function WalletDashboardPage() {
       setSelectedItemId(newItem.id);
 
       setTimeout(() => {
-        setIsModalOpen(false);
         setSuccessMsg("");
         setNewTitle("");
         setNewLast4("");
@@ -333,26 +370,58 @@ export default function WalletDashboardPage() {
           </div>
         </div>
 
+        {/* Brand Treasury Pool Balance & Direct Deposit Summary Banner */}
+        <div className={`mb-8 p-6 rounded-3xl border shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6 transition-colors ${isLightTheme ? "bg-white border-black/10 text-slate-900" : "bg-[#090909] border-white/10 text-white"}`}>
+          <div className="flex items-center gap-4">
+            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center border shrink-0 ${isLightTheme ? "bg-black text-white border-black" : "bg-white text-black border-white"}`}>
+              <Coins className="w-7 h-7" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className={`text-xs font-bold uppercase tracking-wider ${isLightTheme ? "text-slate-500" : "text-neutral-400"}`}>Brand Treasury Pool Balance</h3>
+                <span className={`px-2 py-0.5 rounded text-[9px] font-extrabold uppercase border ${isLightTheme ? "bg-black text-white border-black" : "bg-white text-black border-white"}`}>
+                  Active Float
+                </span>
+              </div>
+              <p className="text-3xl font-black font-mono mt-1">
+                ${depositedBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </p>
+              <p className={`text-xs mt-0.5 ${isLightTheme ? "text-slate-600" : "text-neutral-400"}`}>
+                Available for instant 0-fee invoice settlement & automated disbursements.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 w-full md:w-auto">
+            <button
+              onClick={() => {
+                setActiveTab("cards");
+                setSelectedItemId("card-treasury");
+              }}
+              className={`w-full md:w-auto px-6 py-3.5 rounded-2xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg transition-all cursor-pointer ${isLightTheme ? "bg-[#0F172A] text-white hover:bg-slate-800 force-white-text" : "bg-white text-black hover:bg-neutral-200"}`}
+            >
+              <Plus className="w-4 h-4" />
+              <span>Deposit into Treasury</span>
+            </button>
+          </div>
+        </div>
+
         {/* Carousel / Card Selector Row */}
         <div className="flex items-center gap-4 overflow-x-auto pb-4 pt-1 scrollbar-none">
           
           {/* Add Card / Account Button Tile */}
           <button
             onClick={() => {
-              setSelectedItemId("add");
+              setIsAddModalOpen(true);
             }}
-            className={`shrink-0 w-48 h-24 rounded-2xl border transition-all flex flex-col items-center justify-center gap-2 cursor-pointer ${
-              selectedItemId === "add"
-                ? isLightTheme
-                  ? "bg-slate-100 border-black/40 shadow-md scale-[1.02]"
-                  : "bg-white/[0.08] border-white shadow-lg scale-[1.02]"
-                : isLightTheme
-                  ? "bg-slate-100/80 border-dashed border-slate-300 hover:border-slate-400 text-slate-600 hover:text-black"
-                  : "bg-white/[0.02] border-dashed border-white/20 hover:border-white/40 text-neutral-400 hover:text-white"
+            className={`shrink-0 w-64 h-40 rounded-2xl border transition-all flex flex-col items-center justify-center gap-2 cursor-pointer ${
+              isLightTheme
+                ? "bg-slate-100/80 border-dashed border-slate-300 hover:border-slate-400 text-slate-600 hover:text-black hover:bg-slate-100"
+                : "bg-white/[0.02] border-dashed border-white/20 hover:border-white/40 text-neutral-400 hover:text-white hover:bg-white/[0.05]"
             }`}
           >
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${isLightTheme ? "bg-black/5" : "bg-white/10"}`}>
-              <Plus className={`w-4 h-4 ${isLightTheme ? "text-[#0F172A]" : "text-white"}`} />
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isLightTheme ? "bg-black/5" : "bg-white/10"}`}>
+              <Plus className={`w-5 h-5 ${isLightTheme ? "text-[#0F172A]" : "text-white"}`} />
             </div>
             <span className={`text-xs font-bold ${isLightTheme ? "text-[#0F172A]" : "text-white"}`}>
               {activeTab === "cards" ? "Add card" : "Link account"}
@@ -421,101 +490,74 @@ export default function WalletDashboardPage() {
         {/* Main Content Showcase (Below Cards) */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-8">
           
-          {/* Left Container - Interactive Preview & Action */}
+          {/* Left Container - Constant Treasury Pool Deposit Hub */}
           <div className={`lg:col-span-7 rounded-3xl border p-8 shadow-xl flex flex-col justify-between min-h-[380px] relative overflow-hidden transition-colors ${isLightTheme ? "bg-white border-black/10" : "bg-[#090909] border-white/10"}`}>
             <div className={`absolute -right-20 -bottom-20 w-80 h-80 rounded-full blur-3xl pointer-events-none ${isLightTheme ? "bg-black/[0.02]" : "bg-white/[0.02]"}`} />
             
             <div>
               <div className={`flex items-center justify-between border-b pb-4 mb-6 ${isLightTheme ? "border-slate-200" : "border-white/10"}`}>
                 <h2 className={`text-lg font-black flex items-center gap-2 ${isLightTheme ? "text-[#0F172A]" : "text-white"}`}>
-                  {selectedItemId === "add" ? (
-                    activeTab === "cards" ? "Add a commercial card" : "Link a settlement bank account"
-                  ) : (
-                    selectedItem?.title || "Payment Source Details"
-                  )}
+                  Treasury Pool Deposit Hub
                 </h2>
-                {selectedItem?.isDefault && (
-                  <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
-                    Active Settlement Hub
-                  </span>
-                )}
+                <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                  Active Settlement Float
+                </span>
               </div>
 
-              {selectedItemId === "add" ? (
-                <div className={`rounded-2xl border border-dashed p-8 flex flex-col items-center justify-center text-center my-4 ${isLightTheme ? "bg-slate-50 border-slate-300" : "bg-white/[0.02] border-white/15"}`}>
-                  <div className={`w-16 h-16 rounded-2xl border flex items-center justify-center mb-4 shadow-inner ${isLightTheme ? "bg-slate-100 border-slate-300" : "bg-white/5 border-white/10"}`}>
-                    <Plus className={`w-8 h-8 ${isLightTheme ? "text-[#0F172A]" : "text-white"}`} />
+              <div className={`p-6 rounded-2xl border ${isLightTheme ? "bg-slate-50 border-slate-200" : "bg-white/[0.02] border-white/10"}`}>
+                <div className="flex items-center justify-between mb-6 pb-4 border-b border-white/10 light:border-black/10">
+                  <div>
+                    <h4 className={`text-sm font-black ${isLightTheme ? "text-[#0F172A]" : "text-white"}`}>Deposit Funds</h4>
+                    <p className={`text-[11px] ${isLightTheme ? "text-slate-500" : "text-neutral-400"}`}>Instant 0-fee settlement balance top-up</p>
                   </div>
-                  <h3 className={`text-base font-bold max-w-sm ${isLightTheme ? "text-[#0F172A]" : "text-white"}`}>
-                    {activeTab === "cards"
-                      ? "Earn points on payments with any linked commercial card"
-                      : "Link checking or escrow accounts for zero-fee ACH disbursals"}
-                  </h3>
-                  <p className={`text-xs mt-1 max-w-md ${isLightTheme ? "text-slate-600" : "text-neutral-400"}`}>
-                    {activeTab === "cards"
-                      ? "Link your Visa, Mastercard, or American Express commercial card to automatically earn 1X-2X AgncyPay Rewards when paying invoices."
-                      : "Connect your primary business operating account or dedicated campaign escrow repository for seamless automated payouts."}
-                  </p>
-                  <button
-                    onClick={() => setIsModalOpen(true)}
-                    className={`mt-6 px-6 py-3 rounded-xl font-extrabold text-xs transition-all shadow-lg flex items-center gap-2 cursor-pointer ${isLightTheme ? "bg-[#0F172A] text-white hover:bg-slate-800 force-white-text" : "bg-white text-black hover:bg-neutral-200"}`}
-                  >
-                    <Plus className="w-4 h-4" />
-                    <span>{activeTab === "cards" ? "Add a card" : "Link an account"}</span>
-                  </button>
+                  <div className="text-right">
+                    <span className={`text-xs block ${isLightTheme ? "text-slate-500" : "text-neutral-400"}`}>Available Treasury Balance</span>
+                    <span className={`text-lg font-mono font-black ${isLightTheme ? "text-[#0F172A]" : "text-white"}`}>${depositedBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  </div>
                 </div>
-              ) : (
-                <div className="my-2">
-                  {selectedItem?.image ? (
-                    <div className="rounded-2xl border border-white/15 shadow-2xl max-w-lg mx-auto sm:mx-0 relative overflow-hidden mb-6 group bg-black aspect-[1.6/1] flex items-center justify-center">
-                      <img
-                        src={selectedItem.image}
-                        alt={selectedItem.title}
-                        className="w-full h-full object-cover scale-[1.26] transition-transform duration-700 group-hover:scale-[1.32]"
-                      />
-                    </div>
-                  ) : (
-                    <div className={`p-6 rounded-2xl bg-gradient-to-br ${selectedItem?.gradient} border shadow-lg max-w-md mx-auto sm:mx-0 text-left relative overflow-hidden mb-6`}>
-                      <div className="flex justify-between items-start mb-10">
-                        <span className="text-xs font-mono tracking-widest uppercase opacity-75">AGNCYPAY COMMERCIAL WALLET</span>
-                        {selectedItem?.brand === "mastercard" && (
-                          <div className="flex -space-x-1.5">
-                            <div className="w-6 h-6 rounded-full bg-red-500/80" />
-                            <div className="w-6 h-6 rounded-full bg-amber-500/80" />
-                          </div>
-                        )}
-                      </div>
-                      <p className="text-lg font-mono font-black tracking-widest mb-1">
-                        {selectedItem?.last4 === "APPLY" || selectedItem?.last4 === "POOL" ? selectedItem?.last4 : `•••• •••• •••• ${selectedItem?.last4}`}
-                      </p>
-                      <div className="flex justify-between items-end mt-4">
-                        <div>
-                          <p className="text-[9px] uppercase opacity-60">ACCOUNT HOLDER</p>
-                          <p className="text-xs font-bold uppercase truncate max-w-[200px]">ADIDAS COMMERCIAL TREASURY</p>
-                        </div>
-                        <span className="text-xs font-black uppercase tracking-wider">{selectedItem?.brand}</span>
-                      </div>
-                    </div>
-                  )}
 
-                  <div className={`space-y-3 p-4 rounded-xl border text-xs ${isLightTheme ? "bg-slate-50 border-slate-200" : "bg-white/[0.02] border-white/5"}`}>
-                    <div className={`flex justify-between items-center py-1 border-b ${isLightTheme ? "border-slate-200" : "border-white/5"}`}>
-                      <span className={isLightTheme ? "text-slate-500" : "text-neutral-400"}>Status</span>
-                      <span className="font-bold text-emerald-500 flex items-center gap-1">
-                        <CheckCircle2 className="w-3.5 h-3.5" /> Verified & Active
-                      </span>
+                {depositSuccessMsg ? (
+                  <div className="py-6 text-center">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center mx-auto mb-2 ${isLightTheme ? "bg-black text-white" : "bg-white text-black"}`}>
+                      <Check className="w-5 h-5" />
                     </div>
-                    <div className={`flex justify-between items-center py-1 border-b ${isLightTheme ? "border-slate-200" : "border-white/5"}`}>
-                      <span className={isLightTheme ? "text-slate-500" : "text-neutral-400"}>Billing Address</span>
-                      <span className={`font-medium ${isLightTheme ? "text-[#0F172A]" : "text-white"}`}>Herzogenaurach HQ • Germany</span>
-                    </div>
-                    <div className="flex justify-between items-center py-1">
-                      <span className={isLightTheme ? "text-slate-500" : "text-neutral-400"}>Rewards Multiplier</span>
-                      <span className="font-bold text-amber-500">2X AgncyPay Points on Invoices</span>
-                    </div>
+                    <p className={`text-xs font-bold ${isLightTheme ? "text-[#0F172A]" : "text-white"}`}>{depositSuccessMsg}</p>
                   </div>
-                </div>
-              )}
+                ) : (
+                  <form onSubmit={handleConfirmDeposit} className="space-y-4">
+                    <div>
+                      <label className={`block text-[11px] font-bold uppercase mb-1 ${isLightTheme ? "text-slate-600" : "text-neutral-400"}`}>Deposit Amount (USD)</label>
+                      <div className="relative">
+                        <span className={`absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold ${isLightTheme ? "text-slate-400" : "text-neutral-400"}`}>$</span>
+                        <input
+                          type="number"
+                          required
+                          min="100"
+                          step="any"
+                          value={depositAmount}
+                          onChange={e => setDepositAmount(e.target.value)}
+                          className={`w-full h-11 pl-7 pr-4 rounded-xl border text-xs font-mono font-bold outline-none ${isLightTheme ? "bg-white border-slate-300 text-black" : "bg-black/50 border-white/20 text-white"}`}
+                        />
+                      </div>
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={isProcessingDeposit}
+                      className={`w-full h-11 rounded-xl font-extrabold text-xs uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 shadow-md ${isLightTheme ? "bg-[#0F172A] text-white hover:bg-slate-800 force-white-text" : "bg-white text-black hover:bg-neutral-200"}`}
+                    >
+                      {isProcessingDeposit ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span>Processing Deposit...</span>
+                        </>
+                      ) : (
+                        <span>Deposit into Treasury Pool</span>
+                      )}
+                    </button>
+                  </form>
+                )}
+              </div>
             </div>
 
             <div className={`flex items-center justify-between pt-6 border-t text-xs ${isLightTheme ? "border-slate-200" : "border-white/10"}`}>
@@ -523,87 +565,16 @@ export default function WalletDashboardPage() {
                 <Lock className="w-3.5 h-3.5 text-emerald-500" />
                 <span>256-Bit Bank-Grade Encryption</span>
               </div>
-              {selectedItemId !== "add" && (
-                <div className="flex gap-2">
-                  <button className={`px-3 py-1.5 rounded-lg font-bold text-xs transition-colors cursor-pointer ${isLightTheme ? "bg-slate-100 hover:bg-slate-200 text-slate-800" : "bg-white/[0.05] hover:bg-white/[0.1] text-white"}`}>
-                    Manage Rules
-                  </button>
-                  <button className="px-3 py-1.5 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500/20 font-bold text-xs transition-colors cursor-pointer">
-                    Remove
-                  </button>
-                </div>
-              )}
             </div>
           </div>
 
-          {/* Right Container - Exclusive Benefits on Linked Cards (Bilt Style) */}
-          <div className={`lg:col-span-5 rounded-3xl border p-8 shadow-xl flex flex-col justify-between transition-colors ${isLightTheme ? "bg-white border-black/10" : "bg-[#090909] border-white/10"}`}>
-            <div>
-              <h2 className={`text-lg font-black mb-6 flex items-center gap-2 ${isLightTheme ? "text-[#0F172A]" : "text-white"}`}>
-                <Award className="w-5 h-5 text-amber-500" />
-                <span>Exclusive benefits on linked {activeTab === "cards" ? "cards" : "accounts"}</span>
-              </h2>
-
-              <div className="space-y-6">
-                
-                {/* Benefit 1 */}
-                <div className="flex items-start gap-4">
-                  <div className={`w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 mt-0.5 ${isLightTheme ? "bg-blue-50 border-blue-200" : "bg-blue-500/10 border-blue-500/20"}`}>
-                    <Coins className="w-5 h-5 text-blue-500" />
-                  </div>
-                  <div>
-                    <h3 className={`text-sm font-bold ${isLightTheme ? "text-[#0F172A]" : "text-white"}`}>
-                      Double dip rewards
-                    </h3>
-                    <p className={`text-xs mt-1 leading-relaxed ${isLightTheme ? "text-slate-600" : "text-neutral-400"}`}>
-                      Earn AgncyPay Points on top of your usual corporate card rewards program or bank relationship bonuses.
-                    </p>
-                  </div>
-                </div>
-
-                {/* Benefit 2 */}
-                <div className="flex items-start gap-4">
-                  <div className={`w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 mt-0.5 ${isLightTheme ? "bg-emerald-50 border-emerald-200" : "bg-emerald-500/10 border-emerald-500/20"}`}>
-                    <Zap className="w-5 h-5 text-emerald-500" />
-                  </div>
-                  <div>
-                    <h3 className={`text-sm font-bold ${isLightTheme ? "text-[#0F172A]" : "text-white"}`}>
-                      2X+ Points on agency settlements
-                    </h3>
-                    <p className={`text-xs mt-1 leading-relaxed ${isLightTheme ? "text-slate-600" : "text-neutral-400"}`}>
-                      With eligible linked commercial cards and treasury accounts when paying talent invoices and production retainers.
-                    </p>
-                  </div>
-                </div>
-
-                {/* Benefit 3 */}
-                <div className="flex items-start gap-4">
-                  <div className={`w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 mt-0.5 ${isLightTheme ? "bg-purple-50 border-purple-200" : "bg-purple-500/10 border-purple-500/20"}`}>
-                    <Building2 className="w-5 h-5 text-purple-500" />
-                  </div>
-                  <div>
-                    <h3 className={`text-sm font-bold ${isLightTheme ? "text-[#0F172A]" : "text-white"}`}>
-                      Up to 2X Points on media & software spend
-                    </h3>
-                    <p className={`text-xs mt-1 leading-relaxed ${isLightTheme ? "text-slate-600" : "text-neutral-400"}`}>
-                      2X on verified advertising platforms (Google, Meta, TikTok Ads) and 1X on all other commercial operating spend.
-                    </p>
-                  </div>
-                </div>
-
-              </div>
-            </div>
-
-            <div className={`mt-8 pt-6 border-t p-4 rounded-2xl flex items-center justify-between ${isLightTheme ? "border-slate-200 bg-slate-50" : "border-white/10 bg-white/[0.02]"}`}>
-              <div>
-                <p className={`text-xs font-bold ${isLightTheme ? "text-[#0F172A]" : "text-white"}`}>Need help linking treasury or automating payments?</p>
-                <p className={`text-[11px] ${isLightTheme ? "text-slate-500" : "text-neutral-400"}`}>Speak with AgncyPay AI Assistant.</p>
-              </div>
-              <button className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${isLightTheme ? "bg-slate-200 hover:bg-slate-300 text-[#0F172A]" : "bg-white/[0.08] hover:bg-white/[0.15] text-white"}`}>
-                <span>Ask AI</span>
-                <ExternalLink className="w-3 h-3" />
-              </button>
-            </div>
+          {/* Right Container - Replaced with globalmoney.png */}
+          <div className={`lg:col-span-5 rounded-3xl overflow-hidden border flex transition-colors ${isLightTheme ? "border-black/10 bg-slate-50" : "border-white/10 bg-[#090909]"}`}>
+            <img 
+              src="/globalmoney.png" 
+              alt="Global Money Benefits" 
+              className="w-full h-full object-fill"
+            />
           </div>
 
         </div>
@@ -634,129 +605,103 @@ export default function WalletDashboardPage() {
         </div>
       </footer>
 
-      {/* Add Card / Account Modal */}
-      <AnimatePresence>
-        {isModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => !isSubmitting && setIsModalOpen(false)}
-              className="absolute inset-0 bg-black/80 backdrop-blur-sm"
-            />
-
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className={`relative w-full max-w-md rounded-3xl border p-6 shadow-2xl overflow-hidden transition-colors ${isLightTheme ? "bg-white border-black/10 text-slate-800" : "bg-[#0D0D0D] border-white/20 text-white"}`}
+      {/* Plaid Link Connection Dialogue Modal Popup */}
+      {isAddModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className={`w-full max-w-md rounded-3xl border p-8 shadow-2xl relative transition-all ${isLightTheme ? "bg-white border-slate-200 text-black" : "bg-[#0A0A0A] border-white/10 text-white"}`}>
+            
+            {/* Close Button */}
+            <button 
+              onClick={() => {
+                if (!isSubmitting) {
+                  setIsAddModalOpen(false);
+                  setSuccessMsg("");
+                }
+              }}
+              className={`absolute top-4 right-4 p-1.5 rounded-lg border hover:opacity-75 transition-all cursor-pointer ${isLightTheme ? "border-slate-200 text-slate-500" : "border-white/10 text-neutral-400"}`}
             >
-              <div className={`flex justify-between items-center pb-4 border-b mb-6 ${isLightTheme ? "border-slate-200" : "border-white/10"}`}>
-                <h3 className={`text-base font-black flex items-center gap-2 ${isLightTheme ? "text-[#0F172A]" : "text-white"}`}>
-                  <WalletIcon className="w-4 h-4 text-sky-500" />
-                  <span>{activeTab === "cards" ? "Link Commercial Card" : "Link Bank Account"}</span>
+              <X className="w-4 h-4" />
+            </button>
+
+            {successMsg ? (
+              <div className="py-12 flex flex-col items-center justify-center text-center">
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-3 ${isLightTheme ? "bg-black text-white" : "bg-white text-black"}`}>
+                  <Check className="w-6 h-6" />
+                </div>
+                <h4 className={`text-base font-bold ${isLightTheme ? "text-black" : "text-white"}`}>{successMsg}</h4>
+                <p className={`text-xs mt-1 ${isLightTheme ? "text-slate-500" : "text-neutral-400"}`}>Updating your wallet items...</p>
+              </div>
+            ) : (
+              <div className="py-4 text-center flex flex-col items-center justify-center">
+                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-4 border ${isLightTheme ? "bg-slate-50 border-slate-200 text-slate-900" : "bg-white/5 border-white/10 text-white"}`}>
+                  <Link2 className="w-7 h-7 text-neutral-400" />
+                </div>
+                <h3 className={`text-base font-black ${isLightTheme ? "text-[#0F172A]" : "text-white"}`}>
+                  {activeTab === "cards" ? "Link Commercial Card via Plaid" : "Link Settlement Bank Account via Plaid"}
                 </h3>
+                <p className={`text-xs mt-2 max-w-sm leading-relaxed mb-6 ${isLightTheme ? "text-slate-500" : "text-neutral-400"}`}>
+                  Securely authenticate and link your commercial accounts using 256-bit bank-grade encryption.
+                </p>
                 <button
-                  onClick={() => !isSubmitting && setIsModalOpen(false)}
-                  className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${isLightTheme ? "bg-slate-100 hover:bg-slate-200 text-slate-600" : "bg-white/5 hover:bg-white/10 text-neutral-400 hover:text-white"}`}
+                  onClick={() => {
+                    setIsSubmitting(true);
+                    setTimeout(() => {
+                      setIsSubmitting(false);
+                      setSuccessMsg(activeTab === "cards" ? "Corporate Mastercard connected successfully!" : "Chase checking connected successfully!");
+                      const newId = `item-${Date.now()}`;
+                      if (activeTab === "cards") {
+                        setCards(prev => [
+                          ...prev,
+                          {
+                            id: newId,
+                            type: "card",
+                            title: "Plaid Corporate Card",
+                            subtitle: "Linked Corporate Card • Verified",
+                            last4: "4920",
+                            brand: "mastercard",
+                            gradient: "from-[#334155] via-[#1E293B] to-[#0F172A] border-white/30 text-white force-white-text"
+                          }
+                        ]);
+                      } else {
+                        setAccounts(prev => [
+                          ...prev,
+                          {
+                            id: newId,
+                            type: "account",
+                            title: "Plaid Operating Checking",
+                            subtitle: "Linked Bank Account • Verified",
+                            last4: "8829",
+                            brand: "bank",
+                            gradient: "from-[#0369a1] via-[#075985] to-[#0c4a6e] border-sky-400/40 text-white force-white-text"
+                          }
+                        ]);
+                      }
+                      setTimeout(() => {
+                        setSelectedItemId(newId);
+                        setIsAddModalOpen(false);
+                        setSuccessMsg("");
+                      }, 1500);
+                    }, 1200);
+                  }}
+                  className={`w-full py-3.5 rounded-2xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg transition-all cursor-pointer ${isLightTheme ? "bg-[#0F172A] text-white hover:bg-slate-800 force-white-text" : "bg-white text-black hover:bg-neutral-200"}`}
                 >
-                  <X className="w-4 h-4" />
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Connecting Bank Feeds...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Link2 className="w-4 h-4" />
+                      <span>Link via Plaid Sandbox</span>
+                    </>
+                  )}
                 </button>
               </div>
-
-              {successMsg ? (
-                <div className="py-8 flex flex-col items-center justify-center text-center">
-                  <div className="w-12 h-12 rounded-full bg-emerald-500/20 text-emerald-500 flex items-center justify-center mb-3">
-                    <Check className="w-6 h-6" />
-                  </div>
-                  <h4 className={`text-base font-bold ${isLightTheme ? "text-black" : "text-white"}`}>{successMsg}</h4>
-                  <p className={`text-xs mt-1 ${isLightTheme ? "text-slate-500" : "text-neutral-400"}`}>Updating your wallet items...</p>
-                </div>
-              ) : (
-                <form onSubmit={handleAddItem} className="space-y-4">
-                  <div>
-                    <label className={`block text-xs font-bold mb-1.5 uppercase ${isLightTheme ? "text-slate-600" : "text-neutral-400"}`}>
-                      {activeTab === "cards" ? "Card Name / Label" : "Bank / Institution Name"}
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      placeholder={activeTab === "cards" ? "e.g. Adidas Corporate Visa" : "e.g. Citibank Operating Account"}
-                      value={newTitle}
-                      onChange={e => setNewTitle(e.target.value)}
-                      className={`w-full h-11 px-4 rounded-xl border text-xs font-medium outline-none transition-colors ${isLightTheme ? "bg-slate-100 border-slate-300 text-black focus:border-black" : "bg-black/50 border-white/20 text-white focus:border-white"}`}
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className={`block text-xs font-bold mb-1.5 uppercase ${isLightTheme ? "text-slate-600" : "text-neutral-400"}`}>
-                        {activeTab === "cards" ? "Last 4 Digits" : "Account Last 4"}
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        maxLength={4}
-                        placeholder="e.g. 4829"
-                        value={newLast4}
-                        onChange={e => setNewLast4(e.target.value.replace(/\D/g, ""))}
-                        className={`w-full h-11 px-4 rounded-xl border text-xs font-mono font-bold outline-none transition-colors ${isLightTheme ? "bg-slate-100 border-slate-300 text-black focus:border-black" : "bg-black/50 border-white/20 text-white focus:border-white"}`}
-                      />
-                    </div>
-
-                    {activeTab === "cards" && (
-                      <div>
-                        <label className={`block text-xs font-bold mb-1.5 uppercase ${isLightTheme ? "text-slate-600" : "text-neutral-400"}`}>
-                          Network Brand
-                        </label>
-                        <select
-                          value={newType}
-                          onChange={e => setNewType(e.target.value as any)}
-                          className={`w-full h-11 px-3 rounded-xl border text-xs font-medium outline-none transition-colors ${isLightTheme ? "bg-slate-100 border-slate-300 text-black focus:border-black" : "bg-black/50 border-white/20 text-white focus:border-white"}`}
-                        >
-                          <option value="mastercard">Mastercard</option>
-                          <option value="visa">Visa Commercial</option>
-                          <option value="amex">American Express</option>
-                        </select>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className={`p-3 rounded-xl border flex items-center gap-2.5 text-[11px] mt-2 ${isLightTheme ? "bg-blue-50 border-blue-200 text-slate-700" : "bg-white/5 border-white/10 text-neutral-300"}`}>
-                    <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0" />
-                    <span>Your account credentials are verified instantly via Plaid / Stripe Commercial.</span>
-                  </div>
-
-                  <div className="pt-4 flex justify-end gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setIsModalOpen(false)}
-                      className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-colors ${isLightTheme ? "text-slate-600 hover:text-black" : "text-neutral-400 hover:text-white"}`}
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={isSubmitting || !newTitle || newLast4.length !== 4}
-                      className={`px-6 py-2.5 rounded-xl font-black text-xs disabled:opacity-50 transition-all shadow-md flex items-center gap-2 cursor-pointer ${isLightTheme ? "bg-[#0F172A] text-white hover:bg-slate-800 force-white-text" : "bg-white text-black hover:bg-neutral-200"}`}
-                    >
-                      {isSubmitting ? (
-                        <>
-                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                          <span>Verifying...</span>
-                        </>
-                      ) : (
-                        <span>Link to Wallet</span>
-                      )}
-                    </button>
-                  </div>
-                </form>
-              )}
-            </motion.div>
+            )}
           </div>
-        )}
-      </AnimatePresence>
+        </div>
+      )}
     </main>
   );
 }

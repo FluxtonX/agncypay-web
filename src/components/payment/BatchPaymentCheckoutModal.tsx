@@ -215,7 +215,7 @@ export function BatchPaymentCheckoutModal({
                               {method.type === "card" ? (
                                 <CreditCard className="w-5 h-5 text-white" />
                               ) : (
-                                <Building2 className="w-5 h-5 text-emerald-400" />
+                                <Building2 className="w-5 h-5 text-white" />
                               )}
                             </div>
                             <div>
@@ -225,7 +225,7 @@ export function BatchPaymentCheckoutModal({
                           </div>
 
                           <div className={`w-5 h-5 rounded-full border flex items-center justify-center shrink-0 ${
-                            isSelected ? "border-emerald-400 bg-emerald-500 text-black" : "border-white/20"
+                            isSelected ? "border-white bg-white text-black" : "border-white/20"
                           }`}>
                             {isSelected && <Check className="w-3.5 h-3.5 stroke-[3]" />}
                           </div>
@@ -338,9 +338,9 @@ export function BatchPaymentCheckoutModal({
                 </div>
 
                 {/* Rewards Estimation */}
-                <div className="p-4 rounded-xl border border-[#10b95f]/30 bg-[#082315]/60 flex items-center justify-between text-xs">
-                  <span className="font-bold text-[#70ff9e]">AgncyPay Rewards</span>
-                  <span className="font-extrabold text-[#70ff9e] font-mono">+{estimatedPoints.toLocaleString()} pts</span>
+                <div className="p-4 rounded-xl border border-white/20 bg-white/5 flex items-center justify-between text-xs">
+                  <span className="font-bold text-white">AgncyPay Rewards</span>
+                  <span className="font-extrabold text-white font-mono">+{estimatedPoints.toLocaleString()} pts</span>
                 </div>
 
                 {/* Primary Authorization Action */}
@@ -350,7 +350,7 @@ export function BatchPaymentCheckoutModal({
                   onClick={handleAuthorize}
                   className={`w-full h-14 rounded-xl font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all shadow-xl cursor-pointer active:scale-[0.99] ${
                     isSuccess
-                      ? "bg-emerald-500 text-black font-bold"
+                      ? "bg-white text-black font-bold"
                       : "bg-white text-black hover:bg-neutral-200"
                   }`}
                 >

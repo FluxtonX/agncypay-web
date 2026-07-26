@@ -137,7 +137,7 @@ export function BanksAndCardsPanel({ onConnectAccount }: BanksAndCardsPanelProps
       <div className="p-6 border-b border-white/10 light:border-black/10 bg-white/[0.01] flex items-center justify-between">
         <div>
           <h3 className="text-xs font-extrabold uppercase tracking-wider text-[#8f8f8f] light:text-[#475569] flex items-center gap-2">
-            <Building2 className="w-4 h-4 text-emerald-500 light:text-emerald-600" />
+            <Building2 className="w-4 h-4 text-white light:text-black" />
             CONNECTED BANKING FEEDS
           </h3>
         </div>
@@ -162,9 +162,9 @@ export function BanksAndCardsPanel({ onConnectAccount }: BanksAndCardsPanelProps
       </div>
 
       {plaidError && (
-        <div className="p-3 bg-red-500/10 border-b border-red-500/20 text-red-400 text-xs font-semibold flex items-center justify-between px-6">
+        <div className="p-3 bg-white/10 light:bg-slate-100 border-b border-white/20 light:border-black/20 text-white light:text-black text-xs font-semibold flex items-center justify-between px-6">
           <span>{plaidError}</span>
-          <button onClick={() => setPlaidError(null)} className="text-red-400 hover:text-white cursor-pointer">
+          <button onClick={() => setPlaidError(null)} className="text-white light:text-black hover:opacity-75 cursor-pointer">
             <X className="h-3.5 w-3.5" />
           </button>
         </div>
@@ -176,16 +176,16 @@ export function BanksAndCardsPanel({ onConnectAccount }: BanksAndCardsPanelProps
         {plaidAccounts.length > 0 && plaidAccounts.map((acc) => (
           <div
             key={acc.id}
-            className="flex items-center justify-between p-4 rounded-xl border border-emerald-500/30 light:border-emerald-200 bg-emerald-950/20 light:bg-emerald-50 hover:border-emerald-500/50 transition-all"
+            className="flex items-center justify-between p-4 rounded-xl border border-white/20 light:border-black/20 bg-white/[0.04] light:bg-slate-100 hover:border-white/40 light:hover:border-black/40 transition-all"
           >
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl border border-emerald-500/30 light:border-emerald-300 bg-emerald-500/10 light:bg-emerald-100 flex items-center justify-center shrink-0">
-                <Building2 className="h-6 w-6 text-emerald-400 light:text-emerald-700" />
+              <div className="w-12 h-12 rounded-xl border border-white/20 light:border-black/20 bg-white/10 light:bg-white flex items-center justify-center shrink-0">
+                <Building2 className="h-6 w-6 text-white light:text-black" />
               </div>
               <div>
                 <div className="flex items-center gap-2">
                   <h4 className="text-xs font-bold text-white light:text-[#0F172A]">{acc.institutionName} — {acc.name}</h4>
-                  <span className="px-2 py-0.5 rounded text-[9px] font-extrabold uppercase bg-emerald-500/20 light:bg-emerald-100 text-emerald-400 light:text-emerald-800 border border-emerald-500/30 light:border-emerald-300">
+                  <span className="px-2 py-0.5 rounded text-[9px] font-extrabold uppercase bg-white/10 light:bg-slate-200 text-white light:text-black border border-white/20 light:border-black/20">
                     Plaid Verified
                   </span>
                 </div>
@@ -199,12 +199,12 @@ export function BanksAndCardsPanel({ onConnectAccount }: BanksAndCardsPanelProps
                 <span className="text-xs font-bold text-white light:text-[#0F172A] block">
                   ${acc.availableBalance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
-                <span className="text-[10px] text-emerald-400 light:text-emerald-700 font-semibold">Available Float</span>
+                <span className="text-[10px] text-neutral-400 light:text-neutral-600 font-semibold">Available Float</span>
               </div>
               <button
                 onClick={() => handleDisconnectPlaidAccount(acc.id)}
                 title="Disconnect Bank Feed"
-                className="p-1.5 rounded-lg border border-white/10 light:border-black/10 bg-black/40 light:bg-white text-[#8f8f8f] light:text-[#475569] hover:text-red-400 hover:border-red-500/30 transition-all cursor-pointer"
+                className="p-1.5 rounded-lg border border-white/10 light:border-black/10 bg-black/40 light:bg-white text-[#8f8f8f] light:text-[#475569] hover:text-white light:hover:text-black hover:border-white/30 light:hover:border-black/30 transition-all cursor-pointer"
               >
                 <X className="h-3.5 w-3.5" />
               </button>
@@ -220,7 +220,7 @@ export function BanksAndCardsPanel({ onConnectAccount }: BanksAndCardsPanelProps
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
               <h4 className="text-xs font-bold text-white light:text-[#0F172A] truncate">Chase Ink Business Unlimited Visa</h4>
-              <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold uppercase bg-emerald-950/60 light:bg-emerald-100 text-emerald-400 light:text-emerald-800 border border-emerald-800/40 light:border-emerald-300">
+              <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold uppercase bg-white/10 light:bg-slate-200 text-white light:text-black border border-white/20 light:border-black/20">
                 Verified
               </span>
             </div>
@@ -228,7 +228,7 @@ export function BanksAndCardsPanel({ onConnectAccount }: BanksAndCardsPanelProps
           </div>
           <div className="text-right">
             <span className="text-xs font-bold text-white light:text-[#0F172A] block">$35,000.00</span>
-            <span className="text-[10px] text-emerald-400 light:text-emerald-700 font-semibold">Float Limit</span>
+            <span className="text-[10px] text-neutral-400 light:text-neutral-600 font-semibold">Float Limit</span>
           </div>
         </div>
 
@@ -239,7 +239,7 @@ export function BanksAndCardsPanel({ onConnectAccount }: BanksAndCardsPanelProps
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
               <h4 className="text-xs font-bold text-white light:text-[#0F172A] truncate">Mercury Business IO Mastercard</h4>
-              <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold uppercase bg-emerald-950/60 light:bg-emerald-100 text-emerald-400 light:text-emerald-800 border border-emerald-800/40 light:border-emerald-300">
+              <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold uppercase bg-white/10 light:bg-slate-200 text-white light:text-black border border-white/20 light:border-black/20">
                 Active
               </span>
             </div>
@@ -247,7 +247,7 @@ export function BanksAndCardsPanel({ onConnectAccount }: BanksAndCardsPanelProps
           </div>
           <div className="text-right">
             <span className="text-xs font-bold text-white light:text-[#0F172A] block">$13,950.00</span>
-            <span className="text-[10px] text-emerald-400 light:text-emerald-700 font-semibold">Float Limit</span>
+            <span className="text-[10px] text-neutral-400 light:text-neutral-600 font-semibold">Float Limit</span>
           </div>
         </div>
       </div>
@@ -255,7 +255,7 @@ export function BanksAndCardsPanel({ onConnectAccount }: BanksAndCardsPanelProps
       {/* Footer */}
       <div className="p-6 bg-white/[0.01] flex justify-between items-center text-xs">
         <span className="font-semibold text-[#8f8f8f] light:text-[#475569] flex items-center gap-1.5">
-          <ShieldCheck className="w-4 h-4 text-emerald-500 light:text-emerald-600" />
+          <ShieldCheck className="w-4 h-4 text-white light:text-black" />
           Plaid Available Verified Float
         </span>
         <span className="text-sm font-extrabold text-white light:text-[#0F172A]">

@@ -23,10 +23,11 @@ import {
   AlertTriangle,
   Clock,
   Info,
-  Wallet
+  Wallet,
 } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { subscribeInvoicesByBrand, subscribeInvoicesByAgency } from "../../../lib/firebaseInvoices";
+import { BatchPaymentCheckoutModal, BatchInvoiceItem } from "../../../components/payment/BatchPaymentCheckoutModal";
 
 interface SplitItem {
   name: string;
@@ -75,7 +76,7 @@ export default function InvoicesQueuePage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [processingStage, setProcessingStage] = useState<"idle" | "verifying" | "routing" | "success">("idle");
+  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -224,59 +225,59 @@ export default function InvoicesQueuePage() {
     ? recentPendingInvoice.status === "awaiting_approval"
     : false;
 
+  const invoicesToApproveList = selectedIds.length > 0
+    ? invoices.filter(inv => selectedIds.includes(inv.id) && inv.status === "awaiting_approval")
+    : !isAggregateView && activeInvoice
+    ? [activeInvoice]
+    : recentPendingInvoice && recentPendingInvoice.status === "awaiting_approval"
+    ? [recentPendingInvoice]
+    : [];
+
+  const batchInvoices: BatchInvoiceItem[] = invoicesToApproveList.map(inv => ({
+    id: inv.id,
+    agency: inv.campaignName,
+    amount: inv.amount,
+    status: inv.status,
+    brand: inv.brandName,
+    dueDate: inv.dueDate,
+  }));
+
   const handleApproveAndPay = () => {
     if (!isAwaitingStatus) return;
+    setIsCheckoutOpen(true);
+  };
 
-    const invoicesToApprove = selectedIds.length > 0
-      ? invoices.filter(inv => selectedIds.includes(inv.id) && inv.status === "awaiting_approval")
-      : !isAggregateView && activeInvoice
-      ? [activeInvoice]
-      : recentPendingInvoice && recentPendingInvoice.status === "awaiting_approval"
-      ? [recentPendingInvoice]
-      : [];
-
-    if (invoicesToApprove.length === 0) return;
+  const handleAuthorizePayment = async () => {
+    if (invoicesToApproveList.length === 0) return;
     
     const userEmail = state.user?.email || "guest";
     const queueKey = `brand_queue_invoices_${userEmail}`;
     const notifsKey = `agency_notifications_${userEmail}`;
 
-    setProcessingStage("verifying");
-    
-    setTimeout(() => {
-      setProcessingStage("routing");
-      
-      setTimeout(() => {
-        setProcessingStage("success");
-        
-        setTimeout(() => {
-          setInvoices(prev => {
-            const approvedIds = new Set(invoicesToApprove.map(inv => inv.id));
-            const next = prev.map(inv => 
-              approvedIds.has(inv.id) ? { ...inv, status: "settled" as const } : inv
-            );
-            localStorage.setItem(queueKey, JSON.stringify(next));
-            return next;
-          });
+    await new Promise(resolve => setTimeout(resolve, 1000));
 
-          const totalApproved = invoicesToApprove.reduce((sum, inv) => sum + inv.amount, 0);
-          // Add notification
-          const localNotifs = localStorage.getItem(notifsKey);
-          const notifs = localNotifs ? JSON.parse(localNotifs) : [];
-          const newNotif = {
-            id: `notif-${Date.now()}`,
-            message: `Brand approved & paid ${invoicesToApprove.length > 1 ? `${invoicesToApprove.length} invoices` : `invoice for ${invoicesToApprove[0].campaignName}`} ($${totalApproved.toLocaleString(undefined, { minimumFractionDigits: 2 })})`,
-            timestamp: "Just now",
-            unread: true,
-          };
-          localStorage.setItem(notifsKey, JSON.stringify([newNotif, ...notifs]));
+    setInvoices(prev => {
+      const approvedIds = new Set(invoicesToApproveList.map(inv => inv.id));
+      const next = prev.map(inv => 
+        approvedIds.has(inv.id) ? { ...inv, status: "settled" as const } : inv
+      );
+      localStorage.setItem(queueKey, JSON.stringify(next));
+      return next;
+    });
 
-          setProcessingStage("idle");
-          setSelectedIds([]);
-          window.dispatchEvent(new Event("syncBrandDashboard"));
-        }, 1200);
-      }, 1500);
-    }, 1200);
+    const totalApproved = invoicesToApproveList.reduce((sum, inv) => sum + inv.amount, 0);
+    const localNotifs = localStorage.getItem(notifsKey);
+    const notifs = localNotifs ? JSON.parse(localNotifs) : [];
+    const newNotif = {
+      id: `notif-${Date.now()}`,
+      message: `Brand approved & paid ${invoicesToApproveList.length > 1 ? `${invoicesToApproveList.length} invoices` : `invoice for ${invoicesToApproveList[0].campaignName}`} ($${totalApproved.toLocaleString(undefined, { minimumFractionDigits: 2 })})`,
+      timestamp: "Just now",
+      unread: true,
+    };
+    localStorage.setItem(notifsKey, JSON.stringify([newNotif, ...notifs]));
+
+    setSelectedIds([]);
+    window.dispatchEvent(new Event("syncBrandDashboard"));
   };
 
   return (
@@ -392,40 +393,27 @@ export default function InvoicesQueuePage() {
 
                   {/* Approve & Pay Action Button */}
                   <div className="w-full md:w-auto shrink-0 min-w-[220px]">
-                    <AnimatePresence mode="wait">
-                      {processingStage === "idle" && (
-                        <button
-                          onClick={handleApproveAndPay}
-                          disabled={!isAwaitingStatus}
-                          className={`w-full h-12 px-6 rounded-xl text-xs font-black shadow-sm flex items-center justify-center gap-2 transition-all cursor-pointer ${
-                            isAwaitingStatus
-                              ? "bg-white text-black hover:bg-neutral-200 shadow-white/10 shadow-lg"
-                              : "bg-white/10 text-neutral-400 cursor-default border border-white/10"
-                          }`}
-                        >
-                          {isAwaitingStatus ? (
-                            <>
-                              Approve & Pay {selectedIds.length > 1 ? `(${selectedIds.length}) Invoices` : "(1) Invoice"}
-                              <ChevronRight className="h-4 w-4" />
-                            </>
-                          ) : (
-                            <>
-                              <CheckCircle2 className="h-4.5 w-4.5 text-neutral-400" />
-                              Approved & Settled
-                            </>
-                          )}
-                        </button>
+                    <button
+                      onClick={handleApproveAndPay}
+                      disabled={!isAwaitingStatus}
+                      className={`w-full h-12 px-6 rounded-xl text-xs font-black shadow-sm flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                        isAwaitingStatus
+                          ? "bg-white text-black hover:bg-neutral-200 shadow-white/10 shadow-lg"
+                          : "bg-white/10 text-neutral-400 cursor-default border border-white/10"
+                      }`}
+                    >
+                      {isAwaitingStatus ? (
+                        <>
+                          Approve & Pay {selectedIds.length > 1 ? `(${selectedIds.length}) Invoices` : "(1) Invoice"}
+                          <ChevronRight className="h-4 w-4" />
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle2 className="h-4.5 w-4.5 text-neutral-400" />
+                          Approved & Settled
+                        </>
                       )}
-
-                      {processingStage !== "idle" && (
-                        <div className="w-full h-12 px-6 rounded-xl border border-white/20 bg-[#0A0A0A] text-[10px] font-bold text-[#8f8f8f] flex items-center justify-center gap-3 shadow-inner">
-                          <RefreshCw className="h-4 w-4 animate-spin text-white" />
-                          {processingStage === "verifying" && "Verifying corporate treasury..."}
-                          {processingStage === "routing" && "Auto-routing splits..."}
-                          {processingStage === "success" && "Settlement complete!"}
-                        </div>
-                      )}
-                    </AnimatePresence>
+                    </button>
                   </div>
                 </div>
 
@@ -544,12 +532,21 @@ export default function InvoicesQueuePage() {
                 </button>
               ))}
               {selectedIds.length > 0 && (
-                <button
-                  onClick={() => setSelectedIds([])}
-                  className="px-3 py-1.5 rounded-lg text-xs font-bold text-white bg-white/10 hover:bg-white/20 border border-white/20 transition-all cursor-pointer flex items-center gap-1.5"
-                >
-                  <span>Clear ({selectedIds.length})</span>
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setSelectedIds([])}
+                    className="px-3 py-1.5 rounded-lg text-xs font-bold text-white bg-white/10 hover:bg-white/20 border border-white/20 transition-all cursor-pointer flex items-center gap-1.5"
+                  >
+                    <span>Clear ({selectedIds.length})</span>
+                  </button>
+                  <button
+                    onClick={() => setIsCheckoutOpen(true)}
+                    className="px-3 py-1.5 rounded-lg text-xs font-bold text-black bg-white hover:bg-neutral-200 transition-all cursor-pointer flex items-center gap-1.5 shadow-sm"
+                  >
+                    <ShieldCheck className="w-3.5 h-3.5 text-black" />
+                    <span>Batch Pay ({selectedIds.length})</span>
+                  </button>
+                </div>
               )}
             </div>
 
@@ -662,10 +659,32 @@ export default function InvoicesQueuePage() {
                 </tbody>
               </table>
             </div>
+            {workspaceType === "brand" && selectedIds.length > 0 && (
+              <div className="p-4 bg-[#111] light:bg-white border-t border-white/20 light:border-black/10 flex justify-between items-center">
+                <div>
+                  <p className="text-sm font-bold text-white light:text-[#0F172A]">{selectedIds.length} invoice(s) selected</p>
+                  <p className="text-[11px] text-[#8f8f8f] light:text-[#475569]">Ready for batch payment.</p>
+                </div>
+                <div className="flex gap-3">
+                  <button onClick={() => setSelectedIds([])} className="px-4 py-2 text-xs font-bold text-white light:text-[#475569] hover:bg-white/10 light:hover:bg-black/5 rounded-lg transition-colors">Clear</button>
+                  <button onClick={() => setIsCheckoutOpen(true)} className="px-4 py-2 text-xs font-bold bg-white light:bg-[#0F172A] text-black light:text-white hover:bg-neutral-200 light:hover:bg-[#1E293B] border border-white/20 light:border-black/10 rounded-lg flex items-center gap-2 transition-all shadow-sm cursor-pointer">
+                    <ShieldCheck className="w-4 h-4 text-black light:text-white" /> Batch Pay
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
       </div>
+
+      {/* Bilt-Style High-Contrast Batch Payment Checkout Overlay */}
+      <BatchPaymentCheckoutModal
+        isOpen={isCheckoutOpen}
+        onClose={() => setIsCheckoutOpen(false)}
+        selectedInvoices={batchInvoices}
+        onAuthorizePayment={handleAuthorizePayment}
+      />
 
       {/* Footer */}
       <footer className="border-t border-white/20 bg-black py-8 text-xs text-neutral-400 mt-12">
