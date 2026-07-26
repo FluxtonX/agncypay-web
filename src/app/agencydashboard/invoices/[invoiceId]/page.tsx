@@ -132,7 +132,7 @@ export default function InvoiceDetailPage() {
           id: inv.id,
           campaignName: inv.campaign,
           brandName: inv.brandName || "Adidas Corporate",
-          createdDate: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+          createdDate: inv.createdDate || new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
           dueDate: inv.due,
           amount: inv.amount,
           location: "Escrow Wallet Active",

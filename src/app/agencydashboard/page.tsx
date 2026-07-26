@@ -235,7 +235,9 @@ export default function AgencyDashboardPage() {
         amount: inv.amount,
         status: inv.status,
         talentPayoutStatus: inv.talentPayoutStatus,
-        payerEmail: inv.payerEmail || ""
+        payerEmail: inv.payerEmail || "",
+        createdDate: inv.createdDate || "",
+        createdAt: inv.createdAt
       }));
       setWidgetInvoices(mappedList);
       setIsFetchingInvoices(false);
@@ -646,7 +648,7 @@ export default function AgencyDashboardPage() {
       id: inv.id,
       campaignName: inv.campaign,
       brandName: inv.brandName || "Adidas Corporate",
-      createdDate: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+      createdDate: inv.createdDate || new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
       dueDate: inv.dueDate,
       amount: inv.amount,
       defaultTerm: "Net-30",

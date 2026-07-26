@@ -111,20 +111,42 @@ export async function createFirestoreInvoice(data: {
   }
 }
 
+// Helper to sort invoices: most recent date and time on top, oldest below
+function sortInvoicesRecentFirst(list: FirestoreInvoice[]) {
+  return list.sort((a, b) => {
+    // 1. Compare by Firestore timestamp (createdAt) if available
+    const aTime = a.createdAt?.seconds || (typeof a.createdAt === "number" ? a.createdAt : 0);
+    const bTime = b.createdAt?.seconds || (typeof b.createdAt === "number" ? b.createdAt : 0);
+    if (aTime !== bTime && aTime > 0 && bTime > 0) {
+      return bTime - aTime; // Descending: newest timestamp on top
+    }
+    if (aTime > 0 && !bTime) return -1;
+    if (bTime > 0 && !aTime) return 1;
+
+    // 2. Compare by createdDate string if possible
+    if (a.createdDate && b.createdDate && a.createdDate !== b.createdDate) {
+      const aDate = new Date(a.createdDate).getTime();
+      const bDate = new Date(b.createdDate).getTime();
+      if (!isNaN(aDate) && !isNaN(bDate) && aDate !== bDate) {
+        return bDate - aDate; // Descending: newest date on top
+      }
+    }
+
+    // 3. Fallback: compare by ID descending (e.g., W-INV-015 before W-INV-001)
+    return b.id.localeCompare(a.id, undefined, { numeric: true, sensitivity: "base" });
+  });
+}
+
 // Subscribe to ALL invoices (no filtering — used only if explicitly needed)
 export function subscribeInvoices(callback: (invoices: FirestoreInvoice[]) => void) {
-  const q = query(collection(db, INVOICES_COLLECTION), orderBy("createdAt", "asc"));
+  const q = query(collection(db, INVOICES_COLLECTION));
   
   return onSnapshot(q, (snapshot) => {
     const list: FirestoreInvoice[] = [];
     snapshot.forEach((document) => {
       list.push(document.data() as FirestoreInvoice);
     });
-    list.sort((a, b) => {
-      const aTime = a.createdAt?.seconds || 0;
-      const bTime = b.createdAt?.seconds || 0;
-      return aTime - bTime;
-    });
+    sortInvoicesRecentFirst(list);
     callback(list);
   }, (error) => {
     console.error("Error listening to Firestore updates:", error);
@@ -149,11 +171,7 @@ export function subscribeInvoicesByAgency(agencyEmail: string, callback: (invoic
     snapshot.forEach((document) => {
       list.push(document.data() as FirestoreInvoice);
     });
-    list.sort((a, b) => {
-      const aTime = a.createdAt?.seconds || 0;
-      const bTime = b.createdAt?.seconds || 0;
-      return aTime - bTime;
-    });
+    sortInvoicesRecentFirst(list);
     callback(list);
   }, (error) => {
     console.error("Error listening to agency invoices:", error);
@@ -179,11 +197,7 @@ export function subscribeInvoicesByBrand(brandEmail: string, callback: (invoices
     snapshot.forEach((document) => {
       list.push(document.data() as FirestoreInvoice);
     });
-    list.sort((a, b) => {
-      const aTime = a.createdAt?.seconds || 0;
-      const bTime = b.createdAt?.seconds || 0;
-      return aTime - bTime;
-    });
+    sortInvoicesRecentFirst(list);
     callback(list);
   }, (error) => {
     console.error("Error listening to brand invoices:", error);
@@ -209,11 +223,7 @@ export function subscribeInvoicesByTalent(talentEmail: string, callback: (invoic
     snapshot.forEach((document) => {
       list.push(document.data() as FirestoreInvoice);
     });
-    list.sort((a, b) => {
-      const aTime = a.createdAt?.seconds || 0;
-      const bTime = b.createdAt?.seconds || 0;
-      return aTime - bTime;
-    });
+    sortInvoicesRecentFirst(list);
     callback(list);
   }, (error) => {
     console.error("Error listening to talent invoices:", error);

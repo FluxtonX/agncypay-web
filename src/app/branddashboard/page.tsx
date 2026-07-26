@@ -40,7 +40,11 @@ import {
   Link2Off,
   Plug,
   Wallet,
-  Landmark
+  Landmark,
+  Award,
+  Zap,
+  Gift,
+  Eye
 } from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import { subscribeInvoicesByBrand, subscribeInvoicesByAgency, updateInvoiceStatus, createFirestoreInvoice, getRegisteredBrands, getRegisteredTalents, getRegisteredTalentsByAgency, recordFirestoreDeposit } from "../../lib/firebaseInvoices";
@@ -118,6 +122,7 @@ export default function BrandDashboardPage() {
 
   // Embedded Checkout State
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const [viewingInvoice, setViewingInvoice] = useState<any | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [paymentRail, setPaymentRail] = useState("ACH");
@@ -636,7 +641,9 @@ export default function BrandDashboardPage() {
         amount: inv.amount,
         status: inv.status,
         talentPayoutStatus: inv.talentPayoutStatus,
-        payerEmail: inv.payerEmail || ""
+        payerEmail: inv.payerEmail || "",
+        createdDate: inv.createdDate || "",
+        createdAt: inv.createdAt
       }));
       setWidgetInvoices(mappedList);
     };
@@ -910,7 +917,7 @@ export default function BrandDashboardPage() {
       id: inv.id,
       campaignName: inv.campaign,
       brandName: inv.brandName || "Adidas Corporate",
-      createdDate: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+      createdDate: inv.createdDate || new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
       dueDate: inv.dueDate,
       amount: inv.amount,
       defaultTerm: "Net-30",
@@ -1231,6 +1238,13 @@ export default function BrandDashboardPage() {
             >
               {workspaceType === "brand" ? "Rewards" : "Payout Split Nodes"}
             </button>
+            <button 
+              onClick={() => router.push("/branddashboard/wallet")}
+              className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#8f8f8f] light:text-[#475569] hover:text-white light:hover:text-[#0F172A] transition-all cursor-pointer flex items-center gap-1.5"
+            >
+              <Wallet className="w-3.5 h-3.5" />
+              Wallet
+            </button>
           </nav>
  
           <div className="flex items-center gap-3">
@@ -1432,10 +1446,10 @@ export default function BrandDashboardPage() {
                           type="checkbox" 
                           className="h-4 w-4 accent-white rounded border-white/20 bg-transparent"
                           onChange={(e) => {
-                            const pendingInvs = widgetInvoices.filter(i => i.status === "pending");
+                            const pendingInvs = widgetInvoices.filter(i => i.status === "pending").slice(0, 4);
                             setSelectedIds(e.target.checked ? pendingInvs.map(i => i.id) : []);
                           }}
-                          checked={selectedIds.length > 0 && selectedIds.length === widgetInvoices.filter(i => i.status === "pending").length}
+                          checked={selectedIds.length > 0 && selectedIds.length === widgetInvoices.filter(i => i.status === "pending").slice(0, 4).length}
                         />
                       )}
                     </th>
@@ -1443,11 +1457,11 @@ export default function BrandDashboardPage() {
                     <th className="py-4 font-semibold">Payee</th>
                     <th className="py-4 font-semibold">Job</th>
                     <th className="py-4 font-semibold">Total</th>
-                    <th className="py-4 pr-4 font-semibold">Status</th>
+                    <th className="py-4 pr-4 font-semibold text-right">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/10">
-                  {widgetInvoices.filter(i => i.status === "pending").map((inv) => {
+                  {widgetInvoices.filter(i => i.status === "pending").slice(0, 4).map((inv) => {
                     const isSelected = selectedIds.includes(inv.id);
                     return (
                       <tr key={inv.id} className={`transition-colors hover:bg-white/[0.02] ${isSelected ? "bg-white/[0.05]" : ""}`}>
@@ -1476,15 +1490,34 @@ export default function BrandDashboardPage() {
                         <td className="py-4 font-bold text-white">
                           ${(inv.amount * (workspaceType === "brand" ? 1.015 : 1)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </td>
-                        <td className="py-4 pr-4">
-                          <span className="text-[10px] font-bold px-2.5 py-1 rounded-md bg-[#261603] text-[#ff8a00] border border-[#ff8a00]/20">Awaiting</span>
+                        <td className="py-4 pr-4 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={() => setViewingInvoice(inv)}
+                              className="p-1.5 rounded-lg border border-white/20 hover:bg-white/10 text-white transition-all cursor-pointer flex items-center justify-center"
+                              title="View Invoice Details"
+                            >
+                              <Eye className="h-3.5 w-3.5" />
+                            </button>
+                            {workspaceType === "brand" && (
+                              <button
+                                onClick={() => {
+                                  setSelectedIds([inv.id]);
+                                  setIsCheckoutOpen(true);
+                                }}
+                                className="px-3 py-1.5 rounded-lg bg-white hover:bg-neutral-200 text-black font-extrabold text-[11px] transition-all shadow-sm active:scale-95 cursor-pointer"
+                              >
+                                Pay Now
+                              </button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     );
                   })}
                   {widgetInvoices.filter(i => i.status === "pending").length === 0 && (
                     <tr>
-                      <td colSpan={6} className="py-8 text-center text-xs font-medium text-neutral-500">
+                      <td colSpan={7} className="py-8 text-center text-xs font-medium text-neutral-500">
                         No pending invoices.
                       </td>
                     </tr>
@@ -1493,6 +1526,18 @@ export default function BrandDashboardPage() {
               </table>
               )}
             </div>
+            
+            {widgetInvoices.filter(i => i.status === "pending").length > 4 && (
+              <div className="p-4 bg-white/[0.01] border-t border-white/10 flex justify-center items-center">
+                <button
+                  onClick={() => router.push("/branddashboard/invoices")}
+                  className="px-5 py-2.5 rounded-xl bg-white text-black hover:bg-neutral-200 font-bold text-xs flex items-center gap-2 transition-all shadow-sm cursor-pointer"
+                >
+                  <span>View All ({widgetInvoices.filter(i => i.status === "pending").length}) Invoices</span>
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            )}
             
             {workspaceType === "brand" && selectedIds.length > 0 && (
               <div className="p-4 bg-[#111] light:bg-white border-t border-white/20 light:border-black/10 flex justify-between items-center">
@@ -1510,59 +1555,136 @@ export default function BrandDashboardPage() {
             )}
           </div>
 
-          {/* Recent Payouts Table */}
-          <div className="bg-[#050505] rounded-2xl border border-white/20 shadow-sm overflow-hidden mt-6">
-            <div className="p-6 border-b border-white/20 bg-white/[0.01] flex justify-between items-center">
-              <div className="flex items-center gap-2">
-                <span className="font-bold text-white tracking-tight">Recent Payouts</span>
-                <span className="text-neutral-500 font-medium text-xs">•</span>
-                <span className="text-neutral-400 font-semibold text-xs">
-                  {workspaceType === "brand" ? "Successfully settled invoices" : "Completed payouts"}
+          {/* Bilt-Inspired Reward Points & CRM Invoice Section */}
+          <div className="space-y-6 mt-6">
+            {/* Card 1: InvoicePay for Commercial Hero */}
+            <div className={`rounded-2xl border p-6 shadow-sm transition-colors ${isLightTheme ? "bg-white border-black/10" : "bg-[#050505] border-white/20"}`}>
+              <div className={`flex flex-col md:flex-row justify-between items-start md:items-center gap-6 pb-6 border-b ${isLightTheme ? "border-black/10" : "border-white/10"}`}>
+                <div className="space-y-2 max-w-lg">
+                  <div className="flex items-center gap-2">
+                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${isLightTheme ? "bg-black/5" : "bg-white/10"}`}>
+                      <Building2 className={`w-4 h-4 ${isLightTheme ? "text-black" : "text-white"}`} />
+                    </div>
+                    <h3 className={`text-base font-black tracking-tight ${isLightTheme ? "text-[#0F172A]" : "text-white"}`}>
+                      InvoicePay for Commercial™
+                    </h3>
+                  </div>
+                  <p className={`text-xs ${isLightTheme ? "text-slate-600" : "text-neutral-400"}`}>
+                    Earn AgncyPay Points on commercial payments and CRM-imported invoices no matter which accounting platform you use.
+                  </p>
+                  <button
+                    onClick={() => router.push("/branddashboard/wallet")}
+                    className={`mt-3 px-5 py-2 rounded-xl text-xs font-black transition-all shadow-md flex items-center gap-2 cursor-pointer ${isLightTheme ? "bg-[#0F172A] text-white hover:bg-slate-800 force-white-text" : "bg-white text-black hover:bg-neutral-200"}`}
+                  >
+                    <span>Get Started with InvoicePay</span>
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                <div className={`space-y-2.5 text-xs font-medium p-4 rounded-xl border shrink-0 w-full md:w-auto ${isLightTheme ? "bg-slate-50 border-slate-200 text-slate-700" : "bg-white/[0.02] border-white/10 text-neutral-300"}`}>
+                  <div className="flex items-center gap-2.5">
+                    <Plug className="w-4 h-4 text-sky-400 shrink-0" />
+                    <span>Pay seamlessly from connected CRMs (Salesforce, HubSpot, Xero)</span>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <Coins className="w-4 h-4 text-amber-400 shrink-0" />
+                    <span>Earn 1X-2X AgncyPay Points on every agency settlement & retainer</span>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <Award className="w-4 h-4 text-purple-400 shrink-0" />
+                    <span>Unlock monthly Commercial Reserve® Rewards & cashback tiers</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-4 flex justify-between items-center text-xs font-bold">
+                <button
+                  onClick={() => router.push("/branddashboard/invoices")}
+                  className={`flex items-center gap-1.5 transition-colors cursor-pointer ${isLightTheme ? "text-[#0F172A] hover:text-blue-600" : "text-white hover:text-neutral-300"}`}
+                >
+                  <span>View invoice settlement ledger & points history</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+                <span className={`text-[11px] font-mono ${isLightTheme ? "text-slate-400" : "text-neutral-500"}`}>
+                  CRM SYNC: ACTIVE
                 </span>
               </div>
             </div>
-            
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead>
-                  <tr className="border-b border-white/20 bg-white/[0.02] text-xs font-semibold uppercase tracking-wider text-[#8f8f8f]">
-                    <th className="p-4 pl-6 font-semibold">Invoice</th>
-                    <th className="py-4 font-semibold">Payee</th>
-                    <th className="py-4 font-semibold">Job</th>
-                    <th className="py-4 font-semibold">Total</th>
-                    <th className="py-4 pr-6 font-semibold text-right">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/10">
-                  {widgetInvoices.filter(i => i.status !== "pending").map((inv) => (
-                    <tr key={inv.id} className="transition-colors hover:bg-white/[0.02]">
-                      <td className="p-4 pl-6 text-xs font-mono text-[#8f8f8f]">{inv.id.substring(0,8).toUpperCase()}</td>
-                      <td className="py-4">
-                        <p className="font-bold text-white">{inv.agency}</p>
-                      </td>
-                      <td className="py-4">
-                        <p className="text-white font-medium">{inv.campaign}</p>
-                        <p className="text-[10px] text-[#8f8f8f]">Due {inv.dueDate || inv.due}</p>
-                      </td>
-                      <td className="py-4 font-bold text-white">
-                        ${(inv.amount * (workspaceType === "brand" ? 1.015 : 1)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </td>
-                      <td className="py-4 pr-6 text-right">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase bg-[#082315] text-[#70ff9e] border border-[#10b95f]/30">Paid</span>
-                      </td>
-                    </tr>
-                  ))}
-                  {widgetInvoices.filter(i => i.status !== "pending").length === 0 && (
-                    <tr>
-                      <td colSpan={5} className="py-8 text-center text-xs font-medium text-neutral-500">
-                        No recent payouts.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+
+            {/* Card 2: Earn Points on Commercial Invoices */}
+            <div className={`rounded-2xl border p-6 shadow-sm transition-colors ${isLightTheme ? "bg-white border-black/10" : "bg-[#050505] border-white/20"}`}>
+              <div className="mb-6">
+                <div className="flex items-center gap-2">
+                  <Gift className="w-5 h-5 text-amber-500 shrink-0" />
+                  <h3 className={`text-base font-black tracking-tight ${isLightTheme ? "text-[#0F172A]" : "text-white"}`}>
+                    Earn points on commercial invoice payments
+                  </h3>
+                </div>
+                <p className={`text-xs mt-1 ${isLightTheme ? "text-slate-600" : "text-neutral-400"}`}>
+                  Benefits of automating agency settlements & CRM invoice workflows with everyday AgncyPay Rewards
+                </p>
+              </div>
+
+              <div className={`space-y-6 divide-y ${isLightTheme ? "divide-black/10" : "divide-white/10"}`}>
+                
+                {/* Benefit 1 */}
+                <div className="pt-4 first:pt-0 flex items-start gap-4">
+                  <div className={`w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 mt-0.5 ${isLightTheme ? "bg-blue-50 border-blue-200 text-blue-600" : "bg-blue-500/10 border-blue-500/20 text-blue-400"}`}>
+                    <TrendingUp className="w-5 h-5" />
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <h4 className={`text-sm font-bold ${isLightTheme ? "text-[#0F172A]" : "text-white"}`}>
+                        Treasury Credit Boost™
+                      </h4>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-500/10 text-blue-500 border border-blue-500/20">
+                        Automated Reporting
+                      </span>
+                    </div>
+                    <p className={`text-xs leading-relaxed ${isLightTheme ? "text-slate-600" : "text-neutral-400"}`}>
+                      Build your corporate credit history with D&B and Experian Business when paying CRM-imported invoices on time.
+                    </p>
+                    <button
+                      onClick={() => router.push("/branddashboard/nodes")}
+                      className={`text-xs font-bold transition-colors flex items-center gap-1 mt-1 cursor-pointer ${isLightTheme ? "text-blue-600 hover:text-blue-700" : "text-sky-400 hover:text-sky-300"}`}
+                    >
+                      <span>Explore Commercial Credit Boost</span>
+                      <ChevronRight className="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Benefit 2 (Formerly Benefit 3) */}
+                <div className="pt-6 flex items-start gap-4">
+                  <div className={`w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 mt-0.5 ${isLightTheme ? "bg-purple-50 border-purple-200 text-purple-600" : "bg-purple-500/10 border-purple-500/20 text-purple-400"}`}>
+                    <Zap className="w-5 h-5" />
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <h4 className={`text-sm font-bold ${isLightTheme ? "text-[#0F172A]" : "text-white"}`}>
+                        Pay invoices with points
+                      </h4>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-purple-500/10 text-purple-500 border border-purple-500/20">
+                        Instant Offset
+                      </span>
+                    </div>
+                    <p className={`text-xs leading-relaxed ${isLightTheme ? "text-slate-600" : "text-neutral-400"}`}>
+                      You need at least 5,000 AgncyPay Points to offset agency retainers, CRM invoices, or talent disbursals.
+                    </p>
+                    <button
+                      onClick={() => router.push("/branddashboard/wallet")}
+                      className={`text-xs font-bold transition-colors flex items-center gap-1 mt-1 cursor-pointer ${isLightTheme ? "text-blue-600 hover:text-blue-700" : "text-sky-400 hover:text-sky-300"}`}
+                    >
+                      <span>Check point redemption rules</span>
+                      <ChevronRight className="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
+
+              </div>
             </div>
           </div>
+
 </div>
 
         {/* Right Column - Queue and History Ledger (Narrower) */}
@@ -2414,6 +2536,133 @@ export default function BrandDashboardPage() {
                       </button>
                     </div>
                   </form>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Invoice Details Static Popup Modal */}
+      {viewingInvoice && (() => {
+        const isLight = isLightTheme || (typeof document !== "undefined" && document.documentElement.classList.contains("light"));
+        const amount = Number(viewingInvoice.amount || 0);
+        const rateAmt = amount ? amount * 0.85 : 25000;
+        const reimbAmt = amount ? amount * 0.15 : 3750;
+        
+        return (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/75 backdrop-blur-md" onClick={() => setViewingInvoice(null)} />
+            
+            <div className={`relative w-full max-w-md rounded-2xl border shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 ${
+              isLight 
+                ? "bg-white border-black/20 text-[#0F172A]" 
+                : "bg-[#0A0A0C] border-white/20 text-white"
+            }`}>
+              {/* Modal Header */}
+              <div className={`p-6 border-b flex items-center justify-between ${
+                isLight ? "border-black/10 bg-slate-50" : "border-white/10 bg-white/[0.02]"
+              }`}>
+                <div className="flex items-center gap-3">
+                  <div className={`h-10 w-10 rounded-xl border flex items-center justify-center ${
+                    isLight ? "bg-white border-black/20 text-[#0F172A] shadow-xs" : "bg-white/10 border-white/20 text-white"
+                  }`}>
+                    <FileText className="h-5 w-5 text-current" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold tracking-tight">Invoice Details</h3>
+                    <p className={`text-xs font-mono ${isLight ? "text-slate-500" : "text-neutral-400"}`}>
+                      {viewingInvoice.id?.toUpperCase() || "W-INV-001"}
+                    </p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setViewingInvoice(null)}
+                  className={`p-2 rounded-lg border transition-all cursor-pointer ${
+                    isLight ? "border-black/10 hover:bg-black/5 text-[#0F172A]" : "border-white/10 hover:bg-white/10 text-neutral-400 hover:text-white"
+                  }`}
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              {/* Modal Body */}
+              <div className="p-6 space-y-4 text-xs">
+                <div className={`p-4 rounded-xl border space-y-3 ${
+                  isLight ? "bg-slate-50 border-black/10" : "bg-white/[0.02] border-white/10"
+                }`}>
+                  <div className="flex justify-between items-center border-b pb-2 border-current/10">
+                    <span className={`font-medium ${isLight ? "text-slate-500" : "text-neutral-400"}`}>Payee</span>
+                    <span className="font-bold text-sm">{viewingInvoice.agency || "Ogilvy USA"}</span>
+                  </div>
+                  <div className="flex justify-between items-center border-b pb-2 border-current/10">
+                    <span className={`font-medium ${isLight ? "text-slate-500" : "text-neutral-400"}`}>Email</span>
+                    <span className="font-mono">{viewingInvoice.agencyEmail || viewingInvoice.talentEmail || "billing@agency.com"}</span>
+                  </div>
+                  <div className="flex justify-between items-center border-b pb-2 border-current/10">
+                    <span className={`font-medium ${isLight ? "text-slate-500" : "text-neutral-400"}`}>Job Title</span>
+                    <span className="font-semibold text-right max-w-[200px] truncate">{viewingInvoice.campaign || "Global Brand Retainer"}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className={`font-medium ${isLight ? "text-slate-500" : "text-neutral-400"}`}>Date</span>
+                    <span className="font-semibold">{viewingInvoice.createdDate || viewingInvoice.dueDate || viewingInvoice.due || "Jul 26, 2026"}</span>
+                  </div>
+                </div>
+
+                <div className={`p-4 rounded-xl border space-y-3 ${
+                  isLight ? "bg-slate-50 border-black/10" : "bg-white/[0.02] border-white/10"
+                }`}>
+                  <div>
+                    <span className={`block font-medium mb-1 ${isLight ? "text-slate-500" : "text-neutral-400"}`}>Usage</span>
+                    <p className="font-semibold">Commercial Broadcast &amp; Digital (Global usage rights, 2 yr term)</p>
+                  </div>
+                  <div className="border-t pt-2 border-current/10 flex justify-between items-center">
+                    <span className={`font-medium ${isLight ? "text-slate-500" : "text-neutral-400"}`}>Rate</span>
+                    <span className="font-mono font-bold">${rateAmt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  </div>
+                  <div className="border-t pt-2 border-current/10 flex justify-between items-center">
+                    <span className={`font-medium ${isLight ? "text-slate-500" : "text-neutral-400"}`}>Reimbursement</span>
+                    <span className="font-mono font-bold">${reimbAmt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  </div>
+                  <div className="border-t pt-2 border-current/10 flex justify-between items-center text-sm">
+                    <span className="font-bold">Total Amount</span>
+                    <span className="font-mono font-extrabold text-emerald-500">${amount ? amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "28,750.00"}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className={`p-6 border-t flex items-center justify-end gap-3 ${
+                isLight ? "border-black/10 bg-slate-50" : "border-white/10 bg-white/[0.02]"
+              }`}>
+                <button
+                  type="button"
+                  onClick={() => setViewingInvoice(null)}
+                  className={`px-4 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                    isLight 
+                      ? "bg-white border-black/20 text-[#0F172A] hover:bg-slate-100" 
+                      : "border-white/20 text-neutral-300 hover:bg-white/5 hover:text-white"
+                  }`}
+                >
+                  Close
+                </button>
+                {workspaceType === "brand" && viewingInvoice.status === "pending" && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const invId = viewingInvoice.id;
+                      setViewingInvoice(null);
+                      setSelectedIds([invId]);
+                      setIsCheckoutOpen(true);
+                    }}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer ${
+                      isLight 
+                        ? "bg-[#0F172A] text-white hover:bg-black" 
+                        : "bg-white text-black hover:bg-neutral-200"
+                    }`}
+                  >
+                    Pay This Invoice
+                  </button>
                 )}
               </div>
             </div>

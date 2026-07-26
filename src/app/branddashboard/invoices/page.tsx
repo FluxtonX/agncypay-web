@@ -22,7 +22,8 @@ import {
   MapPin,
   AlertTriangle,
   Clock,
-  Info
+  Info,
+  Wallet
 } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { subscribeInvoicesByBrand, subscribeInvoicesByAgency } from "../../../lib/firebaseInvoices";
@@ -73,6 +74,7 @@ export default function InvoicesQueuePage() {
   const [activeFilter, setActiveFilter] = useState<"all" | "awaiting_approval" | "settled">("awaiting_approval");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [processingStage, setProcessingStage] = useState<"idle" | "verifying" | "routing" | "success">("idle");
 
   useEffect(() => {
@@ -127,7 +129,7 @@ export default function InvoicesQueuePage() {
           id: inv.id,
           campaignName: inv.campaign,
           brandName: inv.brandName || "Adidas Corporate",
-          createdDate: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+          createdDate: inv.createdDate || new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
           dueDate: inv.due,
           amount: inv.amount,
           location: "Escrow Wallet Active",
@@ -188,39 +190,50 @@ export default function InvoicesQueuePage() {
                         invoices[0] ||
                         null;
 
+  const recentPendingInvoice = invoices.find(inv => inv.status === (activeFilter === "settled" ? "settled" : "awaiting_approval")) ||
+                               invoices[0] ||
+                               null;
+
   const isAggregateView = selectedInvoiceId === null;
   const settledSum = invoices.filter(i => i.status === "settled" || i.status === "talent_disbursed").reduce((acc, i) => acc + i.amount, 0);
   const awaitingSum = invoices.filter(i => i.status === "awaiting_approval").reduce((acc, i) => acc + i.amount, 0);
   const allSum = invoices.reduce((acc, i) => acc + i.amount, 0);
+  const selectedSum = invoices.filter(i => selectedIds.includes(i.id)).reduce((acc, i) => acc + i.amount, 0);
 
-  const displayLabel = !isAggregateView && activeInvoice
+  const displayLabel = selectedIds.length > 0
+    ? "Selected total"
+    : !isAggregateView && activeInvoice
     ? (activeInvoice.status === "settled" || activeInvoice.status === "talent_disbursed" ? "Balance paid" : "Balance due")
-    : activeFilter === "settled" 
+    : recentPendingInvoice?.status === "settled" || recentPendingInvoice?.status === "talent_disbursed"
     ? "Balance paid" 
-    : activeFilter === "awaiting_approval" 
-    ? "Balance due" 
-    : "Total billed";
+    : "Balance due";
 
-  const displayAmount = !isAggregateView && activeInvoice
+  const displayAmount = selectedIds.length > 0
+    ? selectedSum
+    : !isAggregateView && activeInvoice
     ? activeInvoice.amount
-    : activeFilter === "settled" 
-    ? settledSum 
-    : activeFilter === "awaiting_approval" 
-    ? awaitingSum 
-    : allSum;
+    : recentPendingInvoice
+    ? recentPendingInvoice.amount
+    : 0;
 
-  const isAwaitingStatus = !isAggregateView && activeInvoice
+  const isAwaitingStatus = selectedIds.length > 0
+    ? invoices.some(i => selectedIds.includes(i.id) && i.status === "awaiting_approval")
+    : !isAggregateView && activeInvoice
     ? activeInvoice.status === "awaiting_approval"
-    : activeFilter === "awaiting_approval" || (activeFilter === "all" && awaitingSum > 0);
+    : recentPendingInvoice
+    ? recentPendingInvoice.status === "awaiting_approval"
+    : false;
 
   const handleApproveAndPay = () => {
     if (!isAwaitingStatus) return;
 
-    const invoicesToApprove = !isAggregateView && activeInvoice
+    const invoicesToApprove = selectedIds.length > 0
+      ? invoices.filter(inv => selectedIds.includes(inv.id) && inv.status === "awaiting_approval")
+      : !isAggregateView && activeInvoice
       ? [activeInvoice]
-      : activeFilter === "awaiting_approval" || activeFilter === "all"
-      ? invoices.filter(inv => inv.status === "awaiting_approval")
-      : activeInvoice ? [activeInvoice] : [];
+      : recentPendingInvoice && recentPendingInvoice.status === "awaiting_approval"
+      ? [recentPendingInvoice]
+      : [];
 
     if (invoicesToApprove.length === 0) return;
     
@@ -259,6 +272,7 @@ export default function InvoicesQueuePage() {
           localStorage.setItem(notifsKey, JSON.stringify([newNotif, ...notifs]));
 
           setProcessingStage("idle");
+          setSelectedIds([]);
           window.dispatchEvent(new Event("syncBrandDashboard"));
         }, 1200);
       }, 1500);
@@ -307,6 +321,13 @@ export default function InvoicesQueuePage() {
               className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#8f8f8f] light:text-[#475569] hover:text-white light:hover:text-[#0F172A] transition-all cursor-pointer"
             >
               Rewards
+            </button>
+            <button 
+              onClick={() => router.push("/branddashboard/wallet")}
+              className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#8f8f8f] light:text-[#475569] hover:text-white light:hover:text-[#0F172A] transition-all cursor-pointer flex items-center gap-1.5"
+            >
+              <Wallet className="w-3.5 h-3.5" />
+              Wallet
             </button>
           </nav>
 
@@ -365,7 +386,7 @@ export default function InvoicesQueuePage() {
                     </span>
                     <div className="mt-4 flex items-center gap-2 text-xs text-neutral-400">
                       <Calendar className="h-4 w-4 text-[#8f8f8f]" />
-                      <span>Due: {activeInvoice.dueDate}</span>
+                      <span>{selectedIds.length > 0 ? `Selected: ${selectedIds.length} invoice${selectedIds.length > 1 ? "s" : ""}` : `Due: ${recentPendingInvoice?.dueDate || activeInvoice?.dueDate || "Net-30"}`}</span>
                     </div>
                   </div>
 
@@ -384,7 +405,7 @@ export default function InvoicesQueuePage() {
                         >
                           {isAwaitingStatus ? (
                             <>
-                              Approve & Pay {isAggregateView && activeFilter === "awaiting_approval" && invoices.filter(i => i.status === "awaiting_approval").length > 1 ? `All (${invoices.filter(i => i.status === "awaiting_approval").length}) Invoices` : "Invoice"}
+                              Approve & Pay {selectedIds.length > 1 ? `(${selectedIds.length}) Invoices` : "(1) Invoice"}
                               <ChevronRight className="h-4 w-4" />
                             </>
                           ) : (
@@ -458,13 +479,19 @@ export default function InvoicesQueuePage() {
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex items-center gap-3 min-w-0">
                           <img
-                            src={activeInvoice.vendorFee.avatar}
-                            alt={activeInvoice.vendorFee.name}
+                            src={(recentPendingInvoice || activeInvoice)?.vendorFee?.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80"}
+                            alt={(recentPendingInvoice || activeInvoice)?.vendorFee?.name || "Processing Fee"}
                             className="h-10 w-10 rounded-lg object-cover border border-white/20 bg-[#111] shrink-0"
                           />
                           <div className="min-w-0">
-                            <p className="text-xs font-bold text-white truncate">{activeInvoice.vendorFee.name}</p>
-                            <p className="text-[10px] text-neutral-500 font-mono">{activeInvoice.vendorFee.walletId}</p>
+                            <p className="text-xs font-bold text-white truncate">
+                              {selectedIds.length > 1 
+                                ? `Consolidated Vendor Pool (${selectedIds.length} Invoices)` 
+                                : (recentPendingInvoice || activeInvoice)?.vendorFee?.name || "Processing Fee"}
+                            </p>
+                            <p className="text-[10px] text-neutral-500 font-mono">
+                              {(recentPendingInvoice || activeInvoice)?.vendorFee?.walletId || "@agncypay"}
+                            </p>
                           </div>
                         </div>
                         <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-950/60 text-amber-300 border border-amber-800/30 shrink-0 uppercase tracking-wider">
@@ -475,7 +502,7 @@ export default function InvoicesQueuePage() {
                       <div className="mt-4 flex justify-between items-baseline pt-2 border-t border-white/10">
                         <span className="text-xs font-semibold text-neutral-400">Direct Production Fee</span>
                         <span className="text-lg font-black text-white">
-                          ${activeInvoice.vendorFee.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          ${displayAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </span>
                       </div>
                     </div>
@@ -545,6 +572,7 @@ export default function InvoicesQueuePage() {
                   onClick={() => {
                     setActiveFilter(tab.id as any);
                     setSelectedInvoiceId(null);
+                    setSelectedIds([]);
                   }}
                   className={`px-4 py-2 rounded-lg text-xs font-semibold tracking-tight transition-all cursor-pointer ${
                     activeFilter === tab.id
@@ -560,6 +588,14 @@ export default function InvoicesQueuePage() {
                   )}
                 </button>
               ))}
+              {selectedIds.length > 0 && (
+                <button
+                  onClick={() => setSelectedIds([])}
+                  className="px-3 py-1.5 rounded-lg text-xs font-bold text-[#ff8a00] bg-[#ff8a00]/10 hover:bg-[#ff8a00]/20 border border-[#ff8a00]/30 transition-all cursor-pointer flex items-center gap-1.5"
+                >
+                  <span>Clear ({selectedIds.length})</span>
+                </button>
+              )}
             </div>
 
             <div className="relative md:w-80">
@@ -580,37 +616,67 @@ export default function InvoicesQueuePage() {
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
                   <tr className="border-b border-white/20 bg-white/[0.01] text-[#8f8f8f] font-bold">
+                    <th className="p-4 w-10">
+                      {workspaceType === "brand" && (
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 accent-white rounded border-white/20 bg-transparent cursor-pointer"
+                          onChange={(e) => {
+                            const awaitingInvs = filteredInvoices.filter(i => i.status === "awaiting_approval");
+                            setSelectedIds(e.target.checked ? awaitingInvs.map(i => i.id) : []);
+                          }}
+                          checked={selectedIds.length > 0 && selectedIds.length === filteredInvoices.filter(i => i.status === "awaiting_approval").length && filteredInvoices.filter(i => i.status === "awaiting_approval").length > 0}
+                        />
+                      )}
+                    </th>
                     <th className="p-4">Invoice ID</th>
                     <th className="p-4">Campaign / Project Name</th>
                     <th className="p-4">Billing Office Location</th>
                     <th className="p-4">Cost Center</th>
                     <th className="p-4 text-right">Invoice Amount</th>
-                    <th className="p-4 text-center">Status</th>
+                    {activeFilter !== "awaiting_approval" && <th className="p-4 text-center">Status</th>}
                     <th className="p-4"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/[0.04]">
                   {filteredInvoices.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="p-8 text-center text-[#8f8f8f]">
+                      <td colSpan={(workspaceType === "brand" ? 8 : 7) - (activeFilter === "awaiting_approval" ? 1 : 0)} className="p-8 text-center text-[#8f8f8f]">
                         No invoices match the selected filter.
                       </td>
                     </tr>
                   ) : (
                     filteredInvoices.map((inv) => {
                       const isAwaiting = inv.status === "awaiting_approval";
-                      const isSelected = activeInvoice?.id === inv.id;
+                      const isSelected = selectedInvoiceId === inv.id;
 
                       return (
                         <tr
                           key={inv.id}
-                          onClick={() => setSelectedInvoiceId(inv.id)}
+                          onClick={(e) => {
+                            if ((e.target as HTMLElement).tagName.toLowerCase() === "input") return;
+                            setSelectedInvoiceId(inv.id);
+                          }}
                           className={`cursor-pointer transition-all group ${
-                            isSelected
+                            isSelected || selectedIds.includes(inv.id)
                               ? "bg-white/[0.07] border-l-4 border-l-[#4B6BFB]"
                               : "hover:bg-white/[0.02]"
                           }`}
                         >
+                          <td className="p-4 w-10" onClick={(e) => e.stopPropagation()}>
+                            {workspaceType === "brand" && isAwaiting && (
+                              <input
+                                type="checkbox"
+                                className="h-4 w-4 accent-white rounded border-white/20 bg-transparent cursor-pointer"
+                                checked={selectedIds.includes(inv.id)}
+                                onChange={() => {
+                                  setSelectedIds(curr =>
+                                    curr.includes(inv.id) ? curr.filter(id => id !== inv.id) : [...curr, inv.id]
+                                  );
+                                }}
+                              />
+                            )}
+                          </td>
                           <td className="p-4 font-mono font-bold text-neutral-300">
                             {inv.id}
                             {isSelected && <span className="ml-2 text-[9px] text-[#4B6BFB] font-bold uppercase">(Active)</span>}
@@ -624,15 +690,17 @@ export default function InvoicesQueuePage() {
                           <td className="p-4 text-right font-black text-white">
                             ${inv.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </td>
-                          <td className="p-4 text-center">
-                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                              isAwaiting 
-                                ? "bg-amber-950/60 text-amber-300 border border-amber-800/30 animate-pulse" 
-                                : "bg-emerald-950/60 text-emerald-300 border border-emerald-800/30"
-                            }`}>
-                              {isAwaiting ? "Awaiting Approval" : "Settled"}
-                            </span>
-                          </td>
+                          {activeFilter !== "awaiting_approval" && (
+                            <td className="p-4 text-center">
+                              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                                isAwaiting 
+                                  ? "bg-amber-950/60 text-amber-300 border border-amber-800/30 animate-pulse" 
+                                  : "bg-emerald-950/60 text-emerald-300 border border-emerald-800/30"
+                              }`}>
+                                {isAwaiting ? "Awaiting Approval" : "Settled"}
+                              </span>
+                            </td>
+                          )}
                           <td className="p-4 text-right pr-6">
                             <ChevronRight className={`h-4 w-4 transition-transform ml-auto ${isSelected ? "text-[#4B6BFB] translate-x-1" : "text-neutral-600 group-hover:text-white"}`} />
                           </td>

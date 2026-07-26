@@ -276,20 +276,35 @@ h1, h2, h3, h4, h5, h6, .font-semibold, .font-bold, .font-extrabold, .font-black
 
 :root.light button.bg-slate-50,
 :root.light button.bg-\[\#F8FAFC\],
-:root.light button.bg-slate-100 {
+:root.light button.bg-slate-100,
+:root.light button.bg-slate-200 {
   background-color: #F8FAFC !important;
   color: #0F172A !important;
   border-color: rgba(0, 0, 0, 0.15) !important;
 }
 
+:root.light button.bg-slate-50 span,
+:root.light button.bg-slate-50 svg,
+:root.light button.bg-\[\#F8FAFC\] span,
+:root.light button.bg-\[\#F8FAFC\] svg,
+:root.light button.bg-slate-100 span,
+:root.light button.bg-slate-100 svg,
+:root.light button.bg-slate-200 span,
+:root.light button.bg-slate-200 svg {
+  color: #0F172A !important;
+}
+
 :root.light button.bg-slate-50:hover,
 :root.light button.bg-\[\#F8FAFC\]:hover,
-:root.light button.bg-slate-100:hover {
-  background-color: #F1F5F9 !important;
+:root.light button.bg-slate-100:hover,
+:root.light button.bg-slate-200:hover {
+  background-color: #E2E8F0 !important;
   border-color: rgba(0, 0, 0, 0.3) !important;
 }
 
-:root.light button.text-black {
+:root.light button.bg-white.text-black,
+:root.light button.bg-black.text-black,
+:root.light button.bg-\[\#0F172A\].text-black {
   color: #FFFFFF !important;
 }
 
