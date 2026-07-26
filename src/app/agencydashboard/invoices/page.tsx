@@ -212,7 +212,7 @@ export default function InvoicesQueuePage() {
               onClick={() => router.push("/agencydashboard/invoices")}
               className="px-4 py-1.5 rounded-full text-xs font-bold bg-white light:bg-[#0F172A] text-black light:text-white shadow-sm border border-white/20 light:border-black/10 transition-all cursor-pointer"
             >
-              {workspaceType === "brand" ? "Invoice Queue" : "Invoice History"}
+              {workspaceType === "brand" ? "Payments" : "Invoice History"}
             </button>
             
             

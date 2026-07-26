@@ -333,6 +333,43 @@ h1, h2, h3, h4, h5, h6, .font-semibold, .font-bold, .font-extrabold, .font-black
   background-color: #FFFFFF !important;
 }
 
+/* Explicit overlay buttons for image cards that stay consistent across both Dark and Light modes */
+:root .force-white-btn,
+:root.light button.force-white-btn,
+:root.light .force-white-btn {
+  background-color: #FFFFFF !important;
+  color: #000000 !important;
+}
+:root .force-white-btn *,
+:root.light button.force-white-btn *,
+:root.light .force-white-btn * {
+  color: #000000 !important;
+}
+
+:root .force-dark-btn,
+:root.light button.force-dark-btn,
+:root.light .force-dark-btn {
+  background-color: rgba(0, 0, 0, 0.75) !important;
+  color: #FFFFFF !important;
+}
+:root .force-dark-btn *,
+:root.light button.force-dark-btn *,
+:root.light .force-dark-btn * {
+  color: #FFFFFF !important;
+}
+
+:root .force-transparent-btn,
+:root.light button.force-transparent-btn,
+:root.light .force-transparent-btn {
+  background-color: transparent !important;
+  color: #FFFFFF !important;
+}
+:root .force-transparent-btn *,
+:root.light button.force-transparent-btn *,
+:root.light .force-transparent-btn * {
+  color: #FFFFFF !important;
+}
+
 :root.light .bg-\[\#050505\] {
   background-color: #FFFFFF !important;
 }

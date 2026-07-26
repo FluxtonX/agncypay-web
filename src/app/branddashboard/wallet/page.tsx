@@ -244,7 +244,7 @@ export default function WalletDashboardPage() {
               onClick={() => router.push("/branddashboard/invoices")}
               className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${isLightTheme ? "text-[#475569] hover:text-[#0F172A] hover:bg-black/5" : "text-[#8f8f8f] hover:text-white hover:bg-white/5"}`}
             >
-              Invoice Queue
+              Payments
             </button>
             <button 
               onClick={() => router.push("/branddashboard/nodes")}

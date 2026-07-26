@@ -72,8 +72,8 @@ const INTEGRATIONS_LIST: IntegrationApp[] = [
 export function IntegrationsPanel({
   onSync,
   onDisconnect,
-  title = "Connected apps",
-  subtitle = "Add the accounting tools and CRMs you use to sync invoices automatically.",
+  title = "Integrations",
+  subtitle = "Connect accounting tools to sync invoices automatically.",
 }: IntegrationsPanelProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [connectedIds, setConnectedIds] = useState<string[]>(["quickbooks", "xero", "sage"]);
@@ -224,12 +224,10 @@ export function IntegrationsPanel({
     [connectedIds, onDisconnect]
   );
 
-  const connectedApps = INTEGRATIONS_LIST.filter((app) => connectedIds.includes(app.id));
-
   return (
-    <div className="bg-[#0A0A0A] border border-white/15 rounded-2xl p-6 shadow-2xl relative text-left transition-all overflow-hidden">
+    <div className="bg-[#0A0A0A] border border-white/15 rounded-2xl p-6 sm:p-7 shadow-2xl relative text-left transition-all overflow-hidden">
       {/* Title & Subtitle */}
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h3 className="text-lg font-bold text-white tracking-tight flex items-center gap-2">
             <Plug className="h-5 w-5 text-white/80" />
@@ -237,10 +235,10 @@ export function IntegrationsPanel({
           </h3>
           <p className="text-xs text-neutral-400 mt-1">{subtitle}</p>
         </div>
-        {connectedApps.length > 0 && (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.06] border border-white/15 px-3 py-1 text-[11px] font-bold text-neutral-200 shrink-0 shadow-sm">
-            <span className="h-2 w-2 rounded-full bg-neutral-300 animate-pulse" />
-            {connectedApps.length} Synced
+        {connectedIds.length > 0 && (
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.06] border border-white/15 px-3 py-1 text-[11px] font-bold text-neutral-200 shrink-0 shadow-sm self-start sm:self-auto">
+            <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+            {connectedIds.length} Synced
           </span>
         )}
       </div>
@@ -252,73 +250,73 @@ export function IntegrationsPanel({
             initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
-            className={`mt-4 px-4 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-2.5 shadow-md ${
+            className={`mt-4 px-4 py-3 rounded-xl text-xs font-semibold flex items-center gap-2.5 shadow-md ${
               statusType === "loading"
                 ? "bg-white/10 text-white border border-white/20"
                 : statusType === "success"
-                ? "bg-white/[0.08] text-white border border-white/25"
+                ? "bg-emerald-950/60 text-emerald-200 border border-emerald-500/40"
                 : "bg-red-950/80 text-red-300 border border-red-500/40"
             }`}
           >
             {statusType === "loading" && <RefreshCw className="h-4 w-4 animate-spin shrink-0 text-white" />}
-            {statusType === "success" && <Check className="h-4 w-4 shrink-0 text-neutral-300" />}
+            {statusType === "success" && <Check className="h-4 w-4 shrink-0 text-emerald-400" />}
             {statusType === "error" && <AlertCircle className="h-4 w-4 shrink-0 text-red-400" />}
             <span>{statusMessage}</span>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Connected App Cards (LinkedIn Horizontal Flow with Edge Blur) */}
-      <div className="relative mt-5">
-        {/* Right Edge Gradient Fade for Horizontal Blur Effect */}
-        <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-24 bg-gradient-to-l from-[#0A0A0A] via-[#0A0A0A]/80 to-transparent backdrop-blur-[1px] z-10" />
+      {/* 5 Horizontal Tiles Matching User Image */}
+      <div className="mt-7 pt-1 flex items-start gap-5 sm:gap-7 overflow-x-auto pb-4 scrollbar-none">
+        {INTEGRATIONS_LIST.map((app) => {
+          const isConn = connectedIds.includes(app.id);
+          const isConnLoading = connectingId === app.id;
 
-        <div className="flex items-center gap-3.5 overflow-x-auto pb-2 scrollbar-none pr-16">
-          {connectedApps.length > 0 ? (
-            connectedApps.map((app) => (
+          return (
+            <div
+              key={app.id}
+              onClick={() => setIsModalOpen(true)}
+              className="flex flex-col items-center cursor-pointer group shrink-0 w-20 sm:w-22"
+            >
+              {/* Tile Box */}
               <div
-                key={app.id}
-                onClick={() => setIsModalOpen(true)}
-                className="flex items-center gap-3.5 bg-white/[0.03] hover:bg-white/[0.07] border border-white/15 hover:border-white/30 rounded-2xl px-4 py-3 sm:px-5 sm:py-3.5 transition-all shadow-md cursor-pointer shrink-0 group"
+                className={`w-16 h-16 sm:w-20 sm:h-20 rounded-2xl sm:rounded-3xl border transition-all duration-200 flex items-center justify-center p-3 sm:p-3.5 shadow-md ${
+                  isConn
+                    ? "bg-white/[0.05] border-emerald-500/40 group-hover:border-emerald-500/70 group-hover:bg-white/[0.09] shadow-emerald-500/5"
+                    : "bg-white/[0.02] border-white/15 group-hover:border-white/40 group-hover:bg-white/[0.07] group-hover:scale-105"
+                }`}
               >
-                <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-black border border-white/10 p-2 flex items-center justify-center shrink-0 shadow-inner group-hover:scale-105 transition-transform">
-                  <img src={app.logo} alt={app.name} className="w-full h-full object-contain" />
-                </div>
-                <div className="flex flex-col text-left">
-                  <span className="text-sm font-bold text-white group-hover:text-neutral-200 transition-colors flex items-center gap-2">
-                    {app.name}
-                    <span className="inline-flex items-center justify-center rounded-full bg-white/10 border border-white/20 px-2 py-0.5 text-[9px] font-bold text-neutral-300">
-                      Synced
-                    </span>
-                  </span>
-                  <span className="text-[11px] text-neutral-400 mt-0.5 truncate max-w-[170px]">
-                    {app.category}
-                  </span>
-                </div>
+                {isConn ? (
+                  <img src={app.logo} alt={app.name} className="w-full h-full object-contain filter drop-shadow-sm group-hover:scale-110 transition-transform" />
+                ) : (
+                  <Plus className="w-6 h-6 sm:w-7 sm:h-7 text-neutral-400 group-hover:text-white group-hover:scale-110 transition-all duration-200" />
+                )}
               </div>
-            ))
-          ) : (
-            <div className="w-full py-6 px-4 rounded-xl border border-dashed border-white/15 bg-white/[0.01] text-center">
-              <p className="text-xs text-neutral-400 italic">No tools connected yet.</p>
-              <p className="text-[11px] text-neutral-500 mt-0.5">Click below to connect QuickBooks, Xero, Sage, NetSuite, or Oracle.</p>
+
+              {/* Tile Label */}
+              <span className={`text-xs font-bold mt-2.5 transition-colors text-center truncate w-full ${
+                isConn ? "text-white group-hover:text-emerald-300" : "text-neutral-300 group-hover:text-white"
+              }`}>
+                {isConn ? app.name : "Connect"}
+              </span>
+
+              {/* Sub-label */}
+              {isConn ? (
+                <span className="text-[10px] text-emerald-400 font-semibold flex items-center justify-center gap-1 mt-0.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  Synced
+                </span>
+              ) : (
+                <span className="text-[10px] text-neutral-500 font-medium mt-0.5 text-center truncate w-full">
+                  {app.name}
+                </span>
+              )}
             </div>
-          )}
-        </div>
+          );
+        })}
       </div>
 
-      {/* Add Connected Apps Pill Button (LinkedIn Style - Clean Monochrome) */}
-      <div className="mt-5 pt-1">
-        <button
-          type="button"
-          onClick={() => setIsModalOpen(true)}
-          className="px-5 py-2.5 rounded-full border border-white/20 bg-white/[0.04] text-white hover:bg-white/[0.09] hover:border-white/35 font-bold text-xs flex items-center gap-2 transition-all cursor-pointer shadow-sm group"
-        >
-          <Plus className="h-4 w-4 group-hover:rotate-90 transition-transform duration-200" />
-          Add connected apps
-        </button>
-      </div>
-
-      {/* LinkedIn-Style Interactive Modal (Elevated Monochrome & Functional) */}
+      {/* CRM Dialogue Box (Modal) */}
       <AnimatePresence>
         {isModalOpen && (
           <div
@@ -332,7 +330,7 @@ export function IntegrationsPanel({
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
               transition={{ duration: 0.15 }}
-              className="w-full max-w-[580px] rounded-2xl border border-white/20 bg-[#0A0A0A] shadow-2xl overflow-hidden text-left flex flex-col max-h-[85vh]"
+              className="w-full max-w-[620px] rounded-2xl border border-white/20 bg-[#0A0A0A] shadow-2xl overflow-hidden text-left flex flex-col max-h-[85vh]"
             >
               {/* Modal Header */}
               <div className="flex items-center justify-between border-b border-white/10 px-6 py-5 bg-white/[0.02]">
@@ -341,9 +339,9 @@ export function IntegrationsPanel({
                     <Plug className="h-5 w-5 text-white/80" />
                   </div>
                   <div>
-                    <h2 className="text-[17px] font-bold text-white tracking-tight">Add connected apps</h2>
+                    <h2 className="text-[17px] font-bold text-white tracking-tight">Connect Accounting & CRM Tools</h2>
                     <p className="text-[12px] text-neutral-400 mt-0.5">
-                      Select accounting and CRM software to sync invoice ledgers automatically.
+                      Select software to sync invoice ledgers automatically into AgncyPay treasury.
                     </p>
                   </div>
                 </div>
@@ -365,39 +363,42 @@ export function IntegrationsPanel({
                   return (
                     <div
                       key={app.id}
-                      className={`flex items-center justify-between gap-4 rounded-2xl border p-4 transition-all ${
+                      className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl border p-4 sm:p-5 transition-all ${
                         isConn
                           ? "border-white/25 bg-white/[0.05] shadow-sm"
-                          : "border-white/10 bg-white/[0.01] hover:border-white/20 hover:bg-white/[0.03]"
+                          : "border-white/10 bg-white/[0.015] hover:border-white/25 hover:bg-white/[0.03]"
                       }`}
                     >
-                      <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                      <div className="flex items-start sm:items-center gap-3.5 min-w-0 flex-1">
                         <div className="w-12 h-12 shrink-0 rounded-xl bg-black border border-white/15 p-2 flex items-center justify-center shadow-inner">
                           <img src={app.logo} alt={app.name} className="w-full h-full object-contain" />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2">
-                            <p className="text-sm font-bold text-white truncate">{app.fullName}</p>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="text-sm font-bold text-white tracking-tight">{app.fullName}</p>
                             {isConn && (
-                              <span className="inline-flex items-center gap-1 rounded-full bg-white/10 border border-white/20 px-2 py-0.5 text-[10px] font-bold text-neutral-300">
-                                <span className="h-1.5 w-1.5 rounded-full bg-neutral-300 animate-pulse" />
+                              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 text-[10px] font-bold text-emerald-300">
+                                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
                                 Connected
                               </span>
                             )}
+                            <span className="text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded-md bg-white/[0.06] text-neutral-400 border border-white/10">
+                              {app.category}
+                            </span>
                           </div>
-                          <p className="text-xs text-neutral-400 mt-0.5 leading-relaxed line-clamp-2">
+                          <p className="text-xs text-neutral-400 mt-1 leading-relaxed">
                             {app.desc}
                           </p>
                         </div>
                       </div>
 
                       {/* Action Button */}
-                      <div className="shrink-0">
+                      <div className="shrink-0 self-end sm:self-center">
                         {isConnLoading ? (
                           <button
                             type="button"
                             disabled
-                            className="flex items-center gap-1.5 h-8 rounded-full border border-white/15 bg-white/10 px-4 text-xs font-bold text-neutral-300 cursor-not-allowed"
+                            className="flex items-center gap-2 h-9 rounded-full border border-white/15 bg-white/10 px-4 text-xs font-bold text-neutral-300 cursor-not-allowed"
                           >
                             <RefreshCw className="h-3.5 w-3.5 animate-spin text-white" />
                             Connecting...
@@ -406,18 +407,18 @@ export function IntegrationsPanel({
                           <button
                             type="button"
                             onClick={() => handleDisconnectApp(app)}
-                            className="flex items-center gap-1.5 h-8 rounded-full border border-white/20 bg-transparent px-3.5 text-xs font-semibold text-neutral-400 hover:border-white/40 hover:text-white transition-colors cursor-pointer shadow-sm"
+                            className="flex items-center gap-2 h-9 rounded-full border border-white/20 bg-white/[0.04] hover:bg-red-950/40 hover:border-red-500/50 hover:text-red-300 px-4 text-xs font-bold text-neutral-300 transition-all cursor-pointer shadow-sm group"
                           >
-                            <Link2Off className="h-3.5 w-3.5" />
+                            <Link2Off className="h-3.5 w-3.5 group-hover:scale-110 transition-transform" />
                             Disconnect
                           </button>
                         ) : (
                           <button
                             type="button"
                             onClick={() => handleConnect(app)}
-                            className="flex items-center gap-1.5 h-8 rounded-full border border-white bg-white hover:bg-neutral-200 px-4 text-xs font-bold text-black transition-all cursor-pointer shadow-md"
+                            className="flex items-center gap-2 h-9 rounded-full border border-white bg-white hover:bg-neutral-200 px-4.5 text-xs font-bold text-black transition-all cursor-pointer shadow-md active:scale-95 group"
                           >
-                            <Link2 className="h-3.5 w-3.5" />
+                            <Link2 className="h-3.5 w-3.5 group-hover:scale-110 transition-transform" />
                             Connect
                           </button>
                         )}
@@ -430,7 +431,7 @@ export function IntegrationsPanel({
               {/* Modal Footer */}
               <div className="border-t border-white/10 px-6 py-4 bg-white/[0.01] flex items-center justify-between gap-4">
                 <p className="text-[11px] text-neutral-500 leading-snug">
-                  Connecting an accounting tool or CRM imports your invoices into AgncyPay for instant automated settlements.
+                  Connecting an accounting tool imports your invoices into AgncyPay for instant automated settlements.
                 </p>
                 <button
                   type="button"

@@ -1110,7 +1110,7 @@ export default function BrandDashboardPage() {
               onClick={() => router.push("/branddashboard/invoices")}
               className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#8f8f8f] light:text-[#475569] hover:text-white light:hover:text-[#0F172A] transition-all cursor-pointer"
             >
-              {workspaceType === "brand" ? "Invoice Queue" : "Sent Invoices"}
+              {workspaceType === "brand" ? "Payments" : "Sent Invoices"}
             </button>
             <button 
               onClick={() => router.push("/branddashboard/nodes")}

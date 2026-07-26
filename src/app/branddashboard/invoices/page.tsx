@@ -314,7 +314,7 @@ export default function InvoicesQueuePage() {
               onClick={() => router.push("/branddashboard/invoices")}
               className="px-4 py-1.5 rounded-full text-xs font-bold bg-white light:bg-[#0F172A] text-black light:text-white shadow-sm border border-white/20 light:border-black/10 transition-all cursor-pointer"
             >
-              Invoice Queue
+              Payments
             </button>
             <button 
               onClick={() => router.push("/branddashboard/nodes")}
@@ -463,87 +463,42 @@ export default function InvoicesQueuePage() {
                 </div>
               </div>
 
-              {/* Direct Vendor Payment Card */}
-              <div className="lg:col-span-5 bg-[#050505] rounded-2xl border border-white/20 p-6 md:p-8 shadow-xl flex flex-col justify-between space-y-6">
-                <div>
-                  <div className="flex justify-between items-center border-b border-white/20 pb-3">
-                    <div className="flex items-center gap-2">
-                      <h4 className="text-xs font-black text-[#8f8f8f] uppercase tracking-wider">Recipient Overview</h4>
-                      <span className="text-[10px] text-neutral-500 font-semibold">(Institutional Settlement)</span>
-                    </div>
-                    <span className="text-[10px] text-neutral-500 font-bold">{selectedIds.length > 0 ? selectedIds.length : 1} Invoice{selectedIds.length > 1 ? "s" : ""} Selected</span>
-                  </div>
-
-                  <div className="mt-4">
-                    <div className="p-4 bg-black border border-white/20 rounded-xl relative overflow-hidden">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex items-center gap-3 min-w-0">
-                          <img
-                            src={(recentPendingInvoice || activeInvoice)?.vendorFee?.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80"}
-                            alt={(recentPendingInvoice || activeInvoice)?.vendorFee?.name || "Payee"}
-                            className="h-10 w-10 rounded-lg object-cover border border-white/20 bg-[#111] shrink-0"
-                          />
-                          <div className="min-w-0">
-                            <p className="text-xs font-bold text-white truncate">
-                              {selectedIds.length > 1 
-                                ? `Selected Payee Batch (${selectedIds.length} Items)` 
-                                : (recentPendingInvoice || activeInvoice)?.vendorFee?.name || "Agency Recipient"}
-                            </p>
-                            <p className="text-[10px] text-neutral-500 font-mono">
-                              {(recentPendingInvoice || activeInvoice)?.vendorFee?.walletId || "@agncypay"}
-                            </p>
-                          </div>
-                        </div>
-                        <span className="text-xs font-semibold text-neutral-400 shrink-0">
-                          Verified Recipient
-                        </span>
-                      </div>
-
-                      <div className="mt-4 flex justify-between items-baseline pt-2 border-t border-white/10">
-                        <span className="text-xs font-semibold text-neutral-400">Total Disbursement Amount</span>
-                        <span className="text-lg font-black text-white">
-                          ${displayAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
+              {/* Recipient Overview Image Card Replacement with Interactive Navigation Buttons */}
+              <div className="lg:col-span-5 rounded-2xl border border-white/20 overflow-hidden shadow-xl relative bg-[#050505] min-h-[360px] flex flex-col justify-between">
+                <img
+                  src="/models/balanceduecard.png"
+                  alt="Elevate your Spend - Balance Due Card"
+                  className="absolute inset-0 w-full h-full object-cover object-center pointer-events-none"
+                />
+                
+                {/* Top Overlay Button: Earn Rewards */}
+                <div className="relative z-10 w-full flex justify-center pt-[18%] sm:pt-[16%] md:pt-[15%]">
+                  <button
+                    onClick={() => router.push("/branddashboard/nodes")}
+                    style={{ backgroundColor: "#FFFFFF", color: "#000000" }}
+                    className="force-white-btn font-semibold px-3.5 py-1 rounded-full shadow-md hover:bg-neutral-100 transition-all text-[10px] active:scale-95 cursor-pointer border border-black/5"
+                  >
+                    Earn Rewards
+                  </button>
                 </div>
 
-                {/* Agency & Talent splits (if applicable) */}
-                {workspaceType === "agency" && (
-                  <div className="pt-2">
-                    <div className="flex justify-between items-center border-b border-white/20 pb-2">
-                      <div className="flex items-center gap-2">
-                        <h4 className="text-xs font-black text-[#8f8f8f] uppercase tracking-wider">Agency & Talent Split</h4>
-                      </div>
-                      <span className="text-[10px] text-neutral-500 font-bold">2 Nodes</span>
-                    </div>
-
-                    <div className="mt-3 grid grid-cols-1 gap-3">
-                      {activeInvoice.splitPool.splits.map((split) => (
-                        <div
-                          key={split.name}
-                          className="p-3 bg-black border border-white/20 rounded-xl relative overflow-hidden flex items-center justify-between"
-                        >
-                          <div className="flex items-center gap-2.5 min-w-0">
-                            <img
-                              src={split.avatar}
-                              alt={split.name}
-                              className="h-8 w-8 rounded-lg object-cover border border-white/20 bg-[#111] shrink-0"
-                            />
-                            <div className="min-w-0">
-                              <p className="text-xs font-bold text-white truncate">{split.name}</p>
-                              <p className="text-[10px] text-neutral-500 font-mono">{split.percentage}% Share</p>
-                            </div>
-                          </div>
-                          <span className="text-sm font-black text-white">
-                            ${split.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                {/* Bottom Overlay Buttons: Physical Card & Virtual Card */}
+                <div className="relative z-10 w-full flex items-center justify-center gap-2.5 pb-6 sm:pb-7">
+                  <button
+                    onClick={() => router.push("/branddashboard/wallet")}
+                    style={{ backgroundColor: "#FFFFFF", color: "#000000", borderColor: "#000000" }}
+                    className="force-white-btn font-semibold w-[115px] h-[26px] rounded-full shadow-lg hover:bg-neutral-100 transition-all text-[11px] active:scale-95 cursor-pointer border-[1.5px] border-black flex items-center justify-center text-center"
+                  >
+                    Physical Card
+                  </button>
+                  <button
+                    onClick={() => router.push("/branddashboard/wallet")}
+                    style={{ backgroundColor: "transparent", color: "#FFFFFF", borderColor: "#FFFFFF" }}
+                    className="force-transparent-btn font-semibold w-[115px] h-[26px] rounded-full transition-all text-[11px] active:scale-95 cursor-pointer shadow-lg border-[1.5px] border-white hover:bg-white/10 flex items-center justify-center text-center"
+                  >
+                    Virtual Card
+                  </button>
+                </div>
               </div>
 
             </div>

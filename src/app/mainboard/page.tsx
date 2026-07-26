@@ -182,7 +182,7 @@ export default function MainboardPage() {
             <section className="rounded-[8px] border border-[#252525] bg-[#050505]">
               <div className="flex flex-col gap-3 border-b border-[#1f1f1f] p-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <h2 className="text-[18px] font-semibold text-white">Invoice queue</h2>
+                  <h2 className="text-[18px] font-semibold text-white">Payments</h2>
                   <p className="mt-1 text-[13px] text-[#8f8f8f]">Review approved vendor invoices and submit payment through AgncyPay.</p>
                 </div>
                 <div className="flex items-center gap-2">

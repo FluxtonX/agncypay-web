@@ -270,7 +270,7 @@ export default function InvoiceDetailPage() {
               onClick={() => router.push("/agencydashboard/invoices")}
               className="px-4 py-1.5 rounded-full text-xs font-semibold bg-white text-black shadow-sm transition-all cursor-pointer"
             >
-              {workspaceType === "brand" ? "Invoice Queue" : "Invoice History"}
+              {workspaceType === "brand" ? "Payments" : "Invoice History"}
             </button>
             
             

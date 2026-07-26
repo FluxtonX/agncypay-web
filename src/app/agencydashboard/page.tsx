@@ -856,7 +856,7 @@ export default function AgencyDashboardPage() {
               onClick={() => router.push("/agencydashboard/invoices")}
               className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#8f8f8f] light:text-[#475569] hover:text-white light:hover:text-[#0F172A] transition-all cursor-pointer"
             >
-              {workspaceType === "brand" ? "Invoice Queue" : "Invoice History"}
+              {workspaceType === "brand" ? "Payments" : "Invoice History"}
             </button>
             
             
