@@ -235,12 +235,6 @@ export function IntegrationsPanel({
           </h3>
           <p className="text-xs text-neutral-400 light:text-[#475569] mt-1">{subtitle}</p>
         </div>
-        {connectedIds.length > 0 && (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.06] light:bg-slate-100 border border-white/15 light:border-black/15 px-3 py-1 text-[11px] font-bold text-neutral-200 light:text-[#0F172A] shrink-0 shadow-sm self-start sm:self-auto">
-            <span className="h-2 w-2 rounded-full bg-white light:bg-black animate-pulse" />
-            {connectedIds.length} Synced
-          </span>
-        )}
       </div>
 
       {/* Status Alert Banner */}

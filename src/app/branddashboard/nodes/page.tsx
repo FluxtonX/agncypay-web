@@ -38,7 +38,7 @@ export default function NodesDashboardPage() {
   const { state, resetState } = useApp();
   const workspaceType = state.user ? state.user.accountType : "brand";
 
-  const [isLightTheme, setIsLightTheme] = useState(false);
+  const [isLightTheme, setIsLightTheme] = useState(true);
   const [invoices, setInvoices] = useState<FirestoreInvoice[]>([]);
   const [processingId, setProcessingId] = useState<string | null>(null);
 
@@ -149,7 +149,7 @@ export default function NodesDashboardPage() {
   const activeLineWidthPct = trackPct * 0.75;
 
   return (
-    <main className={`min-h-screen flex flex-col font-sans antialiased relative transition-colors duration-200 ${workspaceType === "brand" ? "bg-[#F8F9FA] text-black h-screen overflow-hidden pb-0" : "bg-background text-foreground pb-12"}`}>
+    <main className={`min-h-screen flex flex-col font-sans antialiased relative transition-colors duration-200 ${workspaceType === "brand" ? "bg-white text-black h-screen overflow-hidden pb-0" : "bg-background text-foreground pb-12"}`}>
       <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-white/[0.01] rounded-full blur-[100px] pointer-events-none" />
 
       {/* Header */}
@@ -276,127 +276,7 @@ export default function NodesDashboardPage() {
         {workspaceType === "brand" ? (
           <div className="flex flex-col gap-8 max-w-[1150px] mx-auto w-full pb-12">
             
-            {/* Driving User Engagement & Loyalty: Point-Based Club Timeline Banner */}
-            <div className={`p-8 sm:p-10 rounded-3xl border shadow-xl relative overflow-hidden transition-colors ${isLightTheme ? "bg-white border-black/10 text-slate-900" : "bg-[#0A0A0A] border-white/15 text-white"}`}>
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-12 border-b pb-6 border-white/10 light:border-black/10">
-                <div>
-                  <h2 className={`text-2xl sm:text-3xl font-black tracking-tight ${isLightTheme ? "text-black" : "text-white"}`}>
-                    Hi, {state.workspaces.find(w => w.id === state.activeWorkspaceId)?.name || state.user?.fullName || "Adidas Commercial"}
-                  </h2>
-                  <p className={`text-xs font-semibold mt-1 ${isLightTheme ? "text-slate-500" : "text-neutral-400"}`}>
-                    Driving User Engagement and Loyalty • Institutional Point-Based Club
-                  </p>
-                </div>
-                <div className={`px-4 py-2 rounded-full border flex items-center gap-2 text-xs font-black tracking-wider uppercase cursor-pointer shadow-sm transition-transform hover:scale-105 ${isLightTheme ? "bg-black text-white border-black" : "bg-white text-black border-white"}`}>
-                  <Award className="w-4 h-4 text-amber-500" />
-                  <span>AGNCYPAY Style Club</span>
-                  <ChevronRight className="w-4 h-4" />
-                </div>
-              </div>
-
-              {/* Horizontal Timeline Progress Bar (Progressing from 0 points onward) */}
-              <div className="relative pt-8 pb-4 px-2 sm:px-8">
-                
-                {/* Background Uncompleted Track Line (From 0 PTS / Left 12.5% to 500K PTS / Right 12.5%) */}
-                <div 
-                  className={`absolute top-[58px] left-[12.5%] right-[12.5%] h-3.5 rounded-full z-0 transition-all ${isLightTheme ? "bg-slate-200 border border-slate-300 shadow-inner" : "bg-neutral-800 border border-neutral-700 shadow-[inset_0_2px_4px_rgba(0,0,0,0.8)]"}`} 
-                />
-                
-                {/* Active Completed Track Line (Progresses dynamically from 0 points onward!) */}
-                <div 
-                  className={`absolute top-[58px] left-[12.5%] h-3.5 rounded-full z-0 transition-all duration-1000 ${isLightTheme ? "bg-gradient-to-r from-slate-400 via-slate-700 to-black shadow-md border border-black" : "bg-gradient-to-r from-neutral-600 via-neutral-200 to-white shadow-[0_0_25px_rgba(255,255,255,0.7),0_0_10px_rgba(255,255,255,0.4)] border border-white"}`} 
-                  style={{ width: `${activeLineWidthPct}%` }}
-                />
-
-                {/* Live Progress Tip Handle (Attached to the leading edge of the active line) */}
-                <div 
-                  className={`absolute top-[49px] z-20 w-8 h-8 rounded-full border-2 shadow-[0_0_20px_rgba(255,180,0,0.9)] flex items-center justify-center animate-bounce cursor-pointer transition-all ${isLightTheme ? "bg-black border-white text-white" : "bg-white border-amber-500 text-black"}`}
-                  style={{ left: `calc(12.5% + ${activeLineWidthPct}% - 16px)` }}
-                  title={`Live Balance: ${currentPts.toLocaleString()} PTS`}
-                >
-                  <Flame className="w-4 h-4 fill-amber-500 text-amber-500" />
-                </div>
-
-                {/* 4 Timeline Nodes Grid */}
-                <div className="relative z-10 grid grid-cols-4 w-full justify-between items-start text-center">
-                  
-                  {/* Node 1: PRO (0 PTS Start) */}
-                  <div className="flex flex-col items-center">
-                    <div className="h-8 mb-2 flex items-center justify-center">
-                      <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase bg-black/10 light:bg-slate-200 text-neutral-400">
-                        Start
-                      </span>
-                    </div>
-                    <div className={`w-12 h-12 rounded-full flex items-center justify-center border-4 shadow-md transition-transform hover:scale-110 ${isLightTheme ? "bg-black border-white text-white" : "bg-white border-[#111] text-black"}`}>
-                      <CheckCircle2 className="w-6 h-6" />
-                    </div>
-                    <span className={`mt-3 text-sm font-black uppercase tracking-wider ${isLightTheme ? "text-slate-600" : "text-neutral-300"}`}>
-                      PRO
-                    </span>
-                    <span className="text-xs font-mono font-bold text-neutral-400 mt-0.5">0 PTS</span>
-                  </div>
-
-                  {/* Node 2: STYLE (100K PTS) */}
-                  <div className="flex flex-col items-center">
-                    <div className="h-8 mb-2 flex items-center justify-center">
-                      <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase bg-black/10 light:bg-slate-200 text-neutral-400">
-                        Unlocked
-                      </span>
-                    </div>
-                    <div className={`w-12 h-12 rounded-full flex items-center justify-center border-4 shadow-md transition-transform hover:scale-110 ${isLightTheme ? "bg-black border-white text-white" : "bg-white border-[#111] text-black"}`}>
-                      <CheckCircle2 className="w-6 h-6" />
-                    </div>
-                    <span className={`mt-3 text-sm font-black uppercase tracking-wider ${isLightTheme ? "text-slate-600" : "text-neutral-300"}`}>
-                      STYLE
-                    </span>
-                    <span className="text-xs font-mono font-bold text-neutral-400 mt-0.5">100,000 PTS</span>
-                  </div>
-
-                  {/* Node 3: ICON (Current Tier at 250K PTS!) */}
-                  <div className="flex flex-col items-center">
-                    <div className="h-8 mb-2 flex items-center justify-center">
-                      <div className="flex items-center gap-1 px-3 py-1 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-500 text-xs font-mono font-black shadow-sm animate-pulse whitespace-nowrap">
-                        <span>Current Tier</span>
-                        <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                      </div>
-                    </div>
-                    <div className={`w-12 h-12 rounded-full flex items-center justify-center border-4 shadow-2xl ring-4 ring-amber-500/40 transition-transform hover:scale-110 ${isLightTheme ? "bg-black border-white text-white" : "bg-white border-[#111] text-black"}`}>
-                      <Award className="w-6 h-6 text-amber-500" />
-                    </div>
-                    <span className={`mt-3 text-sm font-black uppercase tracking-wider ${isLightTheme ? "text-black" : "text-white"}`}>
-                      ICON
-                    </span>
-                    <span className="text-xs font-mono font-bold text-amber-500 mt-0.5">250,000 PTS</span>
-                  </div>
-
-                  {/* Node 4: ELITE (Goal Tier at 500K PTS!) */}
-                  <div className="flex flex-col items-center">
-                    <div className="h-8 mb-2 flex items-center justify-center">
-                      <span className="px-2.5 py-0.5 rounded text-[10px] font-mono font-bold uppercase bg-amber-500/10 text-amber-500 border border-amber-500/30">
-                        Next Milestone
-                      </span>
-                    </div>
-                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center border-2 shadow-lg transition-transform hover:scale-110 ${isLightTheme ? "bg-slate-100 border-slate-300 text-slate-400" : "bg-white/5 border-white/20 text-amber-500"}`}>
-                      <Crown className="w-6 h-6" />
-                    </div>
-                    <span className={`mt-3 text-sm font-black uppercase tracking-wider ${isLightTheme ? "text-slate-900" : "text-white"}`}>
-                      ELITE
-                    </span>
-                    <div className="mt-0.5 flex flex-col items-center">
-                      <span className={`text-xs font-mono font-black ${isLightTheme ? "text-black" : "text-white"}`}>
-                        500,000 PTS
-                      </span>
-                      <span className="text-[11px] font-semibold text-neutral-400 mt-0.5">
-                        {Math.max(500000 - currentPts, 2500).toLocaleString()} Pts to go
-                      </span>
-                    </div>
-                  </div>
-
-                </div>
-              </div>
-            </div>
-
-            {/* Existing Cards Grid below */}
+            {/* Existing Cards Grid at the top */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 w-full items-stretch">
               {/* Left Column (7 Cols) - Points Balance Card */}
               <div className="lg:col-span-7 bg-white rounded-3xl border border-neutral-200 p-8 sm:p-10 flex flex-col justify-between shadow-sm h-full">
@@ -459,6 +339,127 @@ export default function NodesDashboardPage() {
                 </div>
               </div>
             </div>
+
+            {/* Driving User Engagement & Loyalty: Point-Based Club Timeline Banner at the bottom */}
+            <div className={`p-8 sm:p-10 rounded-3xl border shadow-xl relative overflow-hidden transition-colors ${isLightTheme ? "bg-white border-black/10 text-slate-900" : "bg-[#0A0A0A] border-white/15 text-white"}`}>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-12 border-b pb-6 border-white/10 light:border-black/10">
+                <div>
+                  <h2 className={`text-2xl sm:text-3xl font-black tracking-tight ${isLightTheme ? "text-black" : "text-white"}`}>
+                    Hi, {state.workspaces.find(w => w.id === state.activeWorkspaceId)?.name || state.user?.fullName || "Adidas Commercial"}
+                  </h2>
+                  <p className={`text-xs font-semibold mt-1 ${isLightTheme ? "text-slate-500" : "text-neutral-400"}`}>
+                    Driving User Engagement and Loyalty • Institutional Point-Based Club
+                  </p>
+                </div>
+                <div className={`px-4 py-2 rounded-full border flex items-center gap-2 text-xs font-black tracking-wider uppercase cursor-pointer shadow-sm transition-transform hover:scale-105 ${isLightTheme ? "bg-black text-white border-black" : "bg-white text-black border-white"}`}>
+                  <Award className="w-4 h-4 text-emerald-500" />
+                  <span>AGNCYPAY Style Club</span>
+                  <ChevronRight className="w-4 h-4" />
+                </div>
+              </div>
+
+              {/* Horizontal Timeline Progress Bar (Progressing from 0 points onward) */}
+              <div className="relative pt-8 pb-4 px-2 sm:px-8">
+                
+                {/* Background Uncompleted Track Line (From 0 PTS / Left 12.5% to 500K PTS / Right 12.5%) */}
+                <div 
+                  className={`absolute top-[58px] left-[12.5%] right-[12.5%] h-3.5 rounded-full z-0 transition-all ${isLightTheme ? "bg-slate-200 border border-slate-300 shadow-inner" : "bg-neutral-800 border border-neutral-700 shadow-[inset_0_2px_4px_rgba(0,0,0,0.8)]"}`} 
+                />
+                
+                {/* Active Completed Track Line (Progresses dynamically from 0 points onward!) */}
+                <div 
+                  className={`absolute top-[58px] left-[12.5%] h-3.5 rounded-full z-0 transition-all duration-1000 ${isLightTheme ? "bg-gradient-to-r from-slate-400 via-slate-700 to-black shadow-md border border-black" : "bg-gradient-to-r from-neutral-600 via-neutral-200 to-white shadow-[0_0_25px_rgba(255,255,255,0.7),0_0_10px_rgba(255,255,255,0.4)] border border-white"}`} 
+                  style={{ width: `${activeLineWidthPct}%` }}
+                />
+
+                {/* Live Progress Tip Handle (Pulsing Green Node, No fire/flame emoji!) */}
+                <div 
+                  className={`absolute top-[49px] z-20 w-8 h-8 rounded-full border-2 shadow-[0_0_20px_rgba(16,185,129,0.8)] flex items-center justify-center animate-bounce cursor-pointer transition-all ${isLightTheme ? "bg-black border-white" : "bg-white border-emerald-500"}`}
+                  style={{ left: `calc(12.5% + ${activeLineWidthPct}% - 16px)` }}
+                  title={`Live Balance: ${currentPts.toLocaleString()} PTS`}
+                >
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                </div>
+
+                {/* 4 Timeline Nodes Grid */}
+                <div className="relative z-10 grid grid-cols-4 w-full justify-between items-start text-center">
+                  
+                  {/* Node 1: PRO (0 PTS Start) */}
+                  <div className="flex flex-col items-center">
+                    <div className="h-8 mb-2 flex items-center justify-center">
+                      <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase bg-black/10 light:bg-slate-200 text-neutral-400">
+                        Start
+                      </span>
+                    </div>
+                    <div className={`w-12 h-12 rounded-full flex items-center justify-center border-4 shadow-md transition-transform hover:scale-110 ${isLightTheme ? "bg-black border-white text-white" : "bg-white border-[#111] text-black"}`}>
+                      <CheckCircle2 className="w-6 h-6" />
+                    </div>
+                    <span className={`mt-3 text-sm font-black uppercase tracking-wider ${isLightTheme ? "text-slate-600" : "text-neutral-300"}`}>
+                      PRO
+                    </span>
+                    <span className="text-xs font-mono font-bold text-neutral-400 mt-0.5">0 PTS</span>
+                  </div>
+
+                  {/* Node 2: STYLE (100K PTS) */}
+                  <div className="flex flex-col items-center">
+                    <div className="h-8 mb-2 flex items-center justify-center">
+                      <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase bg-black/10 light:bg-slate-200 text-neutral-400">
+                        Unlocked
+                      </span>
+                    </div>
+                    <div className={`w-12 h-12 rounded-full flex items-center justify-center border-4 shadow-md transition-transform hover:scale-110 ${isLightTheme ? "bg-black border-white text-white" : "bg-white border-[#111] text-black"}`}>
+                      <CheckCircle2 className="w-6 h-6" />
+                    </div>
+                    <span className={`mt-3 text-sm font-black uppercase tracking-wider ${isLightTheme ? "text-slate-600" : "text-neutral-300"}`}>
+                      STYLE
+                    </span>
+                    <span className="text-xs font-mono font-bold text-neutral-400 mt-0.5">100,000 PTS</span>
+                  </div>
+
+                  {/* Node 3: ICON (Current Tier at 250K PTS!) */}
+                  <div className="flex flex-col items-center">
+                    <div className="h-8 mb-2 flex items-center justify-center">
+                      <div className="flex items-center gap-1 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-500 text-xs font-mono font-black shadow-sm animate-pulse whitespace-nowrap">
+                        <span>Current Tier</span>
+                        <Sparkles className="w-3.5 h-3.5 text-emerald-500" />
+                      </div>
+                    </div>
+                    <div className={`w-12 h-12 rounded-full flex items-center justify-center border-4 shadow-2xl ring-4 ring-emerald-500/40 transition-transform hover:scale-110 ${isLightTheme ? "bg-black border-white text-white" : "bg-white border-[#111] text-black"}`}>
+                      <Award className="w-6 h-6 text-emerald-500" />
+                    </div>
+                    <span className={`mt-3 text-sm font-black uppercase tracking-wider ${isLightTheme ? "text-black" : "text-white"}`}>
+                      ICON
+                    </span>
+                    <span className="text-xs font-mono font-bold text-emerald-500 mt-0.5">250,000 PTS</span>
+                  </div>
+
+                  {/* Node 4: ELITE (Goal Tier at 500K PTS!) */}
+                  <div className="flex flex-col items-center">
+                    <div className="h-8 mb-2 flex items-center justify-center">
+                      <span className="px-2.5 py-0.5 rounded text-[10px] font-mono font-bold uppercase bg-emerald-500/10 text-emerald-500 border border-emerald-500/30">
+                        Next Milestone
+                      </span>
+                    </div>
+                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center border-2 shadow-lg transition-transform hover:scale-110 ${isLightTheme ? "bg-slate-100 border-slate-300 text-slate-400" : "bg-white/5 border-white/20 text-emerald-500"}`}>
+                      <Crown className="w-6 h-6" />
+                    </div>
+                    <span className={`mt-3 text-sm font-black uppercase tracking-wider ${isLightTheme ? "text-slate-900" : "text-white"}`}>
+                      ELITE
+                    </span>
+                    <div className="mt-0.5 flex flex-col items-center">
+                      <span className={`text-xs font-mono font-black ${isLightTheme ? "text-black" : "text-white"}`}>
+                        500,000 PTS
+                      </span>
+                      <span className="text-[11px] font-semibold text-neutral-400 mt-0.5">
+                        {Math.max(500000 - currentPts, 2500).toLocaleString()} Pts to go
+                      </span>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+            </div>
+
           </div>
         ) : (
           <div className="space-y-6">

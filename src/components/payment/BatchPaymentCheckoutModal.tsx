@@ -120,9 +120,6 @@ export function BatchPaymentCheckoutModal({
               <div>
                 <div className="flex items-center gap-2">
                   <h1 className="text-lg font-black text-white tracking-tight">Review & Authorize Batch Payment</h1>
-                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-[#082315] text-[#70ff9e] border border-[#10b95f]/30">
-                    Bilt Settlement Protocol
-                  </span>
                 </div>
                 <p className="text-xs text-[#8f8f8f]">Verify payment method, billing authorization, and total settlement</p>
               </div>

@@ -70,7 +70,7 @@ export default function InvoicesQueuePage() {
   const { state, resetState } = useApp();
   const workspaceType = state.user ? state.user.accountType : "brand";
 
-  const [isLightTheme, setIsLightTheme] = useState(false);
+  const [isLightTheme, setIsLightTheme] = useState(true);
   const [invoices, setInvoices] = useState<InvoiceMock[]>([]);
   const [activeFilter, setActiveFilter] = useState<"all" | "awaiting_approval" | "settled">("awaiting_approval");
   const [searchQuery, setSearchQuery] = useState("");
@@ -285,7 +285,7 @@ export default function InvoicesQueuePage() {
       <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-white/[0.01] rounded-full blur-[100px] pointer-events-none" />
 
       {/* Header */}
-      <header className="border-b border-white/25 light:border-black/15 bg-background/90 sticky top-0 z-50 shadow-sm backdrop-blur">
+      <header className={`border-b sticky top-0 z-50 shadow-sm backdrop-blur transition-colors ${isLightTheme ? "border-black/10 bg-white/90" : "border-white/25 bg-background/90"}`}>
         <div className="max-w-[1520px] mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-6">
             <div className="relative flex items-center mr-12">
@@ -297,35 +297,35 @@ export default function InvoicesQueuePage() {
                 />
               </Link>
             </div>
-            <span className="h-4 w-[1px] bg-white/20 hidden md:block" />
-            <div className="hidden md:flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 light:bg-black/5 border border-white/20 light:border-black/10 text-[11px] font-bold uppercase tracking-wider text-white light:text-[#0F172A]">
-              <Building2 className="h-3 w-3 text-white light:text-[#0F172A]" />
+            <span className={`h-4 w-[1px] hidden md:block ${isLightTheme ? "bg-black/20" : "bg-white/20"}`} />
+            <div className={`hidden md:flex items-center gap-2 px-3 py-1 rounded-full border text-[11px] font-bold uppercase tracking-wider ${isLightTheme ? "bg-black/5 border-black/10 text-[#0F172A]" : "bg-white/10 border-white/20 text-white"}`}>
+              <Building2 className={`h-3 w-3 ${isLightTheme ? "text-[#0F172A]" : "text-white"}`} />
               Brand Portal
             </div>
           </div>
 
-          <nav className="hidden lg:flex items-center gap-1 bg-white/[0.03] p-1 rounded-full border border-white/20">
+          <nav className={`hidden lg:flex items-center gap-1 p-1 rounded-full border transition-colors ${isLightTheme ? "bg-black/5 border-black/10" : "bg-white/[0.03] border-white/20"}`}>
             <button 
               onClick={() => router.push("/branddashboard")}
-              className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#8f8f8f] light:text-[#475569] hover:text-white light:hover:text-[#0F172A] transition-all cursor-pointer"
+              className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${isLightTheme ? "text-[#475569] hover:text-[#0F172A] hover:bg-black/5" : "text-[#8f8f8f] hover:text-white hover:bg-white/5"}`}
             >
               Home
             </button>
             <button 
               onClick={() => router.push("/branddashboard/invoices")}
-              className="px-4 py-1.5 rounded-full text-xs font-bold bg-white light:bg-[#0F172A] text-black light:text-white shadow-sm border border-white/20 light:border-black/10 transition-all cursor-pointer"
+              className={`px-4 py-1.5 rounded-full text-xs font-bold shadow-sm border transition-all cursor-pointer ${isLightTheme ? "bg-[#0F172A] text-white border-black/10 force-white-text" : "bg-white text-black border-white/20"}`}
             >
               Payments
             </button>
             <button 
               onClick={() => router.push("/branddashboard/nodes")}
-              className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#8f8f8f] light:text-[#475569] hover:text-white light:hover:text-[#0F172A] transition-all cursor-pointer"
+              className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${isLightTheme ? "text-[#475569] hover:text-[#0F172A] hover:bg-black/5" : "text-[#8f8f8f] hover:text-white hover:bg-white/5"}`}
             >
               Rewards
             </button>
             <button 
               onClick={() => router.push("/branddashboard/wallet")}
-              className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#8f8f8f] light:text-[#475569] hover:text-white light:hover:text-[#0F172A] transition-all cursor-pointer flex items-center gap-1.5"
+              className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${isLightTheme ? "text-[#475569] hover:text-[#0F172A] hover:bg-black/5" : "text-[#8f8f8f] hover:text-white hover:bg-white/5"}`}
             >
               <Wallet className="w-3.5 h-3.5" />
               Wallet
@@ -334,16 +334,16 @@ export default function InvoicesQueuePage() {
 
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-full bg-white/[0.05] border border-white/20 flex items-center justify-center font-bold text-xs text-white">
+              <div className={`h-8 w-8 rounded-full border flex items-center justify-center font-bold text-xs ${isLightTheme ? "bg-black/5 border-black/10 text-black" : "bg-white/[0.05] border-white/20 text-white"}`}>
                 {state.user?.fullName ? state.user.fullName.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2) : "AD"}
               </div>
-              <span className="text-xs font-bold text-[#E5E5EA] hidden sm:inline">
+              <span className={`text-xs font-bold hidden sm:inline ${isLightTheme ? "text-[#0F172A]" : "text-[#E5E5EA]"}`}>
                 {state.workspaces.find(w => w.id === state.activeWorkspaceId)?.name || state.user?.fullName || "Adidas Corporate"}
               </span>
             </div>
             <button
               onClick={toggleTheme}
-              className="p-2 text-neutral-400 hover:text-white transition-colors cursor-pointer mr-1"
+              className={`p-2 transition-colors cursor-pointer mr-1 ${isLightTheme ? "text-[#0F172A] hover:text-black" : "text-neutral-400 hover:text-white"}`}
               title="Toggle Theme"
             >
               {isLightTheme ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
@@ -351,7 +351,7 @@ export default function InvoicesQueuePage() {
 
             <button
               onClick={handleLogout}
-              className="p-2 text-neutral-400 hover:text-white transition-colors"
+              className={`p-2 transition-colors ${isLightTheme ? "text-[#0F172A] hover:text-black" : "text-neutral-400 hover:text-white"}`}
               title="Log Out"
             >
               <LogOut className="h-4 w-4" />

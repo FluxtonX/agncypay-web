@@ -22,10 +22,10 @@
 }
 
 :root.light {
-  --background: #F8FAFC;
+  --background: #FFFFFF;
   --foreground: #0A0A0A;
   
-  --color-brand-deep: #F8FAFC;
+  --color-brand-deep: #FFFFFF;
   --color-brand-mid: #F1F5F9;
   --color-brand-light: #E2E8F0;
   
@@ -55,7 +55,7 @@
   --color-border-custom: var(--border-color);
   --color-card-custom: var(--card-bg);
   
-  --font-sans: var(--font-plus-jakarta), Inter, system-ui, -apple-system, sans-serif;
+  --font-sans: var(--font-inter), system-ui, -apple-system, sans-serif;
   --font-heading: var(--font-outfit), Inter, system-ui, -apple-system, sans-serif;
   
   /* Standardized font scale optimized for high legibility */

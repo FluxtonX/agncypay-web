@@ -123,7 +123,7 @@ export default function WalletDashboardPage() {
   const { state } = useApp();
   const workspaceType = state.user ? state.user.accountType : "brand";
 
-  const [isLightTheme, setIsLightTheme] = useState(false);
+  const [isLightTheme, setIsLightTheme] = useState(true);
   const [activeTab, setActiveTab] = useState<"cards" | "accounts">("cards");
   const [cards, setCards] = useState<WalletItem[]>(INITIAL_CARDS);
   const [accounts, setAccounts] = useState<WalletItem[]>(INITIAL_ACCOUNTS);
@@ -245,7 +245,7 @@ export default function WalletDashboardPage() {
   };
 
   return (
-    <main className={`min-h-screen flex flex-col font-sans antialiased relative transition-colors duration-200 ${isLightTheme ? "bg-[#F8FAFC] text-[#0F172A]" : "bg-black text-white"}`}>
+    <main className={`min-h-screen flex flex-col font-sans antialiased relative transition-colors duration-200 ${isLightTheme ? "bg-white text-[#0F172A]" : "bg-black text-white"}`}>
       <div className={`absolute top-0 left-1/4 w-[600px] h-[600px] rounded-full blur-[120px] pointer-events-none ${isLightTheme ? "bg-blue-500/[0.05]" : "bg-white/[0.02]"}`} />
       <div className={`absolute bottom-10 right-10 w-[400px] h-[400px] rounded-full blur-[100px] pointer-events-none ${isLightTheme ? "bg-[#4B6BFB]/[0.06]" : "bg-[#4B6BFB]/[0.03]"}`} />
 

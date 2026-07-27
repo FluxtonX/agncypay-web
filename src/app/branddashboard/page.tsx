@@ -150,7 +150,7 @@ export default function BrandDashboardPage() {
   const [newCardCVC, setNewCardCVC] = useState("");
   const [newCardZip, setNewCardZip] = useState("");
 
-  const [isLightTheme, setIsLightTheme] = useState(false);
+  const [isLightTheme, setIsLightTheme] = useState(true);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -1071,7 +1071,7 @@ export default function BrandDashboardPage() {
       <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-white/[0.01] rounded-full blur-[100px] pointer-events-none" />
 
       {/* Header - Adaptive Theme */}
-      <header className="border-b border-white/25 light:border-black/15 bg-background/90 sticky top-0 z-50 shadow-sm backdrop-blur">
+      <header className={`border-b sticky top-0 z-50 shadow-sm backdrop-blur transition-colors ${isLightTheme ? "border-black/10 bg-white/90" : "border-white/25 bg-background/90"}`}>
         <div className="max-w-[1520px] mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-6">
             <div className="relative flex items-center mr-12">
@@ -1083,36 +1083,36 @@ export default function BrandDashboardPage() {
                 />
               </Link>
             </div>
-            <span className="h-4 w-[1px] bg-white/20 hidden md:block" />
-            <div className="hidden md:flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 light:bg-black/5 border border-white/20 light:border-black/10 text-[11px] font-bold uppercase tracking-wider text-white light:text-[#0F172A]">
-              <Building2 className="h-3 w-3 text-white light:text-[#0F172A]" />
+            <span className={`h-4 w-[1px] hidden md:block ${isLightTheme ? "bg-black/20" : "bg-white/20"}`} />
+            <div className={`hidden md:flex items-center gap-2 px-3 py-1 rounded-full border text-[11px] font-bold uppercase tracking-wider ${isLightTheme ? "bg-black/5 border-black/10 text-[#0F172A]" : "bg-white/10 border-white/20 text-white"}`}>
+              <Building2 className={`h-3 w-3 ${isLightTheme ? "text-[#0F172A]" : "text-white"}`} />
               Brand Portal
             </div>
           </div>
 
           {/* Center Navigation Tabs (Bilt Style) */}
-          <nav className="hidden lg:flex items-center gap-1 bg-white/[0.03] p-1 rounded-full border border-white/20">
+          <nav className={`hidden lg:flex items-center gap-1 p-1 rounded-full border transition-colors ${isLightTheme ? "bg-black/5 border-black/10" : "bg-white/[0.03] border-white/20"}`}>
             <button 
               onClick={() => router.push("/branddashboard")}
-              className="px-4 py-1.5 rounded-full text-xs font-bold bg-white light:bg-[#0F172A] text-black light:text-white shadow-sm border border-white/20 light:border-black/10 transition-all cursor-pointer"
+              className={`px-4 py-1.5 rounded-full text-xs font-bold shadow-sm border transition-all cursor-pointer ${isLightTheme ? "bg-[#0F172A] text-white border-black/10 force-white-text" : "bg-white text-black border-white/20"}`}
             >
               Home
             </button>
             <button 
               onClick={() => router.push("/branddashboard/invoices")}
-              className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#8f8f8f] light:text-[#475569] hover:text-white light:hover:text-[#0F172A] transition-all cursor-pointer"
+              className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${isLightTheme ? "text-[#475569] hover:text-[#0F172A] hover:bg-black/5" : "text-[#8f8f8f] hover:text-white hover:bg-white/5"}`}
             >
               {workspaceType === "brand" ? "Payments" : "Sent Invoices"}
             </button>
             <button 
               onClick={() => router.push("/branddashboard/nodes")}
-              className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#8f8f8f] light:text-[#475569] hover:text-white light:hover:text-[#0F172A] transition-all cursor-pointer"
+              className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${isLightTheme ? "text-[#475569] hover:text-[#0F172A] hover:bg-black/5" : "text-[#8f8f8f] hover:text-white hover:bg-white/5"}`}
             >
               {workspaceType === "brand" ? "Rewards" : "Payout Split Nodes"}
             </button>
             <button 
               onClick={() => router.push("/branddashboard/wallet")}
-              className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#8f8f8f] light:text-[#475569] hover:text-white light:hover:text-[#0F172A] transition-all cursor-pointer flex items-center gap-1.5"
+              className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${isLightTheme ? "text-[#475569] hover:text-[#0F172A] hover:bg-black/5" : "text-[#8f8f8f] hover:text-white hover:bg-white/5"}`}
             >
               <Wallet className="w-3.5 h-3.5" />
               Wallet
@@ -1141,7 +1141,7 @@ export default function BrandDashboardPage() {
               </>
             )}
             <div className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-full bg-white/[0.05] border border-white/20 flex items-center justify-center font-bold text-xs text-white">
+              <div className={`h-8 w-8 rounded-full border flex items-center justify-center font-bold text-xs ${isLightTheme ? "bg-black/5 border-black/10 text-black" : "bg-white/[0.05] border-white/20 text-white"}`}>
                 {state.user?.fullName ? state.user.fullName.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2) : "AD"}
               </div>
               <span className={`text-xs font-bold hidden sm:inline ${isLightTheme ? "text-[#0F172A]" : "text-[#E5E5EA]"}`}>
@@ -1169,16 +1169,23 @@ export default function BrandDashboardPage() {
       </header>
 
       {/* Hero Header Space */}
-      <section className={`border-b py-6 shadow-sm transition-colors ${isLightTheme ? "bg-[#F8FAFC] border-black/10" : "bg-[#000000] border-white/20"}`}>
+      <section className={`border-b py-6 shadow-sm transition-colors ${isLightTheme ? "bg-white border-black/10" : "bg-[#000000] border-white/20"}`}>
         <div className="max-w-[1520px] mx-auto px-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
             {workspaceType === "brand" ? (
               <>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-[#4B6BFB] bg-[#4B6BFB]/10 px-2 py-0.5 rounded">Active Campaign</span>
-                  <span className={`text-xs font-mono ${isLightTheme ? "text-[#475569]" : "text-neutral-400"}`}>ID: ADIDAS-2026-Q3</span>
+                  <span className={`text-xs font-mono font-bold ${isLightTheme ? "text-[#475569]" : "text-neutral-400"}`}>
+                    ID: {state.user?.activeWorkspaceId || state.user?.agncyId || "WS-2026-Q3"}
+                  </span>
+                  <span className={`h-3 w-[1px] ${isLightTheme ? "bg-black/20" : "bg-white/20"}`} />
+                  <span className={`text-xs font-mono font-bold ${isLightTheme ? "text-[#475569]" : "text-neutral-400"}`}>
+                    {state.user?.email || "adidas.admin@company.com"}
+                  </span>
                 </div>
-                <h1 className={`text-2xl font-bold mt-1 tracking-tight ${isLightTheme ? "text-[#0F172A]" : "text-white"}`}>Adidas Executive Billing</h1>
+                <h1 className={`text-2xl font-bold mt-1 tracking-tight ${isLightTheme ? "text-[#0F172A]" : "text-white"}`}>
+                  {state.workspaces.find(w => w.id === state.activeWorkspaceId)?.name || (state.user?.fullName ? `${state.user.fullName}'s Workspace` : "Adidas Workspace")}
+                </h1>
               </>
             ) : (
               <>
@@ -1236,7 +1243,7 @@ export default function BrandDashboardPage() {
 
               const stats = workspaceType === "brand"
                 ? [
-                    { label: "Total Paid Volume", value: `$${displayPaidVolume.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, trend: "+12.4%", icon: TrendingUp },
+                    { label: "Total Paid Volume", value: `$${displayPaidVolume.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, trend: undefined, icon: TrendingUp },
                     {
                       label: "Awaiting Approval",
                       value: `$${awaitingTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
