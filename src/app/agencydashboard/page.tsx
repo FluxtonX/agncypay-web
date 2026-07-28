@@ -21,6 +21,7 @@ import {
   FileText,
   DollarSign,
   ChevronRight,
+  Eye,
   User,
   LogOut,
   Calendar,
@@ -111,12 +112,8 @@ export default function AgencyDashboardPage() {
   // Widget invoices state
   const [widgetInvoices, setWidgetInvoices] = useState<any[]>([]);
   const [isFetchingInvoices, setIsFetchingInvoices] = useState(true);
-  const [selectedPendingIds, setSelectedPendingIds] = useState<string[]>([]);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [linkedCards, setLinkedCards] = useState<any[]>([]);
-  const [isPayingAll, setIsPayingAll] = useState(false);
-  const [payingInvoiceId, setPayingInvoiceId] = useState<string | null>(null);
-  const [payoutingInvoiceId, setPayoutingInvoiceId] = useState<string | null>(null);
 
   const [mounted, setMounted] = useState(false);
   const [registeredBrands, setRegisteredBrands] = useState<FirestoreUser[]>([]);
@@ -129,16 +126,23 @@ export default function AgencyDashboardPage() {
   useEffect(() => {
     setMounted(true);
     async function loadData() {
-      const brands = await getRegisteredBrands();
-      const userEmail = state.user?.email || "";
-      const accountType = state.user?.accountType || "agency";
+      const brandsData = await getRegisteredBrands();
+      const talentsData = await getRegisteredTalents();
       
-      let talents: FirestoreUser[] = [];
-      if (accountType === "agency" && userEmail) {
-        talents = await getRegisteredTalentsByAgency(userEmail);
-      } else {
-        talents = await getRegisteredTalents();
-      }
+      const MOCK_BRANDS: FirestoreUser[] = [
+        { uid: "b-1", email: "billing@nike.com", fullName: "Nike Brand Team", workspaceName: "Nike Global", accountType: "brand", agencyId: "AG-10001", createdAt: new Date().toISOString() },
+        { uid: "b-2", email: "finance@adidas.com", fullName: "Adidas North America", workspaceName: "Adidas Corp", accountType: "brand", agencyId: "AG-10002", createdAt: new Date().toISOString() },
+        { uid: "b-3", email: "ap@redbull.com", fullName: "Red Bull Media House", workspaceName: "Red Bull Media", accountType: "brand", agencyId: "AG-10003", createdAt: new Date().toISOString() },
+      ];
+      const MOCK_TALENTS: FirestoreUser[] = [
+        { uid: "t-1", email: "alex.rivas@creator.co", fullName: "Alex Rivas", workspaceName: "Alex Studio", accountType: "talent_independent", agencyId: "AG-20001", createdAt: new Date().toISOString() },
+        { uid: "t-2", email: "elena.rostova@talent.io", fullName: "Elena Rostova", workspaceName: "Elena Vlog", accountType: "talent_independent", agencyId: "AG-20002", createdAt: new Date().toISOString() },
+        { uid: "t-3", email: "marcus.chen@studio.com", fullName: "Marcus Chen", workspaceName: "Marcus Media", accountType: "talent_independent", agencyId: "AG-20003", createdAt: new Date().toISOString() },
+      ];
+
+      const brands = brandsData && brandsData.length > 0 ? brandsData : MOCK_BRANDS;
+      const talents = talentsData && talentsData.length > 0 ? talentsData : MOCK_TALENTS;
+
       setRegisteredBrands(brands);
       setRegisteredTalents(talents);
       if (brands.length > 0) setSelectedBrandEmail(brands[0].email);
@@ -192,7 +196,6 @@ export default function AgencyDashboardPage() {
 
   // New invoice state hooks
   const [isNewInvoiceOpen, setIsNewInvoiceOpen] = useState(false);
-  const [showAllPaid, setShowAllPaid] = useState(false);
   const [newCampaign, setNewCampaign] = useState("");
   const [newTalent, setNewTalent] = useState("");
   const [newAmount, setNewAmount] = useState("");
@@ -297,48 +300,6 @@ export default function AgencyDashboardPage() {
     };
   }, [state.user]);
 
-  const handlePayInvoice = (id: string) => {
-    const userEmail = state.user?.email || "";
-    setPayingInvoiceId(id);
-    setTimeout(() => {
-      setWidgetInvoices((prev) => {
-        const next = prev.map((inv) => (inv.id === id ? { ...inv, status: "paid" } : inv));
-        localStorage.setItem(`brand_widget_invoices_${userEmail}`, JSON.stringify(next));
-        
-        const paidInvoice = prev.find((inv) => inv.id === id);
-        if (paidInvoice) {
-          const amt = paidInvoice.amount;
-          setLivePaidVolume((v) => {
-            const nv = v + amt;
-            localStorage.setItem(`brand_stats_paid_volume_${userEmail}`, nv.toString());
-            return nv;
-          });
-          setLiveAutosplitSavings((v) => {
-            const nv = v + amt * 0.015;
-            localStorage.setItem(`brand_stats_autosplit_savings_${userEmail}`, nv.toString());
-            return nv;
-          });
-
-          // Add notification
-          const newNotif = {
-            id: `notif-${Date.now()}`,
-            message: `Brand paid invoice to ${paidInvoice.agency} ($${paidInvoice.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}) for ${paidInvoice.campaign}`,
-            timestamp: "Just now",
-            unread: true,
-          };
-          setNotifications((notifs) => {
-            const updated = [newNotif, ...notifs];
-            localStorage.setItem(`agency_notifications_${userEmail}`, JSON.stringify(updated));
-            return updated;
-          });
-        }
-        return next;
-      });
-      setPayingInvoiceId(null);
-      window.dispatchEvent(new Event("syncAgencyDashboard"));
-    }, 1500);
-  };
-
   const handleCreateInvoice = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newCampaign || !selectedBrandEmail || !newAmount || !newDue) return;
@@ -415,61 +376,6 @@ export default function AgencyDashboardPage() {
     }
   };
 
-  const handlePayAll = async () => {
-    const userEmail = state.user?.email || "";
-    setIsPayingAll(true);
-    setProcessingStage("verifying");
-
-    setTimeout(async () => {
-      setProcessingStage("routing");
-      try {
-        const unpaid = widgetInvoices.filter((inv) => inv.status === "pending");
-        const totalPaid = unpaid.reduce((sum, inv) => sum + inv.amount, 0);
-
-        // Perform updates in Firestore
-        for (const inv of unpaid) {
-          await updateInvoiceStatus(inv.id, "paid", "pending");
-        }
-
-        if (totalPaid > 0) {
-          setLivePaidVolume((v) => {
-            const nv = v + totalPaid;
-            localStorage.setItem(`brand_stats_paid_volume_${userEmail}`, nv.toString());
-            return nv;
-          });
-          setLiveAutosplitSavings((v) => {
-            const nv = v + totalPaid * 0.015;
-            localStorage.setItem(`brand_stats_autosplit_savings_${userEmail}`, nv.toString());
-            return nv;
-          });
-
-          // Add notifications to localStorage
-          const localNotifs = localStorage.getItem(`agency_notifications_${userEmail}`);
-          const notifs = localNotifs ? JSON.parse(localNotifs) : [];
-          const newNotifs = unpaid.map((inv, idx) => ({
-            id: `notif-${Date.now()}-${idx}`,
-            message: `Brand paid invoice to ${inv.agency} ($${inv.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}) for ${inv.campaign}`,
-            timestamp: "Just now",
-            unread: true,
-          }));
-          localStorage.setItem(`agency_notifications_${userEmail}`, JSON.stringify([...newNotifs, ...notifs]));
-        }
-
-        // Show success state
-        setProcessingStage("success");
-        setTimeout(() => {
-          setIsPayingAll(false);
-          setProcessingStage("idle");
-          window.dispatchEvent(new Event("syncAgencyDashboard"));
-        }, 1800);
-      } catch (e) {
-        console.error("Error paying all invoices in Firestore:", e);
-        setIsPayingAll(false);
-        setProcessingStage("idle");
-      }
-    }, 1200);
-  };
-
   const masterIntegrations = [
     { label: "QuickBooks", src: "/quickbook.png" },
     { label: "Xero", src: "/xero.png" },
@@ -506,118 +412,8 @@ export default function AgencyDashboardPage() {
   // Combined Manual and CRM Synced Invoices
   const combinedAllInvoices = [...widgetInvoices, ...crmMappedInvoices];
 
-  // Derived Pending and Paid invoice lists
+  // Derived Pending invoice list
   const pendingInvoices = combinedAllInvoices.filter((inv) => inv.status === "pending");
-  const paidInvoices = combinedAllInvoices.filter((inv) => inv.status === "paid");
-
-  const pendingTotal = pendingInvoices.reduce((sum, inv) => sum + inv.amount, 0);
-  const pendingTotalWithFee = pendingTotal + (pendingTotal * 0.015);
-
-  const selectedPendingInvoices = pendingInvoices.filter((inv) => selectedPendingIds.includes(inv.id));
-  const selectedPendingTotal = selectedPendingInvoices.reduce((sum, inv) => sum + inv.amount, 0);
-  const selectedTotalWithFee = selectedPendingTotal + (selectedPendingTotal * 0.015);
-
-  const paidTotal = paidInvoices.reduce((sum, inv) => sum + inv.amount, 0);
-
-  const handleSelectAllPending = () => {
-    if (selectedPendingIds.length === pendingInvoices.length) {
-      setSelectedPendingIds([]);
-    } else {
-      setSelectedPendingIds(pendingInvoices.map((i) => i.id));
-    }
-  };
-
-  const handleTogglePendingSelect = (id: string) => {
-    setSelectedPendingIds((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
-    );
-  };
-
-  const handleBatchPaySelected = async () => {
-    if (selectedPendingIds.length === 0) return;
-    const userEmail = state.user?.email || "";
-    setIsPayingAll(true);
-    setProcessingStage("verifying");
-
-    setTimeout(async () => {
-      setProcessingStage("routing");
-      try {
-        const selectedInvoices = pendingInvoices.filter((inv) => selectedPendingIds.includes(inv.id));
-        const totalPaid = selectedInvoices.reduce((sum, inv) => sum + inv.amount, 0);
-
-        for (const inv of selectedInvoices) {
-          await updateInvoiceStatus(inv.id, "paid", "pending");
-        }
-
-        if (totalPaid > 0) {
-          setLivePaidVolume((v) => {
-            const nv = v + totalPaid;
-            localStorage.setItem(`brand_stats_paid_volume_${userEmail}`, nv.toString());
-            return nv;
-          });
-          setLiveAutosplitSavings((v) => {
-            const nv = v + totalPaid * 0.015;
-            localStorage.setItem(`brand_stats_autosplit_savings_${userEmail}`, nv.toString());
-            return nv;
-          });
-
-          const localNotifs = localStorage.getItem(`agency_notifications_${userEmail}`);
-          const notifs = localNotifs ? JSON.parse(localNotifs) : [];
-          const newNotifs = selectedInvoices.map((inv, idx) => ({
-            id: `notif-${Date.now()}-${idx}`,
-            message: `Brand paid invoice to ${inv.agency} ($${inv.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}) for ${inv.campaign}`,
-            timestamp: "Just now",
-            unread: true,
-          }));
-          localStorage.setItem(`agency_notifications_${userEmail}`, JSON.stringify([...newNotifs, ...notifs]));
-        }
-
-        setSelectedPendingIds([]);
-        setProcessingStage("success");
-        setTimeout(() => {
-          setIsPayingAll(false);
-          setProcessingStage("idle");
-          window.dispatchEvent(new Event("syncAgencyDashboard"));
-        }, 1500);
-      } catch (e) {
-        console.error("Error batch paying selected invoices:", e);
-        setIsPayingAll(false);
-        setProcessingStage("idle");
-      }
-    }, 1200);
-  };
-
-  const handlePayoutTalent = (id: string) => {
-    setPayoutingInvoiceId(id);
-    setTimeout(() => {
-      setWidgetInvoices((prev) => {
-        const next = prev.map((inv) => (inv.id === id ? { ...inv, talentPayoutStatus: "disbursed" } : inv));
-        localStorage.setItem("brand_widget_invoices", JSON.stringify(next));
-
-        const targetInvoice = prev.find((inv) => inv.id === id);
-        if (targetInvoice) {
-          const totalAmount = targetInvoice.amount;
-          const agencyFee = totalAmount * 0.15;
-          const talentPayout = totalAmount - agencyFee;
-
-          const newNotif = {
-            id: `notif-${Date.now()}`,
-            message: `${targetInvoice.agency} paid talent ${targetInvoice.talent} ($${talentPayout.toLocaleString(undefined, { minimumFractionDigits: 2 })}) after deducting 15% agency fee ($${agencyFee.toLocaleString(undefined, { minimumFractionDigits: 2 })})`,
-            timestamp: "Just now",
-            unread: true,
-          };
-          setNotifications((notifs) => {
-            const updated = [newNotif, ...notifs];
-            localStorage.setItem("agency_notifications", JSON.stringify(updated));
-            return updated;
-          });
-        }
-        return next;
-      });
-      setPayoutingInvoiceId(null);
-      window.dispatchEvent(new Event("syncAgencyDashboard"));
-    }, 1500);
-  };
 
   // Invoices state
   const [invoices, setInvoices] = useState<InvoiceMock[]>([]);
@@ -856,10 +652,22 @@ export default function AgencyDashboardPage() {
               onClick={() => router.push("/agencydashboard/invoices")}
               className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#8f8f8f] light:text-[#475569] hover:text-white light:hover:text-[#0F172A] transition-all cursor-pointer"
             >
-              {workspaceType === "brand" ? "Payments" : "Invoice History"}
+              Invoice History
             </button>
-            
-            
+            <button 
+              onClick={() => router.push("/agencydashboard/wallet")}
+              className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#8f8f8f] light:text-[#475569] hover:text-white light:hover:text-[#0F172A] transition-all cursor-pointer flex items-center gap-1.5"
+            >
+              <Wallet className="w-3.5 h-3.5" />
+              Wallet
+            </button>
+            <button 
+              onClick={() => router.push("/agencydashboard/contacts")}
+              className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#8f8f8f] light:text-[#475569] hover:text-white light:hover:text-[#0F172A] transition-all cursor-pointer flex items-center gap-1.5"
+            >
+              <Users className="w-3.5 h-3.5" />
+              Contacts
+            </button>
           </nav>
  
           <div className="flex items-center gap-3">
@@ -1021,319 +829,101 @@ export default function AgencyDashboardPage() {
               );
               });
             })()}
-          </div>          {/* TABLE 1: PENDING INVOICES (PLATFORM & MANUAL WITH BATCH PAY) */}
-          <div className={`rounded-[13px] border p-4 sm:p-5 shadow-sm flex flex-col min-h-[280px] mt-6 ${
-            isLightTheme ? "bg-white border-black/10 text-[#0F172A]" : "bg-[#0D0D0D] border-[#3a3a3a] text-white"
-          }`}>
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 pb-3 border-b border-white/10 light:border-black/10 gap-3">
-              <div className="flex items-center gap-3">
-                <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg p-1.5 shadow-sm border ${
-                  isLightTheme ? "bg-black/5 border-black/15 text-[#0F172A]" : "bg-[#082315] border-[#10b95f]/30 text-[#70ff9e]"
-                }`}>
-                  <FileText className={`h-4 w-4 ${isLightTheme ? "text-[#0F172A]" : "text-[#70ff9e]"}`} />
-                </div>
-                <div className="text-left">
-                  <div className="flex items-center gap-2">
-                    <h3 className={`text-xs font-bold uppercase tracking-wider ${isLightTheme ? "text-[#0F172A]" : "text-white"}`}>
-                      Pending Invoices ({pendingInvoices.length})
-                    </h3>
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold uppercase bg-amber-500/10 text-amber-500 border border-amber-500/25">
-                      Awaiting Payment
-                    </span>
-                  </div>
-                  <p className={`text-[10px] ${isLightTheme ? "text-[#475569]" : "text-neutral-500"} mt-0.5`}>
-                    {workspaceType === "brand" ? "Pending approval & settlement" : "Awaiting payer settlement"}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 flex-wrap">
-                {pendingInvoices.length > 0 && workspaceType === "brand" && (
-                  <>
-                    <button
-                      type="button"
-                      onClick={handleSelectAllPending}
-                      className={`h-7 px-3 text-[10px] font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer border ${
-                        isLightTheme ? "bg-black/5 border-black/15 text-[#0F172A] hover:bg-black/10" : "bg-neutral-900 border-[#3a3a3a] text-neutral-300 hover:text-white"
-                      }`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selectedPendingIds.length === pendingInvoices.length && pendingInvoices.length > 0}
-                        onChange={handleSelectAllPending}
-                        className="rounded border-neutral-700 bg-black text-[#70ff9e] focus:ring-0 cursor-pointer"
-                      />
-                      <span>Select All ({pendingInvoices.length})</span>
-                    </button>
-
-                    {selectedPendingIds.length > 0 ? (
-                      <button
-                        onClick={handleBatchPaySelected}
-                        disabled={isPayingAll || payingInvoiceId !== null}
-                        className="h-7 px-3.5 bg-white light:bg-[#0F172A] text-black light:text-white hover:bg-neutral-200 text-[10px] font-extrabold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer shadow active:scale-[0.98]"
-                      >
-                        {isPayingAll ? (
-                          <>
-                            <Loader2 className="h-3 w-3 animate-spin" />
-                            Processing...
-                          </>
-                        ) : (
-                          <>
-                            <Sparkles className="h-3 w-3" />
-                            Pay Selected ({selectedPendingIds.length}) · ${selectedTotalWithFee.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                          </>
-                        )}
-                      </button>
-                    ) : (
-                      <button
-                        onClick={handlePayAll}
-                        disabled={isPayingAll || payingInvoiceId !== null}
-                        className="h-7 px-3.5 bg-white/10 hover:bg-white/20 border border-white/20 text-white light:text-[#0F172A] text-[10px] font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer"
-                      >
-                        <Sparkles className="h-3 w-3" />
-                        Pay All · ${pendingTotalWithFee.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </button>
-                    )}
-                  </>
-                )}
-
-                <Link
-                  href="/agencydashboard/invoices"
-                  className={`h-7 px-3 text-[10px] font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer border ${
-                    isLightTheme
-                      ? "bg-black/5 border-black/15 text-[#0F172A] hover:bg-black/10"
-                      : "bg-neutral-900 border-[#3a3a3a] text-neutral-300 hover:text-white"
-                  }`}
-                >
-                  <span>View All</span>
-                  <ArrowUpRight className="h-3 w-3" />
-                </Link>
-              </div>
-            </div>
-
-            {isFetchingInvoices ? (
-              <InvoiceFetchingLoader title="Loading Pending Invoices" subtitle="Fetching platform and manual ledgers..." count={2} />
-            ) : pendingInvoices.length === 0 ? (
-              <div className="flex flex-col items-center justify-center flex-grow py-8 text-xs text-neutral-500 text-center font-semibold">
-                <CheckCircle2 className="h-7 w-7 text-[#10b95f] mx-auto mb-2 opacity-80" />
-                No pending invoices awaiting payment.
-              </div>
-            ) : (
-              <div className="overflow-x-auto flex-grow">
-                <table className="w-full text-left border-collapse text-xs select-text">
-                  <thead>
-                    <tr className="border-b border-[#222] text-neutral-500 font-bold uppercase tracking-wider text-[10px]">
-                      {workspaceType === "brand" && <th className="pb-2 pl-2 w-8"></th>}
-                      <th className="pb-2">Invoice #</th>
-                      <th className="pb-2">{workspaceType === "brand" ? "Agency / Issuer" : "Payer"}</th>
-                      <th className="pb-2">Campaign & Talent</th>
-                      <th className="pb-2">Due Date</th>
-                      <th className="pb-2">Amount</th>
-                      <th className="pb-2">Status</th>
-                      <th className="pb-2 text-right pr-2">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[#222]">
-                    {pendingInvoices.map((inv) => {
-                      const isSelected = selectedPendingIds.includes(inv.id);
-
-                      return (
-                        <tr key={inv.id} className={`hover:bg-white/[0.02] transition-colors group ${isSelected ? "bg-white/[0.03]" : ""}`}>
-                          {workspaceType === "brand" && (
-                            <td className="py-2.5 pl-2">
-                              <input
-                                type="checkbox"
-                                checked={isSelected}
-                                onChange={() => handleTogglePendingSelect(inv.id)}
-                                className="h-3.5 w-3.5 rounded border-neutral-700 bg-black text-emerald-400 focus:ring-0 cursor-pointer"
-                              />
-                            </td>
-                          )}
-                          <td className="py-2.5 font-mono font-bold text-neutral-300 flex items-center gap-1.5">
-                            {inv.isCrmSynced && inv.providerLogo && (
-                              <img src={inv.providerLogo} alt="CRM" className="h-3.5 w-3.5 object-contain shrink-0" title="CRM Synced Invoice" />
-                            )}
-                            <span>#{inv.id.substring(0, 8)}</span>
-                          </td>
-                          <td className="py-2.5 font-bold text-white max-w-[130px] truncate" title={inv.agency}>
-                            {inv.agency}
-                          </td>
-                          <td className="py-2.5">
-                            <span className="font-bold text-white block">{inv.campaign}</span>
-                            <span className="text-[10px] text-neutral-400">Talent: {inv.talent}</span>
-                          </td>
-                          <td className="py-2.5 text-neutral-400">{inv.dueDate}</td>
-                          <td className="py-2.5 font-mono font-bold text-white">
-                            ${inv.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                          </td>
-                          <td className="py-2.5">
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold uppercase bg-amber-500/10 text-amber-500 border border-amber-500/25">
-                              Pending Payer
-                            </span>
-                          </td>
-                          <td className="py-2.5 text-right pr-2">
-                            {workspaceType === "brand" ? (
-                              <button
-                                type="button"
-                                onClick={() => router.push(`/pay/${inv.id}?mode=logged_in&returnTo=dashboard`)}
-                                className="h-6 px-2.5 bg-white text-black hover:bg-neutral-200 font-bold rounded text-[9px] transition-all cursor-pointer inline-flex items-center justify-center active:scale-[0.98]"
-                              >
-                                Pay Now
-                              </button>
-                            ) : (
-                              <span className="text-[9px] font-bold text-neutral-500">Awaiting Payer</span>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-
-          {/* TABLE 2: PAID INVOICES (PLATFORM & MANUAL PAYOUTS) */}
-          <div className={`rounded-[13px] border p-4 sm:p-5 shadow-sm flex flex-col min-h-[280px] mt-6 ${
-            isLightTheme ? "bg-white border-black/10 text-[#0F172A]" : "bg-[#0D0D0D] border-[#3a3a3a] text-white"
-          }`}>
-            <div className="flex items-center justify-between mb-4 pb-3 border-b border-white/10 light:border-black/10">
-              <div className="flex items-center gap-3">
-                <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg p-1.5 shadow-sm border ${
-                  isLightTheme ? "bg-black/5 border-black/15 text-[#0F172A]" : "bg-[#082315] border-[#10b95f]/30 text-[#70ff9e]"
-                }`}>
-                  <Check className={`h-4 w-4 ${isLightTheme ? "text-[#0F172A]" : "text-[#70ff9e]"}`} />
-                </div>
-                <div className="text-left">
-                  <div className="flex items-center gap-2">
-                    <h3 className={`text-xs font-bold uppercase tracking-wider ${isLightTheme ? "text-[#0F172A]" : "text-white"}`}>
-                      Paid Invoices ({paidInvoices.length})
-                    </h3>
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase bg-[#082315] text-[#70ff9e] border border-[#10b95f]/30">
-                      Paid & Settled
-                    </span>
-                  </div>
-                  <p className={`text-[10px] ${isLightTheme ? "text-[#475569]" : "text-neutral-500"} mt-0.5`}>Disbursement ledger for settled campaigns</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <span className={`text-xs font-semibold ${isLightTheme ? "text-[#475569]" : "text-neutral-400"}`}>
-                  Total Settled: <span className={`font-bold ${isLightTheme ? "text-[#0F172A]" : "text-white"}`}>${paidTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+          </div>          {/* Pending Invoices Table */}
+          <div className="bg-[#050505] rounded-2xl border border-white/20 shadow-sm overflow-hidden mt-6">
+            <div className="p-6 border-b border-white/20 bg-white/[0.01] flex justify-between items-center">
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-white tracking-tight">agncypay</span>
+                <span className="text-neutral-500 font-medium text-xs">•</span>
+                <span className="text-neutral-400 font-semibold text-xs">
+                  Pending Invoices (Unpaid)
                 </span>
-                <Link
-                  href="/agencydashboard/invoices"
-                  className={`h-7 px-3 text-[10px] font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer border ${
-                    isLightTheme
-                      ? "bg-black/5 border-black/15 text-[#0F172A] hover:bg-black/10"
-                      : "bg-neutral-900 border-[#3a3a3a] text-neutral-300 hover:text-white"
-                  }`}
-                >
-                  <span>View All ({paidInvoices.length})</span>
-                  <ArrowUpRight className="h-3 w-3" />
-                </Link>
               </div>
             </div>
-
-            {isFetchingInvoices ? (
-              <InvoiceFetchingLoader title="Loading Paid Invoices" subtitle="Fetching settled disbursement ledger..." count={2} />
-            ) : paidInvoices.length === 0 ? (
-              <div className={`flex flex-col items-center justify-center flex-grow py-8 text-xs ${isLightTheme ? "text-[#475569]" : "text-neutral-500"} text-center font-semibold`}>
-                No paid invoices in ledger yet.
-              </div>
-            ) : (
-              <div className="overflow-x-auto flex-grow">
-                <table className="w-full text-left border-collapse text-xs select-text">
+            
+            <div className="overflow-x-auto">
+              {isFetchingInvoices ? (
+                <InvoiceFetchingLoader title="Loading Pending Invoices" subtitle="Fetching platform and manual ledgers..." count={2} />
+              ) : pendingInvoices.length === 0 ? (
+                <div className="py-12 flex flex-col items-center justify-center text-center bg-black/40">
+                  <CheckCircle2 className="h-8 w-8 text-[#10b95f] mx-auto mb-3 opacity-80" />
+                  <p className="text-sm font-bold text-white">No pending invoices</p>
+                  <p className="text-xs text-neutral-400 mt-1">All campaign ledgers are currently settled.</p>
+                </div>
+              ) : (
+                <table className="w-full text-left text-sm">
                   <thead>
-                    <tr className={`border-b border-white/10 light:border-black/10 ${isLightTheme ? "text-[#475569]" : "text-neutral-500"} font-bold uppercase tracking-wider text-[10px]`}>
-                      <th className="pb-2">Invoice #</th>
-                      <th className="pb-2">{workspaceType === "brand" ? "Agency / Issuer" : "Payer"}</th>
-                      <th className="pb-2">Campaign & Talent</th>
-                      <th className="pb-2">Due Date</th>
-                      <th className="pb-2">Amount</th>
-                      <th className="pb-2">Status</th>
-                      <th className="pb-2 text-right pr-2">Action</th>
+                    <tr className="border-b border-white/20 bg-white/[0.02] text-xs font-semibold uppercase tracking-wider text-[#8f8f8f]">
+                      <th className="py-4 pl-6 font-semibold">Invoice</th>
+                      <th className="py-4 font-semibold">Payer</th>
+                      <th className="py-4 font-semibold">Job</th>
+                      <th className="py-4 font-semibold">Total</th>
+                      <th className="py-4 pr-6 font-semibold text-right">Action</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-white/10 light:divide-black/10">
-                    {(showAllPaid ? paidInvoices : paidInvoices.slice(0, 3)).map((inv) => {
-                      const isDisbursed = inv.talentPayoutStatus === "disbursed";
-
-                      return (
-                        <tr key={inv.id} className="hover:bg-white/[0.01] light:hover:bg-black/[0.02] transition-colors group">
-                          <td className={`py-2.5 font-mono font-bold ${isLightTheme ? "text-[#0F172A]" : "text-neutral-300"} flex items-center gap-1.5`}>
+                  <tbody className="divide-y divide-white/10">
+                    {pendingInvoices.slice(0, 4).map((inv) => (
+                      <tr key={inv.id} className="transition-colors hover:bg-white/[0.02]">
+                        <td className="py-4 pl-6 text-xs font-mono text-[#8f8f8f]">
+                          <div className="flex items-center gap-1.5">
                             {inv.isCrmSynced && inv.providerLogo && (
                               <img src={inv.providerLogo} alt="CRM" className="h-3.5 w-3.5 object-contain shrink-0" title="CRM Synced Invoice" />
                             )}
-                            <span>#{inv.id.substring(0, 8)}</span>
-                          </td>
-                          <td className={`py-2.5 font-bold ${isLightTheme ? "text-[#0F172A]" : "text-white"} max-w-[130px] truncate`} title={inv.agency}>
-                            {inv.agency}
-                          </td>
-                          <td className="py-2.5">
-                            <span className={`font-bold block ${isLightTheme ? "text-[#0F172A]" : "text-white"}`}>{inv.campaign}</span>
-                            <span className={`text-[10px] ${isLightTheme ? "text-[#475569]" : "text-neutral-400"}`}>Talent: {inv.talent}</span>
-                          </td>
-                          <td className={`py-2.5 ${isLightTheme ? "text-[#475569]" : "text-neutral-400"}`}>{inv.dueDate}</td>
-                          <td className={`py-2.5 font-mono font-bold ${isLightTheme ? "text-[#0F172A]" : "text-white"}`}>
-                            ${inv.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                          </td>
-                          <td className="py-2.5">
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold uppercase bg-green-500/10 text-green-500 border border-green-500/25">
-                              Paid
-                            </span>
-                          </td>
-                          <td className="py-2.5 text-right pr-2">
-                            {workspaceType === "brand" ? (
-                              <span className="text-[9px] font-bold text-emerald-400">Settled</span>
-                            ) : isDisbursed ? (
-                              <span className={`text-[9px] font-bold ${isLightTheme ? "text-[#475569]" : "text-neutral-400"}`}>Talent Paid (85%)</span>
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={() => router.push(`/payout/${inv.id}?returnTo=dashboard`)}
-                                className={`h-6 px-2.5 font-bold rounded text-[9px] transition-all cursor-pointer inline-flex items-center justify-center active:scale-[0.98] ${
-                                  isLightTheme ? "bg-[#0F172A] text-white hover:bg-[#1E293B]" : "bg-emerald-500 text-black hover:bg-emerald-600"
-                                }`}
-                              >
-                                Payout Talent (85%)
-                              </button>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
+                            <span>#{inv.id.substring(0, 8).toUpperCase()}</span>
+                          </div>
+                        </td>
+                        <td className="py-4 font-bold text-white max-w-[140px] truncate" title={inv.agency}>
+                          {inv.agency}
+                        </td>
+                        <td className="py-4">
+                          <p className="text-white font-medium">{inv.campaign}</p>
+                          <p className="text-[10px] text-[#8f8f8f]">Due {inv.dueDate}</p>
+                        </td>
+                        <td className="py-4 font-bold text-white">
+                          ${inv.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </td>
+                        <td className="py-4 pr-6 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              type="button"
+                              onClick={() => router.push(`/agencydashboard/invoices`)}
+                              className="p-1.5 rounded-lg border border-white/20 hover:bg-white/10 text-white transition-all cursor-pointer flex items-center justify-center"
+                              title="View Invoice Details"
+                            >
+                              <Eye className="h-3.5 w-3.5" />
+                            </button>
+                            <span className="text-[10px] font-bold text-neutral-500">Awaiting Payer</span>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
+              )}
+            </div>
+            
+            {pendingInvoices.length > 4 && (
+              <div className="p-4 bg-white/[0.01] border-t border-white/10 flex justify-center items-center">
+                <button
+                  type="button"
+                  onClick={() => router.push("/agencydashboard/invoices")}
+                  className="px-5 py-2.5 rounded-xl bg-white text-black hover:bg-neutral-200 font-bold text-xs flex items-center gap-2 transition-all shadow-sm cursor-pointer"
+                >
+                  <span>View All ({pendingInvoices.length}) Invoices</span>
+                  <ChevronRight className="h-4 w-4" />
+                </button>
               </div>
             )}
           </div>
 
-          {/* Agency Notifications Banners */}
-          {workspaceType === "agency" && notifications.length > 0 && (
-            <div className="bg-[#050505] rounded-2xl border border-white/20 p-5 shadow-sm mt-6">
-              <h4 className="text-[11px] font-bold text-[#8f8f8f] uppercase tracking-wider flex items-center gap-1.5 mb-4">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                Live Agency Payout Notifications
-              </h4>
-              <div className="max-h-[180px] overflow-y-auto space-y-2 pr-1">
-                {notifications.map((n) => (
-                  <div 
-                    key={n.id} 
-                    className="p-3 bg-[#082315]/40 border border-[#10b95f]/20 rounded-xl flex items-center justify-between gap-4 text-[11px] shadow-sm hover:border-[#10b95f]/30 transition-all"
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="h-5 w-5 rounded-full bg-[#082315] border border-[#10b95f]/30 flex items-center justify-center shrink-0">
-                        <Check className="h-2.5 w-2.5 text-[#70ff9e]" />
-                      </div>
-                      <span className="text-[#e1e1e6] font-medium truncate">{n.message}</span>
-                    </div>
-                    <span className="text-[9px] text-neutral-500 shrink-0 font-semibold">{n.timestamp}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          {/* Open an Account Banner under Pending Invoices */}
+          <div className="mt-6 w-full h-[300px] md:h-[360px] rounded-2xl overflow-hidden shadow-lg transition-transform hover:scale-[1.005] duration-300 relative">
+            <img 
+              src="/models/homepagebottomimage1.png" 
+              alt="Open an Account" 
+              className="w-full h-full object-cover block"
+            />
+          </div>
 
           {/* Empty State for Agency */}
           {workspaceType === "agency" && !activeInvoice && (
@@ -1343,30 +933,6 @@ export default function AgencyDashboardPage() {
               <p className="text-xs text-neutral-400 mt-1.5 max-w-xs mx-auto leading-relaxed">
                 You haven't created any invoices yet. Click the "+ New Invoice" button to issue your first split campaign invoice.
               </p>
-            </div>
-          )}          {/* Agency Notifications Banners */}
-          {workspaceType === "agency" && notifications.length > 0 && (
-            <div className="bg-[#050505] light:bg-white rounded-2xl border border-white/20 light:border-black/10 p-5 shadow-sm mt-6">
-              <h4 className="text-[11px] font-bold text-[#8f8f8f] light:text-[#475569] uppercase tracking-wider flex items-center gap-1.5 mb-4">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                Live Agency Payout Notifications
-              </h4>
-              <div className="max-h-[180px] overflow-y-auto space-y-2 pr-1">
-                {notifications.map((n) => (
-                  <div 
-                    key={n.id} 
-                    className="p-3 bg-[#082315]/40 light:bg-emerald-500/10 border border-[#10b95f]/20 rounded-xl flex items-center justify-between gap-4 text-[11px] shadow-sm hover:border-[#10b95f]/30 transition-all"
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="h-5 w-5 rounded-full bg-[#082315] border border-[#10b95f]/30 flex items-center justify-center shrink-0">
-                        <Check className="h-2.5 w-2.5 text-[#70ff9e]" />
-                      </div>
-                      <span className="text-[#e1e1e6] light:text-[#0F172A] font-medium truncate">{n.message}</span>
-                    </div>
-                    <span className="text-[9px] text-neutral-500 light:text-[#475569] shrink-0 font-semibold">{n.timestamp}</span>
-                  </div>
-                ))}
-              </div>
             </div>
           )}
         </div>
@@ -1438,41 +1004,6 @@ export default function AgencyDashboardPage() {
           </div>
         </div>
       </footer>
-
-      {/* Page-level payment processing loader overlay */}
-      {isPayingAll && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 px-4 backdrop-blur-[2px]">
-          <section className="w-full max-w-[300px] rounded-[10px] border border-[#2f2f2f] bg-[#202020] p-6 text-center shadow-2xl">
-            {(processingStage === "idle" || processingStage === "verifying") && (
-              <>
-                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-[#555] bg-[#151515]">
-                  <Lock className="h-7 w-7 animate-pulse text-white" />
-                </div>
-                <h2 className="mt-5 text-[23px] font-bold tracking-[-0.03em] text-white">verifying</h2>
-                <p className="mt-2 text-[11px] leading-5 text-[#bdbdbd]">Securing the payment session.</p>
-              </>
-            )}
-            {processingStage === "routing" && (
-              <>
-                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-[#555] bg-[#151515]">
-                  <Loader2 className="h-7 w-7 animate-spin text-white" />
-                </div>
-                <h2 className="mt-5 text-[23px] font-bold tracking-[-0.03em] text-white">processing</h2>
-                <p className="mt-2 text-[11px] leading-5 text-[#bdbdbd]">Routing funds to nodes.</p>
-              </>
-            )}
-            {processingStage === "success" && (
-              <>
-                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#16c95f] text-white shadow-[0_0_28px_rgba(22,201,95,0.3)]">
-                  <CheckCircle2 className="h-9 w-9" />
-                </div>
-                <h2 className="mt-5 text-[23px] font-bold tracking-[-0.03em] text-[#69f39b]">Success</h2>
-                <p className="mt-2 text-[11px] leading-5 text-[#c8f5d5]">Invoices successfully paid.</p>
-              </>
-            )}
-          </section>
-        </div>
-      )}
 
       {/* New Invoice Modal */}
       <AnimatePresence>

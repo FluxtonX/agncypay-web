@@ -99,8 +99,12 @@ export default function LoginPage() {
           }
         );
 
-        if (userProfile.accountType === "brand" || userProfile.accountType === "agency") {
-          router.push(safeNextPath || "/branddashboard");
+        if (userProfile.accountType === "agency") {
+          const target = (safeNextPath && !safeNextPath.startsWith("/branddashboard")) ? safeNextPath : "/agencydashboard";
+          router.push(target);
+        } else if (userProfile.accountType === "brand") {
+          const target = (safeNextPath && !safeNextPath.startsWith("/agencydashboard")) ? safeNextPath : "/branddashboard/invoices";
+          router.push(target);
         } else {
           router.push(safeNextPath || "/dashboard");
         }

@@ -21,7 +21,7 @@ export default function VerifyEmailPage() {
   const workspaceType = state.user ? normalizeWorkspaceType(state.user.accountType) : "brand";
   const verificationRoute =
     workspaceType === "brand"
-      ? "/branddashboard"
+      ? "/branddashboard/invoices"
       : workspaceType === "agency"
       ? "/agencydashboard"
       : "/dashboard";

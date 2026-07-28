@@ -83,6 +83,12 @@ export default function NodesDashboardPage() {
   };
 
   useEffect(() => {
+    if (workspaceType === "brand") {
+      router.replace("/branddashboard");
+    }
+  }, [workspaceType, router]);
+
+  useEffect(() => {
     const userEmail = state.user?.email;
     if (!userEmail) return;
 
@@ -190,7 +196,7 @@ export default function NodesDashboardPage() {
               onClick={() => router.push("/branddashboard/nodes")}
               className="px-4 py-1.5 rounded-full text-xs font-bold bg-white light:bg-[#0F172A] text-black light:text-white shadow-sm border border-white/20 light:border-black/10 transition-all cursor-pointer"
             >
-              Rewards
+              Payout Split Nodes
             </button>
             <button 
               onClick={() => router.push("/branddashboard/wallet")}

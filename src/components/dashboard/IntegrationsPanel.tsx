@@ -274,14 +274,14 @@ export function IntegrationsPanel({
             >
               {/* Tile Box */}
               <div
-                className={`w-16 h-16 sm:w-20 sm:h-20 rounded-2xl sm:rounded-3xl border transition-all duration-200 flex items-center justify-center p-3 sm:p-3.5 shadow-md ${
+                className={`w-16 h-16 sm:w-20 sm:h-20 rounded-2xl sm:rounded-3xl border transition-all duration-200 flex items-center justify-center shadow-md overflow-hidden ${
                   isConn
-                    ? "bg-white/[0.08] light:bg-slate-100 border-white/30 light:border-black/30 group-hover:border-white light:group-hover:border-black shadow-sm"
-                    : "bg-white/[0.02] light:bg-slate-50 border-white/15 light:border-black/15 group-hover:border-white/40 light:group-hover:border-black/40 group-hover:scale-105"
+                    ? "bg-white/[0.08] light:bg-slate-100 border-white/30 light:border-black/30 group-hover:border-white light:group-hover:border-black shadow-sm p-0"
+                    : "bg-white/[0.02] light:bg-slate-50 border-white/15 light:border-black/15 group-hover:border-white/40 light:group-hover:border-black/40 group-hover:scale-105 p-3 sm:p-3.5"
                 }`}
               >
                 {isConn ? (
-                  <img src={app.logo} alt={app.name} className="w-full h-full object-contain filter drop-shadow-sm group-hover:scale-110 transition-transform" />
+                  <img src={app.logo} alt={app.name} className="w-full h-full object-cover filter drop-shadow-sm group-hover:scale-110 transition-transform" />
                 ) : (
                   <Plus className="w-6 h-6 sm:w-7 sm:h-7 text-neutral-400 group-hover:text-white light:group-hover:text-black group-hover:scale-110 transition-all duration-200" />
                 )}
@@ -364,8 +364,8 @@ export function IntegrationsPanel({
                       }`}
                     >
                       <div className="flex items-start sm:items-center gap-3.5 min-w-0 flex-1">
-                        <div className="w-12 h-12 shrink-0 rounded-xl bg-black border border-white/15 p-2 flex items-center justify-center shadow-inner">
-                          <img src={app.logo} alt={app.name} className="w-full h-full object-contain" />
+                        <div className="w-12 h-12 shrink-0 rounded-xl bg-black border border-white/15 p-0 overflow-hidden flex items-center justify-center shadow-inner">
+                          <img src={app.logo} alt={app.name} className="w-full h-full object-cover" />
                         </div>
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2 flex-wrap">

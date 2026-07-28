@@ -48,25 +48,6 @@ interface WalletItem {
 
 const INITIAL_CARDS: WalletItem[] = [
   {
-    id: "card-agncy",
-    type: "card",
-    title: "AgncyPay Obsidian Black Card",
-    subtitle: "Real Time, Everytime • 2.5% Cashback",
-    last4: "APPLY",
-    brand: "agncypay",
-    gradient: "from-[#1E293B] via-[#0F172A] to-[#0B1120] border-[#38BDF8]/40 text-white force-white-text",
-    image: "/cards/agncy-card-black.jpg"
-  },
-  {
-    id: "card-treasury",
-    type: "card",
-    title: "AgncyPay Brushed Silver Card",
-    subtitle: "Real Time, Everytime • Treasury Pool",
-    last4: "POOL",
-    brand: "treasury",
-    gradient: "from-[#334155] via-[#1e293b] to-[#0f172a] border-[#cbd5e1]/40 text-slate-100 force-white-text"
-  },
-  {
     id: "card-mc",
     type: "card",
     title: "Mastercard Commercial",
@@ -127,7 +108,7 @@ export default function WalletDashboardPage() {
   const [activeTab, setActiveTab] = useState<"cards" | "accounts">("cards");
   const [cards, setCards] = useState<WalletItem[]>(INITIAL_CARDS);
   const [accounts, setAccounts] = useState<WalletItem[]>(INITIAL_ACCOUNTS);
-  const [selectedItemId, setSelectedItemId] = useState<string | null>("card-treasury");
+  const [selectedItemId, setSelectedItemId] = useState<string | null>("card-mc");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   // New Card/Account Form State
@@ -205,7 +186,7 @@ export default function WalletDashboardPage() {
     }
   };
 
-  const items = activeTab === "cards" ? cards : activeTab === "accounts" ? accounts : cards.filter(c => c.brand === "treasury");
+  const items = activeTab === "cards" ? cards : accounts;
   const selectedItem = items.find(i => i.id === selectedItemId);
 
   const handleAddItem = (e: React.FormEvent) => {
@@ -283,12 +264,14 @@ export default function WalletDashboardPage() {
             >
               Payments
             </button>
-            <button 
-              onClick={() => router.push("/branddashboard/nodes")}
-              className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${isLightTheme ? "text-[#475569] hover:text-[#0F172A] hover:bg-black/5" : "text-[#8f8f8f] hover:text-white hover:bg-white/5"}`}
-            >
-              Rewards
-            </button>
+            {workspaceType !== "brand" && (
+              <button 
+                onClick={() => router.push("/branddashboard/nodes")}
+                className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${isLightTheme ? "text-[#475569] hover:text-[#0F172A] hover:bg-black/5" : "text-[#8f8f8f] hover:text-white hover:bg-white/5"}`}
+              >
+                Payout Split Nodes
+              </button>
+            )}
             <button 
               onClick={() => router.push("/branddashboard/wallet")}
               className={`px-4 py-1.5 rounded-full text-xs font-bold shadow-sm border transition-all cursor-pointer flex items-center gap-1.5 ${isLightTheme ? "bg-[#0F172A] text-white border-black/10 force-white-text" : "bg-white text-black border-white/20"}`}
@@ -370,41 +353,7 @@ export default function WalletDashboardPage() {
           </div>
         </div>
 
-        {/* Brand Treasury Pool Balance & Direct Deposit Summary Banner */}
-        <div className={`mb-8 p-6 rounded-3xl border shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6 transition-colors ${isLightTheme ? "bg-white border-black/10 text-slate-900" : "bg-[#090909] border-white/10 text-white"}`}>
-          <div className="flex items-center gap-4">
-            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center border shrink-0 ${isLightTheme ? "bg-black text-white border-black" : "bg-white text-black border-white"}`}>
-              <Coins className="w-7 h-7" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className={`text-xs font-bold uppercase tracking-wider ${isLightTheme ? "text-slate-500" : "text-neutral-400"}`}>Brand Treasury Pool Balance</h3>
-                <span className={`px-2 py-0.5 rounded text-[9px] font-extrabold uppercase border ${isLightTheme ? "bg-black text-white border-black" : "bg-white text-black border-white"}`}>
-                  Active Float
-                </span>
-              </div>
-              <p className="text-3xl font-black font-mono mt-1">
-                ${depositedBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </p>
-              <p className={`text-xs mt-0.5 ${isLightTheme ? "text-slate-600" : "text-neutral-400"}`}>
-                Available for instant 0-fee invoice settlement & automated disbursements.
-              </p>
-            </div>
-          </div>
 
-          <div className="flex items-center gap-3 w-full md:w-auto">
-            <button
-              onClick={() => {
-                setActiveTab("cards");
-                setSelectedItemId("card-treasury");
-              }}
-              className={`w-full md:w-auto px-6 py-3.5 rounded-2xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg transition-all cursor-pointer ${isLightTheme ? "bg-[#0F172A] text-white hover:bg-slate-800 force-white-text" : "bg-white text-black hover:bg-neutral-200"}`}
-            >
-              <Plus className="w-4 h-4" />
-              <span>Deposit into Treasury</span>
-            </button>
-          </div>
-        </div>
 
         {/* Carousel / Card Selector Row */}
         <div className="flex items-center gap-4 overflow-x-auto pb-4 pt-1 scrollbar-none">
@@ -490,90 +439,60 @@ export default function WalletDashboardPage() {
         {/* Main Content Showcase (Below Cards) */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-8">
           
-          {/* Left Container - Constant Treasury Pool Deposit Hub */}
+          {/* Left Container - Card Details & Controls */}
           <div className={`lg:col-span-7 rounded-3xl border p-8 shadow-xl flex flex-col justify-between min-h-[380px] relative overflow-hidden transition-colors ${isLightTheme ? "bg-white border-black/10" : "bg-[#090909] border-white/10"}`}>
             <div className={`absolute -right-20 -bottom-20 w-80 h-80 rounded-full blur-3xl pointer-events-none ${isLightTheme ? "bg-black/[0.02]" : "bg-white/[0.02]"}`} />
             
             <div>
               <div className={`flex items-center justify-between border-b pb-4 mb-6 ${isLightTheme ? "border-slate-200" : "border-white/10"}`}>
                 <h2 className={`text-lg font-black flex items-center gap-2 ${isLightTheme ? "text-[#0F172A]" : "text-white"}`}>
-                  Treasury Pool Deposit Hub
+                  Card Details & Settings
                 </h2>
                 <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
-                  Active Settlement Float
+                  Active Card
                 </span>
               </div>
 
-              <div className={`p-6 rounded-2xl border ${isLightTheme ? "bg-slate-50 border-slate-200" : "bg-white/[0.02] border-white/10"}`}>
-                <div className="flex items-center justify-between mb-6 pb-4 border-b border-white/10 light:border-black/10">
+              <div className={`p-6 rounded-2xl border ${isLightTheme ? "bg-slate-50 border-slate-200" : "bg-white/[0.02] border-white/10"} mb-4`}>
+                <div className="flex items-center justify-between mb-4">
                   <div>
-                    <h4 className={`text-sm font-black ${isLightTheme ? "text-[#0F172A]" : "text-white"}`}>Deposit Funds</h4>
-                    <p className={`text-[11px] ${isLightTheme ? "text-slate-500" : "text-neutral-400"}`}>Instant 0-fee settlement balance top-up</p>
+                    <h4 className={`text-sm font-black ${isLightTheme ? "text-[#0F172A]" : "text-white"}`}>{selectedItem?.title}</h4>
+                    <p className={`text-[11px] ${isLightTheme ? "text-slate-500" : "text-neutral-400"}`}>{selectedItem?.subtitle}</p>
                   </div>
                   <div className="text-right">
-                    <span className={`text-xs block ${isLightTheme ? "text-slate-500" : "text-neutral-400"}`}>Available Treasury Balance</span>
-                    <span className={`text-lg font-mono font-black ${isLightTheme ? "text-[#0F172A]" : "text-white"}`}>${depositedBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    <span className={`text-xs block ${isLightTheme ? "text-slate-500" : "text-neutral-400"}`}>Card Number</span>
+                    <span className={`text-sm font-mono font-bold ${isLightTheme ? "text-[#0F172A]" : "text-white"}`}>{selectedItem?.last4 === "APPLY" ? "APPLY" : `•••• •••• •••• ${selectedItem?.last4}`}</span>
                   </div>
                 </div>
-
-                {depositSuccessMsg ? (
-                  <div className="py-6 text-center">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center mx-auto mb-2 ${isLightTheme ? "bg-black text-white" : "bg-white text-black"}`}>
-                      <Check className="w-5 h-5" />
-                    </div>
-                    <p className={`text-xs font-bold ${isLightTheme ? "text-[#0F172A]" : "text-white"}`}>{depositSuccessMsg}</p>
+                <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/10 light:border-black/10 text-xs">
+                  <div>
+                    <span className="text-neutral-400 block">Status</span>
+                    <span className="font-bold text-emerald-500">Connected & Verified</span>
                   </div>
-                ) : (
-                  <form onSubmit={handleConfirmDeposit} className="space-y-4">
-                    <div>
-                      <label className={`block text-[11px] font-bold uppercase mb-1 ${isLightTheme ? "text-slate-600" : "text-neutral-400"}`}>Deposit Amount (USD)</label>
-                      <div className="relative">
-                        <span className={`absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold ${isLightTheme ? "text-slate-400" : "text-neutral-400"}`}>$</span>
-                        <input
-                          type="number"
-                          required
-                          min="100"
-                          step="any"
-                          value={depositAmount}
-                          onChange={e => setDepositAmount(e.target.value)}
-                          className={`w-full h-11 pl-7 pr-4 rounded-xl border text-xs font-mono font-bold outline-none ${isLightTheme ? "bg-white border-slate-300 text-black" : "bg-black/50 border-white/20 text-white"}`}
-                        />
-                      </div>
-                    </div>
-
-                    <button
-                      type="submit"
-                      disabled={isProcessingDeposit}
-                      className={`w-full h-11 rounded-xl font-extrabold text-xs uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 shadow-md ${isLightTheme ? "bg-[#0F172A] text-white hover:bg-slate-800 force-white-text" : "bg-white text-black hover:bg-neutral-200"}`}
-                    >
-                      {isProcessingDeposit ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          <span>Processing Deposit...</span>
-                        </>
-                      ) : (
-                        <span>Deposit into Treasury Pool</span>
-                      )}
-                    </button>
-                  </form>
-                )}
+                  <div>
+                    <span className="text-neutral-400 block">Type</span>
+                    <span className="font-bold uppercase">{selectedItem?.brand || "Visa"}</span>
+                  </div>
+                </div>
               </div>
-            </div>
 
-            <div className={`flex items-center justify-between pt-6 border-t text-xs ${isLightTheme ? "border-slate-200" : "border-white/10"}`}>
-              <div className={`flex items-center gap-2 ${isLightTheme ? "text-slate-500" : "text-neutral-400"}`}>
-                <Lock className="w-3.5 h-3.5 text-emerald-500" />
-                <span>256-Bit Bank-Grade Encryption</span>
+              <div className="grid grid-cols-2 gap-3">
+                <button className={`py-3 rounded-xl border text-xs font-bold transition-all cursor-pointer ${isLightTheme ? "bg-white border-black/20 text-[#0F172A] hover:bg-slate-100" : "border-white/20 text-neutral-300 hover:bg-white/5 hover:text-white"}`}>
+                  Freeze Card
+                </button>
+                <button className={`py-3 rounded-xl border text-xs font-bold transition-all cursor-pointer ${isLightTheme ? "bg-white border-black/20 text-[#0F172A] hover:bg-slate-100" : "border-white/20 text-neutral-300 hover:bg-white/5 hover:text-white"}`}>
+                  Change Spending Limit
+                </button>
               </div>
             </div>
           </div>
 
-          {/* Right Container - Replaced with globalmoney.png */}
+          {/* Right Container - Replaced with walletleftbottomimage.png */}
           <div className={`lg:col-span-5 rounded-3xl overflow-hidden border flex transition-colors ${isLightTheme ? "border-black/10 bg-slate-50" : "border-white/10 bg-[#090909]"}`}>
             <img 
-              src="/globalmoney.png" 
+              src="/walletleftbottomimage.png" 
               alt="Global Money Benefits" 
-              className="w-full h-full object-fill"
+              className="w-full h-full object-contain"
             />
           </div>
 

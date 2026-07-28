@@ -80,7 +80,6 @@ export function BatchPaymentCheckoutModal({
   const subtotal = selectedInvoices.reduce((sum, inv) => sum + inv.amount, 0);
   const platformFee = subtotal * 0.015; // 1.5% fee
   const grandTotal = subtotal + platformFee;
-  const estimatedPoints = Math.round(grandTotal * 1.5);
 
   const handleAddMethodSuccess = (newMethod: SavedPaymentMethod) => {
     setSavedMethods((prev) => [newMethod, ...prev]);
@@ -177,7 +176,7 @@ export function BatchPaymentCheckoutModal({
                   </div>
 
                   <p className="text-xs font-medium text-[#8f8f8f] max-w-md mx-auto leading-relaxed">
-                    Add a payment method to start earning rewards and authorize invoice settlements securely.
+                    Add a payment method to authorize invoice settlements securely.
                   </p>
 
                   <div className="pt-2 max-w-md mx-auto">
@@ -334,11 +333,7 @@ export function BatchPaymentCheckoutModal({
                   </div>
                 </div>
 
-                {/* Rewards Estimation */}
-                <div className="p-4 rounded-xl border border-white/20 bg-white/5 flex items-center justify-between text-xs">
-                  <span className="font-bold text-white">AgncyPay Rewards</span>
-                  <span className="font-extrabold text-white font-mono">+{estimatedPoints.toLocaleString()} pts</span>
-                </div>
+
 
                 {/* Primary Authorization Action */}
                 <button

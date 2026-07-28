@@ -85,6 +85,14 @@ interface PlaidAccount {
   connectedAt: string;
 }
 
+const getCardImage = (institutionName: string) => {
+  const norm = institutionName.toLowerCase();
+  if (norm.includes("chase")) return "/chase-ink-business-unlimited.png";
+  if (norm.includes("mercury")) return "/mercurycard.png";
+  if (norm.includes("bank of america")) return "https://business.bankofamerica.com/content/dam/consumer/business/deposits/checking-accounts/debit-cards/bofa_busdbtcm_v.png";
+  return undefined;
+};
+
 interface InvoiceMock {
   id: string;
   campaignName: string;
@@ -134,21 +142,7 @@ export default function BrandDashboardPage() {
   const [qbSyncStatus, setQbSyncStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [qbSyncMessage, setQbSyncMessage] = useState("");
 
-  // Deposit Balance & Deposit Modal State (Brand Side)
-  const [depositedBalance, setDepositedBalance] = useState(25000);
-  const [isDepositModalOpen, setIsDepositModalOpen] = useState(false);
-  const [depositAmount, setDepositAmount] = useState("1000");
-  const [depositMethod, setDepositMethod] = useState<"card" | "ach" | "wire" | "rtp">("card");
-  const [selectedCardId, setSelectedCardId] = useState("card-1");
-  const [showAddCard, setShowAddCard] = useState(false);
-  const [isProcessingDeposit, setIsProcessingDeposit] = useState(false);
-  const [depositSuccessMsg, setDepositSuccessMsg] = useState<string | null>(null);
-
-  const [newCardHolder, setNewCardHolder] = useState("");
-  const [newCardNumber, setNewCardNumber] = useState("");
-  const [newCardExpiry, setNewCardExpiry] = useState("");
-  const [newCardCVC, setNewCardCVC] = useState("");
-  const [newCardZip, setNewCardZip] = useState("");
+  // Deposit Balance & Deposit Modal State (Brand Side) - REMOVED
 
   const [isLightTheme, setIsLightTheme] = useState(true);
 
@@ -214,7 +208,7 @@ export default function BrandDashboardPage() {
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const savedPlaid = localStorage.getItem("brand_plaid_accounts");
+      const savedPlaid = localStorage.getItem("brand_plaid_accounts_v3");
       if (savedPlaid) {
         try {
           setPlaidAccounts(JSON.parse(savedPlaid));
@@ -222,37 +216,63 @@ export default function BrandDashboardPage() {
           console.error("Error loading saved Plaid accounts", e);
         }
       } else {
-        // Default realistic commercial bank feeds
+        // Default realistic commercial bank feeds from talent view
         const defaultAccounts: PlaidAccount[] = [
           {
-            id: "plaid-default-1",
-            itemId: "item-chase",
+            id: "plaid-default-chase-ink",
+            itemId: "item-chase-ink",
             institutionName: "Chase",
-            name: "Commercial Business Checking",
-            mask: "8819",
-            type: "depository",
-            subtype: "checking",
-            availableBalance: 142500.00,
-            currentBalance: 142500.00,
+            name: "Ink Business Unlimited Visa",
+            mask: "8886",
+            type: "credit",
+            subtype: "credit card",
+            availableBalance: 150000.00,
+            currentBalance: 150000.00,
             currency: "USD",
             connectedAt: new Date().toISOString()
           },
           {
-            id: "plaid-default-2",
-            itemId: "item-mercury",
+            id: "plaid-default-mercury-io",
+            itemId: "item-mercury-io",
             institutionName: "Mercury",
-            name: "Treasury Operating Account",
-            mask: "4920",
+            name: "Business IO Mastercard",
+            mask: "5557",
+            type: "credit",
+            subtype: "credit card",
+            availableBalance: 250000.00,
+            currentBalance: 250000.00,
+            currency: "USD",
+            connectedAt: new Date().toISOString()
+          },
+          {
+            id: "plaid-default-bofa-debit",
+            itemId: "item-bofa-debit",
+            institutionName: "Bank of America",
+            name: "Business Debit Visa",
+            mask: "8888",
             type: "depository",
-            subtype: "checking",
-            availableBalance: 285000.00,
-            currentBalance: 285000.00,
+            subtype: "debit card",
+            availableBalance: 310000.00,
+            currentBalance: 310000.00,
+            currency: "USD",
+            connectedAt: new Date().toISOString()
+          },
+          {
+            id: "plaid-default-mercury-debit",
+            itemId: "item-mercury-debit",
+            institutionName: "Mercury",
+            name: "Debit Mastercard",
+            mask: "8886",
+            type: "depository",
+            subtype: "debit card",
+            availableBalance: 450000.00,
+            currentBalance: 450000.00,
             currency: "USD",
             connectedAt: new Date().toISOString()
           }
         ];
         setPlaidAccounts(defaultAccounts);
-        localStorage.setItem("brand_plaid_accounts", JSON.stringify(defaultAccounts));
+        localStorage.setItem("brand_plaid_accounts_v3", JSON.stringify(defaultAccounts));
       }
     }
   }, []);
@@ -280,7 +300,7 @@ export default function BrandDashboardPage() {
       setPlaidAccounts(prev => {
         const updated = [...prev, newAcc];
         if (typeof window !== "undefined") {
-          localStorage.setItem("brand_plaid_accounts", JSON.stringify(updated));
+          localStorage.setItem("brand_plaid_accounts_v3", JSON.stringify(updated));
         }
         return updated;
       });
@@ -293,92 +313,13 @@ export default function BrandDashboardPage() {
     setPlaidAccounts((prev) => {
       const updated = prev.filter((acc) => acc.id !== id);
       if (typeof window !== "undefined") {
-        localStorage.setItem("brand_plaid_accounts", JSON.stringify(updated));
+        localStorage.setItem("brand_plaid_accounts_v3", JSON.stringify(updated));
       }
       return updated;
     });
   };
 
-  // Sync balance from localStorage on mount
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const userEmail = state.user?.email || "";
-      const savedBalance = localStorage.getItem(`brand_deposited_balance_${userEmail}`);
-      if (savedBalance) {
-        setDepositedBalance(parseFloat(savedBalance));
-      }
-    }
-  }, [state.user?.email]);
-
-  const handleConfirmDeposit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const numericAmt = parseFloat(depositAmount);
-    if (isNaN(numericAmt) || numericAmt <= 0) return;
-
-    setIsProcessingDeposit(true);
-    const userEmail = state.user?.email || "";
-
-    try {
-      let updated = depositedBalance + numericAmt;
-      try {
-        updated = await recordFirestoreDeposit(userEmail, numericAmt, depositMethod);
-      } catch (err) {
-        console.warn("Firestore deposit record warning:", err);
-      }
-
-      setDepositedBalance(updated);
-      if (typeof window !== "undefined") {
-        localStorage.setItem(`brand_deposited_balance_${userEmail}`, updated.toString());
-      }
-
-      setDepositSuccessMsg(
-        `Successfully deposited $${numericAmt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} into AGNCYPAY Treasury!`
-      );
-
-      setTimeout(() => {
-        setIsDepositModalOpen(false);
-        setIsProcessingDeposit(false);
-        setDepositSuccessMsg(null);
-      }, 1500);
-    } catch (err) {
-      console.error("Deposit error:", err);
-      const fallbackBal = depositedBalance + numericAmt;
-      setDepositedBalance(fallbackBal);
-      if (typeof window !== "undefined") {
-        localStorage.setItem(`brand_deposited_balance_${userEmail}`, fallbackBal.toString());
-      }
-      setDepositSuccessMsg(
-        `Successfully deposited $${numericAmt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} into AGNCYPAY Treasury!`
-      );
-
-      setTimeout(() => {
-        setIsDepositModalOpen(false);
-        setIsProcessingDeposit(false);
-        setDepositSuccessMsg(null);
-      }, 1500);
-    }
-  };
-
-  const handleAddNewCard = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newCardHolder.trim() || !newCardNumber.trim()) return;
-    const last4 = newCardNumber.replace(/\D/g, "").slice(-4) || "9999";
-    const newCardObj = {
-      id: `card-${Date.now()}`,
-      name: `${newCardHolder.trim()}'s Card`,
-      detail: `Visa ****${last4}`,
-      image: "/visa-logo.svg",
-      fallback: "Card"
-    };
-    setLinkedCards(prev => [...prev, newCardObj]);
-    setSelectedCardId(newCardObj.id);
-    setShowAddCard(false);
-    setNewCardHolder("");
-    setNewCardNumber("");
-    setNewCardExpiry("");
-    setNewCardCVC("");
-    setNewCardZip("");
-  };
+  // Treasury Deposit functionality removed
 
   const fetchQbInvoices = async () => {
     setQbSyncStatus("loading");
@@ -1104,12 +1045,14 @@ export default function BrandDashboardPage() {
             >
               {workspaceType === "brand" ? "Payments" : "Sent Invoices"}
             </button>
-            <button 
-              onClick={() => router.push("/branddashboard/nodes")}
-              className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${isLightTheme ? "text-[#475569] hover:text-[#0F172A] hover:bg-black/5" : "text-[#8f8f8f] hover:text-white hover:bg-white/5"}`}
-            >
-              {workspaceType === "brand" ? "Rewards" : "Payout Split Nodes"}
-            </button>
+            {workspaceType !== "brand" && (
+              <button 
+                onClick={() => router.push("/branddashboard/nodes")}
+                className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${isLightTheme ? "text-[#475569] hover:text-[#0F172A] hover:bg-black/5" : "text-[#8f8f8f] hover:text-white hover:bg-white/5"}`}
+              >
+                Payout Split Nodes
+              </button>
+            )}
             <button 
               onClick={() => router.push("/branddashboard/wallet")}
               className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${isLightTheme ? "text-[#475569] hover:text-[#0F172A] hover:bg-black/5" : "text-[#8f8f8f] hover:text-white hover:bg-white/5"}`}
@@ -1221,7 +1164,7 @@ export default function BrandDashboardPage() {
 
 
           {/* Analytics Cards Grid */}
-          <div className={`grid grid-cols-2 ${workspaceType === "brand" ? "md:grid-cols-3" : "md:grid-cols-4"} gap-4`}>
+          <div className={`grid grid-cols-2 ${workspaceType === "brand" ? "md:grid-cols-2" : "md:grid-cols-4"} gap-4`}>
             {(() => {
               const paidInvoices = liveFunctionalInvoices.filter(i => 
                 workspaceType === "brand" 
@@ -1241,16 +1184,15 @@ export default function BrandDashboardPage() {
               const awaitingTotal = awaitingItems.reduce((acc, curr) => acc + curr.amount, 0);
               const awaitingCount = awaitingItems.length;
 
-              const stats = workspaceType === "brand"
+              const stats: any[] = workspaceType === "brand"
                 ? [
                     { label: "Total Paid Volume", value: `$${displayPaidVolume.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, trend: undefined, icon: TrendingUp },
                     {
-                      label: "Awaiting Approval",
+                      label: "Awaiting Payments",
                       value: `$${awaitingTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
                       count: `${awaitingCount} invoice${awaitingCount !== 1 ? "s" : ""}`,
                       icon: Clock
-                    },
-                    { label: "Reward Points", value: `${Math.floor(displayPaidVolume * 10).toLocaleString()}`, detail: "Earned from payouts", icon: Sparkles }
+                    }
                   ]
                 : [
                     { label: "Total Billed", value: `$${liveFunctionalInvoices.reduce((a, b) => a + b.amount, 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, trend: "+15.2%", icon: TrendingUp },
@@ -1263,9 +1205,9 @@ export default function BrandDashboardPage() {
                     { label: "Total Paid", value: `$${displayPaidVolume.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, detail: "Settled to agency", icon: Coins },
                     { label: "Talent Payouts", value: `$${disbursedVolume.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, detail: "Disbursed to talent", icon: Users }
                   ];
-
+ 
               return stats.map((stat, idx) => {
-                const isAwaitingApproval = stat.label === "Awaiting Approval";
+                const isAwaitingApproval = stat.label === "Awaiting Payments";
               return (
                 <div 
                   key={idx} 
@@ -1435,11 +1377,11 @@ export default function BrandDashboardPage() {
           </div>
 
           {/* Open an Account Banner under Pending Invoices */}
-          <div className="mt-6 w-full rounded-2xl overflow-hidden shadow-lg transition-transform hover:scale-[1.005] duration-300">
+          <div className="mt-6 w-full h-[300px] md:h-[360px] rounded-2xl overflow-hidden shadow-lg transition-transform hover:scale-[1.005] duration-300 relative">
             <img 
-              src="/openanaccount.png" 
+              src="/models/homepagebottomimage1.png" 
               alt="Open an Account" 
-              className="w-full h-auto block"
+              className="w-full h-full object-cover block"
             />
           </div>
 
@@ -1448,27 +1390,7 @@ export default function BrandDashboardPage() {
         {/* Right Column - Queue and History Ledger (Narrower) */}
         <div id="approval-queue-section" className="lg:col-span-4 space-y-6">
           
-          {/* Brand Treasury Balance & Deposit Section (Brand Side Only) */}
-          {workspaceType === "brand" && (
-            <div className="bg-[#050505] rounded-xl border border-white/10 p-5 shadow-sm">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <h3 className="text-sm font-bold uppercase tracking-wider text-neutral-400">Brand Treasury Balance</h3>
-                  <p className="text-2xl font-black text-white mt-1 font-mono">
-                    ${depositedBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </p>
-                  <p className="text-xs text-neutral-400 mt-0.5">Available for instant invoice settlement & automated payouts.</p>
-                </div>
-                <button
-                  onClick={() => setIsDepositModalOpen(true)}
-                  className="py-2.5 px-4 rounded-xl bg-white text-black font-bold text-xs flex items-center justify-center gap-2 hover:bg-neutral-200 transition-all shadow-md active:scale-[0.99] cursor-pointer shrink-0"
-                >
-                  <Plus className="h-4 w-4 text-black" />
-                  Deposit Funds
-                </button>
-              </div>
-            </div>
-          )}
+          {/* Brand Treasury Balance Section Removed */}
 
           {/* Integrations Widget */}
           <IntegrationsPanel
@@ -1525,8 +1447,12 @@ export default function BrandDashboardPage() {
                     className="flex items-center justify-between p-4 rounded-xl border border-white/15 light:border-black/15 bg-white/[0.03] light:bg-slate-50 hover:border-white/30 light:hover:border-black/30 transition-all shadow-sm"
                   >
                     <div className="flex items-center gap-4">
-                      <div className="w-11 h-11 rounded-xl border border-white/15 light:border-black/15 bg-white/10 light:bg-white flex items-center justify-center shrink-0 shadow-inner">
-                        <Building2 className="h-5 w-5 text-white light:text-black" />
+                      <div className="w-20 h-12 rounded-lg border border-white/15 light:border-black/15 bg-black flex items-center justify-center shrink-0 shadow-inner overflow-hidden">
+                        {getCardImage(acc.institutionName) ? (
+                          <img src={getCardImage(acc.institutionName)} alt={acc.name} className="h-full w-full object-cover" />
+                        ) : (
+                          <Building2 className="h-6 w-6 text-white light:text-black" />
+                        )}
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
@@ -1924,360 +1850,6 @@ export default function BrandDashboardPage() {
           </div>
         </div>
       )}
-
-      {/* Brand Deposit Modal */}
-      {isDepositModalOpen && (() => {
-        const isLight = isLightTheme || (typeof document !== "undefined" && document.documentElement.classList.contains("light"));
-        return (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <div className="absolute inset-0 bg-black/75 backdrop-blur-md" onClick={() => !isProcessingDeposit && setIsDepositModalOpen(false)} />
-            
-            <div className={`relative w-full max-w-lg rounded-2xl border shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 ${
-              isLight 
-                ? "bg-white border-black/20 text-[#0F172A]" 
-                : "bg-[#0A0A0A] border-white/20 text-white"
-            }`}>
-              {/* Modal Header */}
-              <div className={`p-6 border-b flex items-center justify-between ${
-                isLight ? "border-black/10 bg-slate-50" : "border-white/10 bg-white/[0.02]"
-              }`}>
-                <div className="flex items-center gap-3">
-                  <div className={`h-10 w-10 rounded-xl border flex items-center justify-center ${
-                    isLight ? "bg-white border-black/20 text-[#0F172A] shadow-xs" : "bg-white/10 border-white/20 text-white"
-                  }`}>
-                    <Wallet className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <h3 className={`text-lg font-bold leading-tight ${isLight ? "text-[#0F172A]" : "text-white"}`}>Deposit Treasury Balance</h3>
-                    <p className={`text-xs font-medium ${isLight ? "text-[#475569]" : "text-neutral-400"}`}>Add funds to instant liquidity balance</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setIsDepositModalOpen(false)}
-                  className={`p-2 rounded-lg transition-colors cursor-pointer ${
-                    isLight ? "text-[#475569] hover:bg-slate-200 hover:text-[#0F172A]" : "text-neutral-400 hover:bg-white/10 hover:text-white"
-                  }`}
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-
-              {/* Modal Body */}
-              <div className="p-6 space-y-6 max-h-[80vh] overflow-y-auto">
-                {depositSuccessMsg ? (
-                  <div className="py-10 text-center space-y-4">
-                    <div className="h-16 w-16 rounded-full bg-emerald-500/20 border border-emerald-500 text-emerald-500 flex items-center justify-center mx-auto animate-bounce">
-                      <CheckCircle2 className="h-8 w-8" />
-                    </div>
-                    <h4 className={`text-xl font-bold ${isLight ? "text-[#0F172A]" : "text-white"}`}>Deposit Successful</h4>
-                    <p className={`text-sm max-w-[280px] mx-auto font-medium ${isLight ? "text-[#475569]" : "text-neutral-300"}`}>{depositSuccessMsg}</p>
-                  </div>
-                ) : isProcessingDeposit ? (
-                  <div className="py-14 text-center space-y-4">
-                    <Loader2 className={`h-10 w-10 animate-spin mx-auto ${isLight ? "text-[#0F172A]" : "text-white"}`} />
-                    <div>
-                      <p className={`text-lg font-bold ${isLight ? "text-[#0F172A]" : "text-white"}`}>Processing Deposit...</p>
-                      <p className={`text-xs mt-1 font-medium ${isLight ? "text-[#475569]" : "text-neutral-400"}`}>Securing funds via selected payment channel.</p>
-                    </div>
-                  </div>
-                ) : (
-                  <form onSubmit={handleConfirmDeposit} className="space-y-6">
-                    {/* Step 1: Amount Selection */}
-                    <div>
-                      <label className={`block text-xs font-bold uppercase tracking-wider mb-2 ${isLight ? "text-[#0F172A]" : "text-neutral-300"}`}>
-                        Deposit Amount ($USD)
-                      </label>
-                      <div className="relative">
-                        <span className={`absolute left-3.5 top-1/2 -translate-y-1/2 text-lg font-extrabold ${isLight ? "text-[#0F172A]" : "text-neutral-400"}`}>$</span>
-                        <input
-                          type="number"
-                          min="1"
-                          step="any"
-                          value={depositAmount}
-                          onChange={(e) => setDepositAmount(e.target.value)}
-                          placeholder="1000.00"
-                          className={`w-full pl-8 pr-4 py-3 border rounded-xl text-lg font-extrabold focus:outline-none font-mono ${
-                            isLight 
-                              ? "bg-white border-black/20 text-[#0F172A] focus:border-black shadow-xs" 
-                              : "bg-black border-white/20 text-white focus:border-white"
-                          }`}
-                          required
-                        />
-                      </div>
-                      
-                      {/* Quick Pills */}
-                      <div className="grid grid-cols-4 gap-2 mt-2.5">
-                        {["500", "1000", "2500", "5000"].map((preset) => (
-                          <button
-                            key={preset}
-                            type="button"
-                            onClick={() => setDepositAmount(preset)}
-                            className={`py-2 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
-                              depositAmount === preset
-                                ? isLight
-                                  ? "border-black bg-[#0F172A] text-white shadow-md font-extrabold"
-                                  : "border-white bg-white text-black shadow-md font-extrabold"
-                                : isLight
-                                  ? "border-black/20 bg-slate-50 text-[#0F172A] hover:bg-slate-100 hover:border-black/40 font-bold shadow-xs"
-                                  : "border-white/10 bg-white/[0.02] text-neutral-300 hover:border-white/20"
-                            }`}
-                          >
-                            +${parseInt(preset).toLocaleString()}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Step 2: Method Selection */}
-                    <div>
-                      <label className={`block text-xs font-bold uppercase tracking-wider mb-2 ${isLight ? "text-[#0F172A]" : "text-neutral-300"}`}>
-                        Deposit Method
-                      </label>
-                      <div className="grid grid-cols-2 gap-2.5">
-                        {[
-                          { id: "card", label: "Linked Card", sub: "Instant • Standard Fee" },
-                          { id: "ach", label: "ACH Bank Transfer", sub: "1-2 Days • 0% Fee" },
-                          { id: "wire", label: "Wire Transfer", sub: "Same Day • $15 Fee" },
-                          { id: "rtp", label: "RTP Instant", sub: "Instant • $5 Fee" },
-                        ].map((m) => {
-                          const isSelected = depositMethod === m.id;
-                          return (
-                            <button
-                              key={m.id}
-                              type="button"
-                              onClick={() => setDepositMethod(m.id as any)}
-                              className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
-                                isLight
-                                  ? isSelected
-                                    ? "border-black bg-[#0F172A] text-white shadow-md font-bold"
-                                    : "border-black/20 bg-slate-50 text-[#0F172A] hover:bg-slate-100 hover:border-black/40 font-semibold shadow-xs"
-                                  : isSelected
-                                    ? "border-white bg-white text-black shadow-md font-bold"
-                                    : "border-white/10 bg-white/5 text-white hover:border-white/20 font-semibold"
-                              }`}
-                            >
-                              <div className="flex items-center justify-between">
-                                <span className={`text-xs font-bold ${
-                                  isLight
-                                    ? isSelected ? "text-white" : "text-[#0F172A]"
-                                    : isSelected ? "text-black" : "text-white"
-                                }`}>{m.label}</span>
-                                <div className={`h-4 w-4 rounded-full border flex items-center justify-center ${
-                                  isLight
-                                    ? isSelected
-                                      ? "border-white bg-white text-black"
-                                      : "border-black/40 bg-transparent"
-                                    : isSelected
-                                      ? "border-black bg-black text-white"
-                                      : "border-white/30 bg-transparent"
-                                }`}>
-                                  {isSelected && (
-                                    <div className={`h-2 w-2 rounded-full ${isLight ? "bg-black" : "bg-white"}`} />
-                                  )}
-                                </div>
-                              </div>
-                              <span className={`text-[10px] block mt-1.5 font-medium ${
-                                isLight
-                                  ? isSelected ? "text-slate-300" : "text-[#475569]"
-                                  : isSelected ? "text-neutral-700" : "text-neutral-400"
-                              }`}>{m.sub}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    {/* Step 3: Card Selection if Linked Card chosen */}
-                    {depositMethod === "card" && (
-                      <div className="space-y-3">
-                        <div className="flex justify-between items-center">
-                          <label className={`text-xs font-bold uppercase tracking-wider ${isLight ? "text-[#0F172A]" : "text-neutral-300"}`}>
-                            Select Card
-                          </label>
-                          <button
-                            type="button"
-                            onClick={() => setShowAddCard(!showAddCard)}
-                            className={`text-xs font-bold flex items-center gap-1 cursor-pointer ${
-                              isLight ? "text-[#475569] hover:text-[#0F172A]" : "text-neutral-300 hover:text-white"
-                            }`}
-                          >
-                            <Plus className="h-3 w-3" />
-                            {showAddCard ? "Use Saved Card" : "Add New Card"}
-                          </button>
-                        </div>
-
-                        {showAddCard ? (
-                          <div className={`p-4 rounded-xl border space-y-3 ${
-                            isLight ? "bg-slate-50 border-black/20" : "bg-black border-white/20"
-                          }`}>
-                            <div>
-                              <label className={`text-[10px] uppercase font-bold ${isLight ? "text-[#475569]" : "text-neutral-400"}`}>Cardholder Name</label>
-                              <input
-                                type="text"
-                                placeholder="Jane Doe"
-                                value={newCardHolder}
-                                onChange={(e) => setNewCardHolder(e.target.value)}
-                                className={`w-full mt-1 border rounded-lg p-2 text-xs font-semibold focus:outline-none ${
-                                  isLight ? "bg-white border-black/20 text-[#0F172A] focus:border-black" : "bg-neutral-900 border-white/20 text-white focus:border-white"
-                                }`}
-                              />
-                            </div>
-                            <div>
-                              <label className={`text-[10px] uppercase font-bold ${isLight ? "text-[#475569]" : "text-neutral-400"}`}>Card Number</label>
-                              <input
-                                type="text"
-                                placeholder="4000 0000 0000 0000"
-                                value={newCardNumber}
-                                onChange={(e) => setNewCardNumber(e.target.value)}
-                                className={`w-full mt-1 border rounded-lg p-2 text-xs font-semibold focus:outline-none ${
-                                  isLight ? "bg-white border-black/20 text-[#0F172A] focus:border-black" : "bg-neutral-900 border-white/20 text-white focus:border-white"
-                                }`}
-                              />
-                            </div>
-                            <div className="grid grid-cols-3 gap-2">
-                              <div>
-                                <label className={`text-[10px] uppercase font-bold ${isLight ? "text-[#475569]" : "text-neutral-400"}`}>Expires</label>
-                                <input
-                                  type="text"
-                                  placeholder="MM/YY"
-                                  value={newCardExpiry}
-                                  onChange={(e) => setNewCardExpiry(e.target.value)}
-                                  className={`w-full mt-1 border rounded-lg p-2 text-xs font-semibold focus:outline-none ${
-                                    isLight ? "bg-white border-black/20 text-[#0F172A] focus:border-black" : "bg-neutral-900 border-white/20 text-white focus:border-white"
-                                  }`}
-                                />
-                              </div>
-                              <div>
-                                <label className={`text-[10px] uppercase font-bold ${isLight ? "text-[#475569]" : "text-neutral-400"}`}>CVC</label>
-                                <input
-                                  type="text"
-                                  placeholder="123"
-                                  value={newCardCVC}
-                                  onChange={(e) => setNewCardCVC(e.target.value)}
-                                  className={`w-full mt-1 border rounded-lg p-2 text-xs font-semibold focus:outline-none ${
-                                    isLight ? "bg-white border-black/20 text-[#0F172A] focus:border-black" : "bg-neutral-900 border-white/20 text-white focus:border-white"
-                                  }`}
-                                />
-                              </div>
-                              <div>
-                                <label className={`text-[10px] uppercase font-bold ${isLight ? "text-[#475569]" : "text-neutral-400"}`}>ZIP</label>
-                                <input
-                                  type="text"
-                                  placeholder="10001"
-                                  value={newCardZip}
-                                  onChange={(e) => setNewCardZip(e.target.value)}
-                                  className={`w-full mt-1 border rounded-lg p-2 text-xs font-semibold focus:outline-none ${
-                                    isLight ? "bg-white border-black/20 text-[#0F172A] focus:border-black" : "bg-neutral-900 border-white/20 text-white focus:border-white"
-                                  }`}
-                                />
-                              </div>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={handleAddNewCard}
-                              className={`w-full py-2 font-bold text-xs rounded-lg mt-2 cursor-pointer transition-colors shadow-sm ${
-                                isLight ? "bg-[#0F172A] text-white hover:bg-black" : "bg-white/10 hover:bg-white/20 text-white border border-white/20"
-                              }`}
-                            >
-                              Save & Attach Card
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="space-y-2.5">
-                            {linkedCards.map((card: any) => {
-                              const isSelected = card.id === selectedCardId;
-                              const isChase = card.id.includes("1") || card.id.includes("chase") || card.name.toLowerCase().includes("chase");
-                              const isMercury = card.id.includes("2") || card.id.includes("mercury") || card.name.toLowerCase().includes("mercury");
-
-                              return (
-                                <div
-                                  key={card.id}
-                                  onClick={() => setSelectedCardId(card.id)}
-                                  className={`p-3.5 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${
-                                    isLight
-                                      ? isSelected
-                                        ? "border-black bg-[#0F172A] text-white shadow-md font-bold"
-                                        : "border-black/20 bg-white text-[#0F172A] hover:bg-slate-100 hover:border-black/40 font-semibold shadow-xs"
-                                      : isSelected
-                                        ? "border-white bg-white text-black shadow-md font-bold"
-                                        : "border-white/10 bg-white/5 text-white hover:border-white/20 font-semibold"
-                                  }`}
-                                >
-                                  <div className="flex items-center gap-3">
-                                    <div className="h-9 w-14 shrink-0 rounded-lg border border-black/20 bg-white p-0.5 flex items-center justify-center shadow-xs overflow-hidden">
-                                      <img
-                                        src={
-                                          card.image 
-                                            || (isChase ? "/chase-ink-business-unlimited.png" : isMercury ? "/mercurycard.png" : "/visa-logo.svg")
-                                        }
-                                        alt={card.name}
-                                        className="h-full w-full object-contain"
-                                      />
-                                    </div>
-                                    <div>
-                                      <p className={`text-xs font-bold ${
-                                        isLight
-                                          ? isSelected ? "text-white" : "text-[#0F172A]"
-                                          : isSelected ? "text-black" : "text-white"
-                                      }`}>{card.name}</p>
-                                      <p className={`text-[10px] font-medium ${
-                                        isLight
-                                          ? isSelected ? "text-slate-300" : "text-[#475569]"
-                                          : isSelected ? "text-neutral-700" : "text-neutral-400"
-                                      }`}>{card.detail}</p>
-                                    </div>
-                                  </div>
-                                  <div className={`h-4 w-4 rounded-full border flex items-center justify-center ${
-                                    isLight
-                                      ? isSelected
-                                        ? "border-white bg-white text-black"
-                                        : "border-black/40 bg-transparent"
-                                      : isSelected
-                                        ? "border-black bg-black text-white"
-                                        : "border-white/30 bg-transparent"
-                                  }`}>
-                                    {isSelected && <Check className="h-2.5 w-2.5 stroke-[3]" />}
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Actions */}
-                    <div className="pt-2 flex items-center gap-3">
-                      <button
-                        type="button"
-                        onClick={() => setIsDepositModalOpen(false)}
-                        className={`flex-1 py-3 rounded-xl border text-xs font-bold transition-all cursor-pointer shadow-xs ${
-                          isLight 
-                            ? "bg-white border-black/20 text-[#0F172A] hover:bg-slate-100" 
-                            : "border-white/20 text-neutral-300 hover:bg-white/5 hover:text-white"
-                        }`}
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        type="submit"
-                        className={`flex-1 py-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-md cursor-pointer ${
-                          isLight 
-                            ? "bg-[#0F172A] text-white hover:bg-black" 
-                            : "bg-white text-black hover:bg-neutral-200"
-                        }`}
-                      >
-                        <Wallet className="h-4 w-4 text-current" />
-                        Confirm Deposit
-                      </button>
-                    </div>
-                  </form>
-                )}
-              </div>
-            </div>
-          </div>
-        );
-      })()}
 
       {/* Invoice Details Static Popup Modal */}
       {viewingInvoice && (() => {

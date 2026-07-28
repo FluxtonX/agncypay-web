@@ -24,6 +24,7 @@ import {
   Clock,
   Info,
   Wallet,
+  X,
 } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { subscribeInvoicesByBrand, subscribeInvoicesByAgency } from "../../../lib/firebaseInvoices";
@@ -65,6 +66,14 @@ interface InvoiceMock {
   defaultTerm: "Net-30" | "Net-60" | "Net-90";
 }
 
+const mockRecipients = [
+  { id: "western-models", name: "Western Models Agency", handle: "@western_models", email: "payouts@westernmodels.com", type: "agency", avatar: "W" },
+  { id: "studio-holland", name: "Studio Holland Talent", handle: "@studio_holland", email: "billing@studioholland.com", type: "agency", avatar: "S" },
+  { id: "john-adams", name: "John Adams", handle: "@john_adams", email: "john@johnadams.com", type: "talent", avatar: "J" },
+  { id: "lucy-che", name: "Lucy Che", handle: "@lucy_che", email: "lucy@lucyche.com", type: "talent", avatar: "L" },
+  { id: "jessica-bailey", name: "Jessica Bailey", handle: "@jessica_bailey", email: "jessica@jessicabailey.com", type: "talent", avatar: "J" },
+];
+
 export default function InvoicesQueuePage() {
   const router = useRouter();
   const { state, resetState } = useApp();
@@ -77,6 +86,14 @@ export default function InvoicesQueuePage() {
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+
+  // Send & Request panel state
+  const [isSendRequestActive, setIsSendRequestActive] = useState(false);
+  const [sendRequestMode, setSendRequestMode] = useState<"send" | "receive">("send");
+  const [sendRequestQuery, setSendRequestQuery] = useState("");
+  const [selectedRecipientId, setSelectedRecipientId] = useState<string | null>(null);
+  const [paymentAmount, setPaymentAmount] = useState("");
+  const [isPaymentSuccess, setIsPaymentSuccess] = useState(false);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -317,12 +334,14 @@ export default function InvoicesQueuePage() {
             >
               Payments
             </button>
-            <button 
-              onClick={() => router.push("/branddashboard/nodes")}
-              className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${isLightTheme ? "text-[#475569] hover:text-[#0F172A] hover:bg-black/5" : "text-[#8f8f8f] hover:text-white hover:bg-white/5"}`}
-            >
-              Rewards
-            </button>
+            {workspaceType !== "brand" && (
+              <button 
+                onClick={() => router.push("/branddashboard/nodes")}
+                className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${isLightTheme ? "text-[#475569] hover:text-[#0F172A] hover:bg-black/5" : "text-[#8f8f8f] hover:text-white hover:bg-white/5"}`}
+              >
+                Payout Split Nodes
+              </button>
+            )}
             <button 
               onClick={() => router.push("/branddashboard/wallet")}
               className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${isLightTheme ? "text-[#475569] hover:text-[#0F172A] hover:bg-black/5" : "text-[#8f8f8f] hover:text-white hover:bg-white/5"}`}
@@ -367,6 +386,191 @@ export default function InvoicesQueuePage() {
         {activeInvoice && (
           <div className="space-y-6">
 
+            {/* Send and Request Money Widget */}
+            <div className="p-6 rounded-2xl border border-neutral-200 bg-white shadow-xl space-y-6">
+              {/* Header Row */}
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <h2 className="text-[18px] font-bold text-neutral-900 tracking-tight">Send and request money</h2>
+                  <p className="text-xs text-neutral-500 mt-1">Send immediate commercial payouts or request billing approval from partners.</p>
+                </div>
+                {/* Mode Pill Selector */}
+                <div className="inline-flex rounded-full border border-neutral-200 bg-neutral-100 p-1">
+                  <button
+                    onClick={() => {
+                      setSendRequestMode("send");
+                      setSelectedRecipientId(null);
+                      setIsPaymentSuccess(false);
+                    }}
+                    className={`h-8 rounded-full px-5 text-[11px] font-bold transition-all cursor-pointer ${
+                      sendRequestMode === "send" ? "bg-white text-neutral-900 shadow-sm" : "text-neutral-500 hover:text-neutral-900"
+                    }`}
+                  >
+                    Send
+                  </button>
+                  <button
+                    onClick={() => {
+                      setSendRequestMode("receive");
+                      setSelectedRecipientId(null);
+                      setIsPaymentSuccess(false);
+                    }}
+                    className={`h-8 rounded-full px-5 text-[11px] font-bold transition-all cursor-pointer ${
+                      sendRequestMode === "receive" ? "bg-white text-neutral-900 shadow-sm" : "text-neutral-500 hover:text-neutral-900"
+                    }`}
+                  >
+                    Request
+                  </button>
+                </div>
+              </div>
+
+              {/* Form or Search stage */}
+              {!selectedRecipientId ? (
+                <>
+                  {/* Search Input */}
+                  <div className="relative">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-500" />
+                    <input
+                      type="text"
+                      value={sendRequestQuery}
+                      onChange={(e) => setSendRequestQuery(e.target.value)}
+                      placeholder="Name, Agency ID, email, mobile"
+                      className="w-full h-12 pl-11 pr-4 rounded-xl border border-neutral-200 bg-neutral-50 text-xs font-semibold text-neutral-900 outline-none focus:border-neutral-400 focus:bg-white transition-all placeholder:text-neutral-400"
+                    />
+                  </div>
+
+                  {/* Dynamic Area */}
+                  {sendRequestQuery.trim() && (
+                    <div className="space-y-2">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-neutral-500">Search Results</p>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {mockRecipients
+                          .filter(r =>
+                            r.name.toLowerCase().includes(sendRequestQuery.toLowerCase()) ||
+                            r.handle.toLowerCase().includes(sendRequestQuery.toLowerCase()) ||
+                            r.email.toLowerCase().includes(sendRequestQuery.toLowerCase())
+                          )
+                          .map((recipient) => (
+                            <div
+                              key={recipient.id}
+                              onClick={() => {
+                                setSelectedRecipientId(recipient.id);
+                                setPaymentAmount("");
+                                setIsPaymentSuccess(false);
+                              }}
+                              className="flex items-center gap-3 p-3 rounded-xl border border-neutral-200 bg-neutral-50 hover:bg-neutral-100 hover:border-neutral-300 transition-all cursor-pointer"
+                            >
+                              <div className="w-9 h-9 rounded-full bg-neutral-200 flex items-center justify-center font-bold text-neutral-700 text-xs">
+                                {recipient.avatar}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <h4 className="text-xs font-bold text-neutral-950 truncate">{recipient.name}</h4>
+                                <p className="text-[10px] text-neutral-600 mt-0.5 font-mono truncate">{recipient.handle} • {recipient.email}</p>
+                              </div>
+                              <ChevronRight className="h-4 w-4 text-neutral-500" />
+                            </div>
+                          ))}
+                        {mockRecipients.filter(r =>
+                          r.name.toLowerCase().includes(sendRequestQuery.toLowerCase()) ||
+                          r.handle.toLowerCase().includes(sendRequestQuery.toLowerCase()) ||
+                          r.email.toLowerCase().includes(sendRequestQuery.toLowerCase())
+                        ).length === 0 && (
+                          <div className="col-span-full py-4 text-center text-xs text-neutral-500">
+                            No recipients match &quot;{sendRequestQuery}&quot;
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </>
+              ) : (
+                /* Payment form for selected recipient */
+                (() => {
+                  const recipient = mockRecipients.find(r => r.id === selectedRecipientId);
+                  if (!recipient) return null;
+                  return (
+                    <div className="p-5 rounded-2xl border border-neutral-200 bg-neutral-50 space-y-4 max-w-md mx-auto shadow-sm">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-neutral-200 flex items-center justify-center font-bold text-neutral-800 text-sm">
+                          {recipient.avatar}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <h4 className="text-xs font-bold text-neutral-955 truncate">{recipient.name}</h4>
+                          <p className="text-[10px] text-neutral-600 mt-0.5 truncate">{recipient.email}</p>
+                        </div>
+                        <button
+                          onClick={() => setSelectedRecipientId(null)}
+                          className="text-[11px] text-neutral-500 hover:text-neutral-800 cursor-pointer font-semibold underline"
+                        >
+                          Change
+                        </button>
+                      </div>
+
+                      {isPaymentSuccess ? (
+                        <div className="py-6 text-center space-y-2">
+                          <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto mb-2 font-bold text-lg">
+                            ✓
+                          </div>
+                          <h4 className="text-xs font-bold text-neutral-950">Transaction Success!</h4>
+                          <p className="text-[11px] text-neutral-600">
+                            {sendRequestMode === "send"
+                              ? `$${parseFloat(paymentAmount).toLocaleString(undefined, { minimumFractionDigits: 2 })} has been sent to ${recipient.name}.`
+                              : `Billing request of $${parseFloat(paymentAmount).toLocaleString(undefined, { minimumFractionDigits: 2 })} sent to ${recipient.name}.`}
+                          </p>
+                          <button
+                            onClick={() => {
+                              setIsPaymentSuccess(false);
+                              setSelectedRecipientId(null);
+                              setPaymentAmount("");
+                              setSendRequestQuery("");
+                            }}
+                            className="mt-4 px-4 py-1.5 rounded-lg bg-neutral-200 text-neutral-800 hover:bg-neutral-300 text-xs font-bold cursor-pointer"
+                          >
+                            Done
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          <div>
+                            <label className="text-[10px] font-bold uppercase tracking-wider text-neutral-600 block mb-1.5">
+                              {sendRequestMode === "send" ? "Amount to Send (USD)" : "Amount to Request (USD)"}
+                            </label>
+                            <input
+                              type="number"
+                              value={paymentAmount}
+                              onChange={(e) => setPaymentAmount(e.target.value)}
+                              placeholder="0.00"
+                              className="w-full h-11 px-3 rounded-lg border border-neutral-300 bg-white text-xs font-bold text-neutral-950 outline-none focus:border-neutral-500 focus:ring-1 focus:ring-neutral-500"
+                            />
+                          </div>
+
+                          <button
+                            disabled={!paymentAmount || parseFloat(paymentAmount) <= 0}
+                            onClick={() => setIsPaymentSuccess(true)}
+                            className="w-full h-11 rounded-lg bg-black text-white hover:bg-neutral-800 text-xs font-bold uppercase tracking-wider transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shadow-md"
+                          >
+                            {sendRequestMode === "send" ? `Send $${paymentAmount || "0.00"}` : `Request $${paymentAmount || "0.00"}`}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()
+              )}
+
+              {/* Clear All Footer Link */}
+              <div className="pt-2 flex justify-center">
+                <button
+                  onClick={() => {
+                    setSendRequestQuery("");
+                    setSelectedRecipientId(null);
+                    setIsPaymentSuccess(false);
+                  }}
+                  className="text-xs font-bold text-[#10b981] hover:underline cursor-pointer"
+                >
+                  Clear all
+                </button>
+              </div>
+            </div>
 
             {/* 2-Column Grid: Left (7 cols) Balance Due, Right (5 cols) Direct Vendor Payment */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -451,42 +655,13 @@ export default function InvoicesQueuePage() {
                 </div>
               </div>
 
-              {/* Recipient Overview Image Card Replacement with Interactive Navigation Buttons */}
+              {/* Recipient Overview Image Card Replacement */}
               <div className="lg:col-span-5 rounded-2xl border border-white/20 overflow-hidden shadow-xl relative bg-[#050505] min-h-[360px] flex flex-col justify-between">
                 <img
-                  src="/models/balanceduecard.png"
-                  alt="Elevate your Spend - Balance Due Card"
-                  className="absolute inset-0 w-full h-full object-cover object-center pointer-events-none"
+                  src="/sendpaymenttoprightimage.png"
+                  alt="Send Payment Info Card"
+                  className="absolute inset-0 w-full h-full object-contain object-center pointer-events-none"
                 />
-                
-                {/* Top Overlay Button: Earn Rewards */}
-                <div className="relative z-10 w-full flex justify-center pt-[18%] sm:pt-[16%] md:pt-[15%]">
-                  <button
-                    onClick={() => router.push("/branddashboard/nodes")}
-                    style={{ backgroundColor: "#FFFFFF", color: "#000000" }}
-                    className="force-white-btn font-semibold px-3.5 py-1 rounded-full shadow-md hover:bg-neutral-100 transition-all text-[10px] active:scale-95 cursor-pointer border border-black/5"
-                  >
-                    Earn Rewards
-                  </button>
-                </div>
-
-                {/* Bottom Overlay Buttons: Physical Card & Virtual Card */}
-                <div className="relative z-10 w-full flex items-center justify-center gap-2.5 pb-6 sm:pb-7">
-                  <button
-                    onClick={() => router.push("/branddashboard/wallet")}
-                    style={{ backgroundColor: "#FFFFFF", color: "#000000", borderColor: "#000000" }}
-                    className="force-white-btn font-semibold w-[115px] h-[26px] rounded-full shadow-lg hover:bg-neutral-100 transition-all text-[11px] active:scale-95 cursor-pointer border-[1.5px] border-black flex items-center justify-center text-center"
-                  >
-                    Physical Card
-                  </button>
-                  <button
-                    onClick={() => router.push("/branddashboard/wallet")}
-                    style={{ backgroundColor: "transparent", color: "#FFFFFF", borderColor: "#FFFFFF" }}
-                    className="force-transparent-btn font-semibold w-[115px] h-[26px] rounded-full transition-all text-[11px] active:scale-95 cursor-pointer shadow-lg border-[1.5px] border-white hover:bg-white/10 flex items-center justify-center text-center"
-                  >
-                    Virtual Card
-                  </button>
-                </div>
               </div>
 
             </div>
