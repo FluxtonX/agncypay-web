@@ -136,6 +136,7 @@ export default function AgencyDashboardPage() {
   const [mounted, setMounted] = useState(false);
   const [registeredBrands, setRegisteredBrands] = useState<FirestoreUser[]>([]);
   const [registeredTalents, setRegisteredTalents] = useState<FirestoreUser[]>([]);
+  const [selectedBrandEmail, setSelectedBrandEmail] = useState("");
   const [selectedTalentEmail, setSelectedTalentEmail] = useState("");
 
   // Plaid Connection State & Handlers
