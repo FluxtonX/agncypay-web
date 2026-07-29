@@ -53,7 +53,6 @@ const navByWorkspace: Record<WorkspaceType, DashboardNavItem[]> = {
     { label: "Dashboard", path: "/dashboard", activePath: "/dashboard", icon: LayoutGrid },
     { label: "Wallet", path: "/dashboard/wallet", activePath: "/dashboard/wallet", icon: WalletCards },
     { label: "Invoices", path: "/dashboard/invoices", activePath: "/dashboard/invoices", icon: FileText },
-    { label: "Talent", path: "/dashboard/talent", activePath: "/dashboard/talent", icon: UsersRound, permission: "manage_talent" },
     { label: "Splits", path: "/dashboard/splits", activePath: "/dashboard/splits", icon: Network, permission: "view_splits" },
     { label: "Payouts", path: "/dashboard/payouts", activePath: "/dashboard/payouts", icon: BadgeDollarSign, permission: "approve_payouts" },
     { label: "Clients", path: "/dashboard/clients", activePath: "/dashboard/clients", icon: BriefcaseBusiness },
@@ -77,7 +76,6 @@ const navByWorkspace: Record<WorkspaceType, DashboardNavItem[]> = {
   mother_agency: [
     { label: "Dashboard", path: "/dashboard", activePath: "/dashboard", icon: LayoutGrid },
     { label: "Child Agencies", path: "/dashboard/agencies", activePath: "/dashboard/agencies", icon: Users },
-    { label: "Talent Network", path: "/dashboard/talent", activePath: "/dashboard/talent", icon: UsersRound },
     { label: "Vendors", path: "/dashboard/vendors", activePath: "/dashboard/vendors", icon: BriefcaseBusiness },
     { label: "Treasury", path: "/dashboard/treasury", activePath: "/dashboard/treasury", icon: Landmark, permission: "view_treasury" },
     { label: "Payouts", path: "/dashboard/payouts", activePath: "/dashboard/payouts", icon: BadgeDollarSign, permission: "approve_payouts" },

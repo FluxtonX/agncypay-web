@@ -11,7 +11,9 @@ import {
   LogOut,
   Sun,
   Moon,
-  Landmark
+  Landmark,
+  Lock,
+  HelpCircle
 } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { subscribeInvoicesByBrand, subscribeInvoicesByAgency } from "../../../lib/firebaseInvoices";
@@ -102,7 +104,9 @@ export default function InvoicesQueuePage() {
   };
 
   const [invoices, setInvoices] = useState<InvoiceMock[]>([]);
-  const [activeFilter, setActiveFilter] = useState<"all" | "awaiting_approval" | "settled">("awaiting_approval");
+  const [activeMainTab, setActiveMainTab] = useState<"receivables" | "payables">("receivables");
+  const [activeReceivableFilter, setActiveReceivableFilter] = useState<"all" | "awaiting_approval" | "settled">("awaiting_approval");
+  const [activePayableFilter, setActivePayableFilter] = useState<"all" | "pending_payout" | "disbursed">("pending_payout");
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
@@ -167,13 +171,26 @@ export default function InvoicesQueuePage() {
 
   // Filter logic
   const filteredInvoices = invoices.filter(inv => {
-    const matchesFilter = activeFilter === "all" 
-      ? true 
-      : activeFilter === "settled"
-      ? (inv.status === "settled" || inv.status === "talent_disbursed")
-      : inv.status === activeFilter;
+    const isReceivable = activeMainTab === "receivables";
+    
+    // Determine if it matches the sub-filter
+    let matchesFilter = true;
+    if (isReceivable) {
+      if (activeReceivableFilter !== "all") {
+        const uiStatus = (inv.status === "settled" || inv.status === "talent_disbursed") ? "settled" : "awaiting_approval";
+        matchesFilter = uiStatus === activeReceivableFilter;
+      }
+    } else {
+      if (activePayableFilter !== "all") {
+        const uiStatus = inv.status === "talent_disbursed" ? "disbursed" : "pending_payout";
+        matchesFilter = uiStatus === activePayableFilter;
+      }
+    }
+
     const matchesSearch = inv.campaignName.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          inv.id.toLowerCase().includes(searchQuery.toLowerCase());
+                          inv.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          (!isReceivable && inv.splitPool.splits.some(s => s.role === "Talent" && s.name.toLowerCase().includes(searchQuery.toLowerCase())));
+                          
     return matchesFilter && matchesSearch;
   });
 
@@ -212,7 +229,7 @@ export default function InvoicesQueuePage() {
               onClick={() => router.push("/agencydashboard/invoices")}
               className="px-4 py-1.5 rounded-full text-xs font-bold bg-white light:bg-[#0F172A] text-black light:text-white shadow-sm border border-white/20 light:border-black/10 transition-all cursor-pointer"
             >
-              Invoice History
+              Payments
             </button>
             <button 
               onClick={() => router.push("/agencydashboard/wallet")}
@@ -231,22 +248,24 @@ export default function InvoicesQueuePage() {
           <div className="flex items-center gap-3">
             {workspaceType === "agency" && (
               <>
-                <button
-                  onClick={() => router.push("/agencydashboard/agencybanking")}
-                  className="px-3.5 py-1.5 rounded-full text-xs font-bold bg-white light:bg-[#0F172A] text-black light:text-white hover:bg-neutral-200 light:hover:bg-[#1E293B] border border-white/20 light:border-black/10 shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
-                >
-                  <Landmark className="h-3.5 w-3.5" />
-                  Switch to Agency Banking
-                </button>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    disabled
+                    className="px-3.5 py-1.5 rounded-full text-xs font-bold bg-white/40 light:bg-[#0F172A]/40 text-black/40 light:text-white/40 border border-white/10 light:border-black/5 shadow-sm transition-all flex items-center gap-1.5 cursor-not-allowed blur-[0.6px]"
+                  >
+                    <Lock className="h-3.5 w-3.5" />
+                    Switch to Agency Banking
+                  </button>
+                  <button 
+                    onClick={() => alert("Agency Banking is currently locked. Complete your compliance verification to unlock this feature.")}
+                    className="p-1 text-neutral-400 hover:text-white transition-colors"
+                    title="Why is this locked?"
+                  >
+                    <HelpCircle className="h-4 w-4" />
+                  </button>
+                </div>
                 <div className="h-4 w-[1px] bg-white/20" />
-                <button
-                  onClick={() => router.push("/dashboard")}
-                  className="text-xs font-semibold text-[#8f8f8f] hover:text-white transition-colors flex items-center gap-1"
-                >
-                  <ArrowLeft className="h-3.5 w-3.5" />
-                  Talent View
-                </button>
-                <div className="h-4 w-[1px] bg-white/20" />
+
               </>
             )}
             <div className="flex items-center gap-2">
@@ -293,36 +312,155 @@ export default function InvoicesQueuePage() {
 
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Invoice Approval Manager</h1>
-            <p className="text-xs text-[#8f8f8f] mt-1">Select an invoice from the list below to open its dedicated property-style billing dashboard.</p>
+            <h1 className="text-2xl font-bold tracking-tight">Payments Manager</h1>
+            <p className="text-xs text-[#8f8f8f] mt-1">Manage brand receivables and talent payables in one place.</p>
           </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => alert("Request Payment from Brand flow initiated.")}
+              className={`h-10 px-5 rounded-lg text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md shrink-0 ${isLightTheme ? "bg-white border border-black/10 text-[#0F172A] hover:bg-neutral-100" : "bg-white/10 hover:bg-white/20 border border-white/20 text-white"}`}
+            >
+              Request Payment
+            </button>
+            <button
+              onClick={() => alert("Send Payment to Talent flow initiated.")}
+              className={`h-10 px-5 rounded-lg text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md shrink-0 ${isLightTheme ? "bg-[#0F172A] text-white hover:bg-[#1E293B]" : "bg-white text-black hover:bg-neutral-200"}`}
+            >
+              Send Payment
+            </button>
+          </div>
+        </div>
+
+        {/* Main Tabs */}
+        <div className="flex items-center gap-2 border-b border-white/10 pb-4">
+          <button
+            onClick={() => setActiveMainTab("receivables")}
+            className={`px-5 py-2.5 rounded-lg text-sm font-bold transition-all ${
+              activeMainTab === "receivables"
+                ? "bg-white text-black"
+                : "text-[#8f8f8f] hover:text-white hover:bg-white/5"
+            }`}
+          >
+            Receivables (From Brands)
+          </button>
+          <button
+            onClick={() => setActiveMainTab("payables")}
+            className={`px-5 py-2.5 rounded-lg text-sm font-bold transition-all ${
+              activeMainTab === "payables"
+                ? "bg-white text-black"
+                : "text-[#8f8f8f] hover:text-white hover:bg-white/5"
+            }`}
+          >
+            Payables (To Talent)
+          </button>
+        </div>
+
+        {/* Summary Widgets */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {activeMainTab === "receivables" ? (
+            <>
+              <div className="bg-[#050505] border border-white/10 rounded-xl p-5 shadow-lg">
+                <p className="text-[11px] font-bold text-[#8f8f8f] uppercase tracking-wider mb-2">Total Expected</p>
+                <p className="text-2xl font-black text-white">
+                  ${invoices.reduce((acc, curr) => acc + curr.amount, 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </p>
+              </div>
+              <div className="bg-[#050505] border border-white/10 rounded-xl p-5 shadow-lg">
+                <p className="text-[11px] font-bold text-amber-500 uppercase tracking-wider mb-2">Awaiting Brands</p>
+                <p className="text-2xl font-black text-amber-400">
+                  ${invoices.filter(i => i.status === "awaiting_approval").reduce((acc, curr) => acc + curr.amount, 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </p>
+              </div>
+              <div className="bg-[#050505] border border-white/10 rounded-xl p-5 shadow-lg">
+                <p className="text-[11px] font-bold text-emerald-500 uppercase tracking-wider mb-2">Total Settled</p>
+                <p className="text-2xl font-black text-emerald-400">
+                  ${invoices.filter(i => i.status === "settled" || i.status === "talent_disbursed").reduce((acc, curr) => acc + curr.amount, 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </p>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="bg-[#050505] border border-white/10 rounded-xl p-5 shadow-lg">
+                <p className="text-[11px] font-bold text-[#8f8f8f] uppercase tracking-wider mb-2">Total Owed to Talent</p>
+                <p className="text-2xl font-black text-white">
+                  ${invoices.reduce((acc, curr) => {
+                    const talentSplit = curr.splitPool.splits.find(s => s.role === "Talent");
+                    return acc + (talentSplit ? talentSplit.amount : 0);
+                  }, 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </p>
+              </div>
+              <div className="bg-[#050505] border border-white/10 rounded-xl p-5 shadow-lg">
+                <p className="text-[11px] font-bold text-amber-500 uppercase tracking-wider mb-2">Pending Payouts</p>
+                <p className="text-2xl font-black text-amber-400">
+                  ${invoices.filter(i => i.status !== "talent_disbursed").reduce((acc, curr) => {
+                    const talentSplit = curr.splitPool.splits.find(s => s.role === "Talent");
+                    return acc + (talentSplit ? talentSplit.amount : 0);
+                  }, 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </p>
+              </div>
+              <div className="bg-[#050505] border border-white/10 rounded-xl p-5 shadow-lg">
+                <p className="text-[11px] font-bold text-emerald-500 uppercase tracking-wider mb-2">Total Disbursed</p>
+                <p className="text-2xl font-black text-emerald-400">
+                  ${invoices.filter(i => i.status === "talent_disbursed").reduce((acc, curr) => {
+                    const talentSplit = curr.splitPool.splits.find(s => s.role === "Talent");
+                    return acc + (talentSplit ? talentSplit.amount : 0);
+                  }, 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </p>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Search & Tabs Controls */}
         <div className="flex flex-col md:flex-row gap-4 justify-between items-stretch md:items-center bg-[#050505] p-3 rounded-xl border border-white/20">
           <div className="flex flex-wrap gap-2">
-            {[
-              { id: "all", label: "All Invoices" },
-              { id: "awaiting_approval", label: "Awaiting Approval" },
-              { id: "settled", label: "Settled" }
-            ].map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveFilter(tab.id as any)}
-                className={`px-4 py-2 rounded-lg text-xs font-semibold tracking-tight transition-all cursor-pointer ${
-                  activeFilter === tab.id
-                    ? "bg-white text-black font-bold"
-                    : "text-[#8f8f8f] hover:text-white bg-transparent hover:bg-white/[0.02]"
-                }`}
-              >
-                {tab.label}
-                {tab.id === "awaiting_approval" && (
-                  <span className="ml-1.5 px-1.5 py-0.5 rounded bg-[#10b981]/10 text-[#10b981] text-[10px] font-bold">
-                    {invoices.filter(i => i.status === "awaiting_approval").length}
-                  </span>
-                )}
-              </button>
-            ))}
+            {activeMainTab === "receivables" ? (
+              [
+                { id: "all", label: "All Invoices" },
+                { id: "awaiting_approval", label: "Awaiting Brand" },
+                { id: "settled", label: "Settled" }
+              ].map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveReceivableFilter(tab.id as any)}
+                  className={`px-4 py-2 rounded-lg text-xs font-semibold tracking-tight transition-all cursor-pointer ${
+                    activeReceivableFilter === tab.id
+                      ? "bg-white text-black font-bold"
+                      : "text-[#8f8f8f] hover:text-white bg-transparent hover:bg-white/[0.02]"
+                  }`}
+                >
+                  {tab.label}
+                  {tab.id === "awaiting_approval" && (
+                    <span className="ml-1.5 px-1.5 py-0.5 rounded bg-[#10b981]/10 text-[#10b981] text-[10px] font-bold">
+                      {invoices.filter(i => i.status === "awaiting_approval").length}
+                    </span>
+                  )}
+                </button>
+              ))
+            ) : (
+              [
+                { id: "all", label: "All Payouts" },
+                { id: "pending_payout", label: "Pending Payout" },
+                { id: "disbursed", label: "Disbursed" }
+              ].map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActivePayableFilter(tab.id as any)}
+                  className={`px-4 py-2 rounded-lg text-xs font-semibold tracking-tight transition-all cursor-pointer ${
+                    activePayableFilter === tab.id
+                      ? "bg-white text-black font-bold"
+                      : "text-[#8f8f8f] hover:text-white bg-transparent hover:bg-white/[0.02]"
+                  }`}
+                >
+                  {tab.label}
+                  {tab.id === "pending_payout" && (
+                    <span className="ml-1.5 px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-500 text-[10px] font-bold">
+                      {invoices.filter(i => i.status !== "talent_disbursed").length}
+                    </span>
+                  )}
+                </button>
+              ))
+            )}
           </div>
 
           <div className="relative md:w-80">
@@ -344,10 +482,17 @@ export default function InvoicesQueuePage() {
               <thead>
                 <tr className="border-b border-white/20 bg-white/[0.01] text-[#8f8f8f] font-bold">
                   <th className="p-4">Invoice ID</th>
-                  <th className="p-4">Campaign / Project Name</th>
-                  <th className="p-4">Billing Office Location</th>
-                  <th className="p-4">Cost Center</th>
-                  <th className="p-4 text-right">Invoice Amount</th>
+                  {activeMainTab === "receivables" ? (
+                    <>
+                      <th className="p-4">Brand / Campaign</th>
+                      <th className="p-4 text-right">Expected Amount</th>
+                    </>
+                  ) : (
+                    <>
+                      <th className="p-4">Talent / Campaign</th>
+                      <th className="p-4 text-right">Payout Amount</th>
+                    </>
+                  )}
                   <th className="p-4 text-center">Status</th>
                   <th className="p-4"></th>
                 </tr>
@@ -370,23 +515,45 @@ export default function InvoicesQueuePage() {
                         className="hover:bg-white/[0.02] cursor-pointer transition-colors group"
                       >
                         <td className="p-4 font-mono font-bold text-neutral-400">{inv.id}</td>
-                        <td className="p-4">
-                          <p className="text-white font-bold">{inv.campaignName}</p>
-                          <p className="text-[10px] text-neutral-500 mt-0.5">{inv.brandName}</p>
-                        </td>
-                        <td className="p-4 text-neutral-300">{inv.location}</td>
-                        <td className="p-4 text-neutral-400 font-mono">{inv.costCenter}</td>
-                        <td className="p-4 text-right font-black text-white">
-                          ${inv.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </td>
+                        {activeMainTab === "receivables" ? (
+                          <>
+                            <td className="p-4">
+                              <p className="text-white font-bold">{inv.brandName}</p>
+                              <p className="text-[10px] text-neutral-500 mt-0.5">{inv.campaignName}</p>
+                            </td>
+                            <td className="p-4 text-right font-black text-white">
+                              ${inv.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </td>
+                          </>
+                        ) : (
+                          <>
+                            <td className="p-4">
+                              <p className="text-white font-bold">{inv.splitPool.splits.find(s => s.role === "Talent")?.name || "Talent"}</p>
+                              <p className="text-[10px] text-neutral-500 mt-0.5">{inv.campaignName}</p>
+                            </td>
+                            <td className="p-4 text-right font-black text-white">
+                              ${(inv.splitPool.splits.find(s => s.role === "Talent")?.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </td>
+                          </>
+                        )}
                         <td className="p-4 text-center">
-                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                            isAwaiting 
-                              ? "bg-amber-950/60 text-amber-300 border border-amber-800/30 animate-pulse" 
-                              : "bg-emerald-950/60 text-emerald-300 border border-emerald-800/30"
-                          }`}>
-                            {isAwaiting ? "Awaiting Approval" : "Settled"}
-                          </span>
+                          {activeMainTab === "receivables" ? (
+                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                              inv.status === "awaiting_approval" 
+                                ? "bg-amber-950/60 text-amber-300 border border-amber-800/30 animate-pulse" 
+                                : "bg-emerald-950/60 text-emerald-300 border border-emerald-800/30"
+                            }`}>
+                              {inv.status === "awaiting_approval" ? "Awaiting Brand" : "Settled"}
+                            </span>
+                          ) : (
+                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                              inv.status !== "talent_disbursed"
+                                ? "bg-amber-950/60 text-amber-300 border border-amber-800/30 animate-pulse" 
+                                : "bg-emerald-950/60 text-emerald-300 border border-emerald-800/30"
+                            }`}>
+                              {inv.status !== "talent_disbursed" ? "Pending Payout" : "Disbursed"}
+                            </span>
+                          )}
                         </td>
                         <td className="p-4 text-right pr-6">
                           <ChevronRight className="h-4 w-4 text-neutral-600 group-hover:text-white transition-colors ml-auto" />

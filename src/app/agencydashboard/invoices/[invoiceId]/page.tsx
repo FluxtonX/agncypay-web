@@ -268,9 +268,9 @@ export default function InvoiceDetailPage() {
             </button>
             <button 
               onClick={() => router.push("/agencydashboard/invoices")}
-              className="px-4 py-1.5 rounded-full text-xs font-semibold bg-white text-black shadow-sm transition-all cursor-pointer"
+              className="px-4 py-1.5 rounded-full text-xs font-bold bg-white light:bg-[#0F172A] text-black light:text-white shadow-sm border border-white/20 light:border-black/10 transition-all cursor-pointer"
             >
-              {workspaceType === "brand" ? "Payments" : "Invoice History"}
+              Payments
             </button>
             
             
@@ -279,14 +279,7 @@ export default function InvoiceDetailPage() {
           <div className="flex items-center gap-3">
             {workspaceType === "agency" && (
               <>
-                <button
-                  onClick={() => router.push("/dashboard")}
-                  className="text-xs font-semibold text-[#8f8f8f] hover:text-white transition-colors flex items-center gap-1"
-                >
-                  <ArrowLeft className="h-3.5 w-3.5" />
-                  Talent View
-                </button>
-                <div className="h-4 w-[1px] bg-white/20" />
+
               </>
             )}
             <div className="flex items-center gap-2">

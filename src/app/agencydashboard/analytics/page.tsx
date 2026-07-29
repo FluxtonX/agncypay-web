@@ -16,7 +16,8 @@ import {
   Moon,
   HelpCircle,
   FileText,
-  Landmark
+  Landmark,
+  Lock
 } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { subscribeInvoicesByBrand, subscribeInvoicesByAgency, FirestoreInvoice } from "../../../lib/firebaseInvoices";
@@ -155,22 +156,24 @@ export default function AnalyticsDashboardPage() {
           <div className="flex items-center gap-3">
             {workspaceType === "agency" && (
               <>
-                <button
-                  onClick={() => router.push("/agencydashboard")}
-                  className="px-3.5 py-1.5 rounded-full text-xs font-bold bg-white light:bg-[#0F172A] text-black light:text-white hover:bg-neutral-200 light:hover:bg-[#1E293B] border border-white/20 light:border-black/10 shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
-                >
-                  <Building2 className="h-3.5 w-3.5" />
-                  Switch to Agency Portal
-                </button>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    disabled
+                    className="px-3.5 py-1.5 rounded-full text-xs font-bold bg-white/40 light:bg-[#0F172A]/40 text-black/40 light:text-white/40 border border-white/10 light:border-black/5 shadow-sm transition-all flex items-center gap-1.5 cursor-not-allowed blur-[0.6px]"
+                  >
+                    <Lock className="h-3.5 w-3.5" />
+                    Switch to Agency Portal
+                  </button>
+                  <button 
+                    onClick={() => alert("Agency Portal is currently locked. Complete your compliance verification to unlock this feature.")}
+                    className="p-1 text-neutral-400 hover:text-white transition-colors"
+                    title="Why is this locked?"
+                  >
+                    <HelpCircle className="h-4 w-4" />
+                  </button>
+                </div>
                 <div className="h-4 w-[1px] bg-white/20" />
-                <button
-                  onClick={() => router.push("/dashboard")}
-                  className="text-xs font-semibold text-[#8f8f8f] hover:text-white transition-colors flex items-center gap-1"
-                >
-                  <ArrowLeft className="h-3.5 w-3.5" />
-                  Talent View
-                </button>
-                <div className="h-4 w-[1px] bg-white/20" />
+
               </>
             )}
             <div className="flex items-center gap-2">

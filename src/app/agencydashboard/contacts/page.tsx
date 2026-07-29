@@ -19,7 +19,8 @@ import {
   ArrowUpRight,
   CheckCircle2,
   Clock,
-  Loader2
+  Loader2,
+  X
 } from "lucide-react";
 import { getRegisteredBrands, getRegisteredTalents } from "../../../lib/firebaseInvoices";
 import { FirestoreUser } from "../../../lib/firebaseAuth";
@@ -34,6 +35,11 @@ export default function AgencyContactsPage() {
   const [brands, setBrands] = useState<FirestoreUser[]>([]);
   const [talents, setTalents] = useState<FirestoreUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  
+  const [inviteModalType, setInviteModalType] = useState<"brand" | "talent" | null>(null);
+  const [inviteName, setInviteName] = useState("");
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [isSendingInvite, setIsSendingInvite] = useState(false);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -98,6 +104,41 @@ export default function AgencyContactsPage() {
     }
   };
 
+  const handleSendInvite = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inviteName || !inviteEmail) return;
+    setIsSendingInvite(true);
+    
+    // Simulate API delay
+    setTimeout(() => {
+      if (inviteModalType === "brand") {
+        setBrands(prev => [{
+          uid: `b-${Date.now()}`,
+          email: inviteEmail,
+          fullName: inviteName,
+          workspaceName: inviteName,
+          accountType: "brand",
+          agencyId: state.user?.agncyId || "AG-1000",
+          createdAt: new Date().toISOString()
+        }, ...prev]);
+      } else if (inviteModalType === "talent") {
+        setTalents(prev => [{
+          uid: `t-${Date.now()}`,
+          email: inviteEmail,
+          fullName: inviteName,
+          workspaceName: `${inviteName} Studio`,
+          accountType: "talent_independent",
+          agencyId: state.user?.agncyId || "AG-2000",
+          createdAt: new Date().toISOString()
+        }, ...prev]);
+      }
+      setIsSendingInvite(false);
+      setInviteModalType(null);
+      setInviteName("");
+      setInviteEmail("");
+    }, 1000);
+  };
+
   const filteredBrands = brands.filter(b =>
     (b.workspaceName || b.fullName || b.email).toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -126,7 +167,7 @@ export default function AgencyContactsPage() {
           {/* 4-Tab Nav */}
           <nav className={`hidden lg:flex items-center gap-1 p-1 rounded-full border ${isLightTheme ? "bg-black/[0.05] border-black/10" : "bg-white/[0.05] border-white/20"}`}>
             <button onClick={() => router.push("/agencydashboard")} className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${isLightTheme ? "text-[#475569] hover:text-[#0F172A] hover:bg-black/5" : "text-[#8f8f8f] hover:text-white hover:bg-white/5"}`}>Home</button>
-            <button onClick={() => router.push("/agencydashboard/invoices")} className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${isLightTheme ? "text-[#475569] hover:text-[#0F172A] hover:bg-black/5" : "text-[#8f8f8f] hover:text-white hover:bg-white/5"}`}>Invoice History</button>
+            <button onClick={() => router.push("/agencydashboard/invoices")} className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${isLightTheme ? "text-[#475569] hover:text-[#0F172A] hover:bg-black/5" : "text-[#8f8f8f] hover:text-white hover:bg-white/5"}`}>Payments</button>
             <button onClick={() => router.push("/agencydashboard/wallet")} className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${isLightTheme ? "text-[#475569] hover:text-[#0F172A] hover:bg-black/5" : "text-[#8f8f8f] hover:text-white hover:bg-white/5"}`}>
               <WalletIcon className="w-3.5 h-3.5" />
               Wallet
@@ -211,20 +252,38 @@ export default function AgencyContactsPage() {
             </button>
           </div>
 
-          {/* Search */}
-          <div className="relative w-full sm:w-72">
-            <Search className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${isLightTheme ? "text-slate-400" : "text-neutral-500"}`} />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              placeholder={`Search ${activeSection === "brands" ? "brands" : "talent"}...`}
-              className={`w-full h-9 rounded-xl pl-9 pr-4 text-xs border outline-none transition-colors ${
-                isLightTheme
-                  ? "bg-white border-black/10 text-[#0F172A] placeholder:text-slate-400 focus:border-black/20"
-                  : "bg-white/5 border-white/10 text-white placeholder:text-neutral-600 focus:border-white/20"
-              }`}
-            />
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
+            {/* Search */}
+            <div className="relative w-full sm:w-64">
+              <Search className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${isLightTheme ? "text-slate-400" : "text-neutral-500"}`} />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                placeholder={`Search ${activeSection === "brands" ? "brands" : "talent"}...`}
+                className={`w-full h-9 rounded-xl pl-9 pr-4 text-xs border outline-none transition-colors ${
+                  isLightTheme
+                    ? "bg-white border-black/10 text-[#0F172A] placeholder:text-slate-400 focus:border-black/20"
+                    : "bg-white/5 border-white/10 text-white placeholder:text-neutral-600 focus:border-white/20"
+                }`}
+              />
+            </div>
+
+            {activeSection === "talent" ? (
+              <button 
+                onClick={() => setInviteModalType("talent")}
+                className={`shrink-0 h-9 px-4 rounded-xl text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-1.5 ${isLightTheme ? "bg-[#0F172A] text-white hover:bg-[#1E293B]" : "bg-white text-black hover:bg-neutral-200"}`}
+              >
+                + Invite Talent
+              </button>
+            ) : (
+              <button 
+                onClick={() => setInviteModalType("brand")}
+                className={`shrink-0 h-9 px-4 rounded-xl text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-1.5 ${isLightTheme ? "bg-[#0F172A] text-white hover:bg-[#1E293B]" : "bg-white text-black hover:bg-neutral-200"}`}
+              >
+                + Invite Brand
+              </button>
+            )}
           </div>
         </div>
 
@@ -356,6 +415,96 @@ export default function AgencyContactsPage() {
           </div>
         </div>
       </footer>
+
+      {/* Invite Modal */}
+      {inviteModalType && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className={`relative w-full max-w-md rounded-2xl shadow-2xl p-6 border ${isLightTheme ? "bg-white border-black/10" : "bg-[#0A0A0A] border-white/10"}`}>
+            <button
+              onClick={() => {
+                setInviteModalType(null);
+                setInviteName("");
+                setInviteEmail("");
+              }}
+              className={`absolute top-4 right-4 p-1.5 rounded-full transition-colors ${isLightTheme ? "hover:bg-black/5 text-slate-500" : "hover:bg-white/10 text-neutral-400"}`}
+            >
+              <X className="w-5 h-5" />
+            </button>
+            
+            <h2 className={`text-xl font-black tracking-tight mb-1 ${isLightTheme ? "text-[#0F172A]" : "text-white"}`}>
+              Invite {inviteModalType === "brand" ? "Brand" : "Talent"}
+            </h2>
+            <p className={`text-xs mb-6 ${isLightTheme ? "text-slate-500" : "text-neutral-400"}`}>
+              Send an email invitation for them to join your network.
+            </p>
+
+            <form onSubmit={handleSendInvite} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className={`block text-[11px] font-bold uppercase tracking-wider ${isLightTheme ? "text-slate-600" : "text-neutral-400"}`}>Full Name or Company</label>
+                <input
+                  type="text"
+                  required
+                  value={inviteName}
+                  onChange={e => setInviteName(e.target.value)}
+                  placeholder={`e.g. ${inviteModalType === "brand" ? "Acme Corp" : "John Doe"}`}
+                  className={`w-full h-11 px-4 rounded-xl text-sm border outline-none transition-colors ${
+                    isLightTheme
+                      ? "bg-white border-black/10 text-[#0F172A] placeholder:text-slate-400 focus:border-black/20 focus:ring-1 focus:ring-black/10"
+                      : "bg-[#111] border-white/10 text-white placeholder:text-neutral-600 focus:border-white/20 focus:ring-1 focus:ring-white/10"
+                  }`}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className={`block text-[11px] font-bold uppercase tracking-wider ${isLightTheme ? "text-slate-600" : "text-neutral-400"}`}>Email Address</label>
+                <input
+                  type="email"
+                  required
+                  value={inviteEmail}
+                  onChange={e => setInviteEmail(e.target.value)}
+                  placeholder="email@example.com"
+                  className={`w-full h-11 px-4 rounded-xl text-sm border outline-none transition-colors ${
+                    isLightTheme
+                      ? "bg-white border-black/10 text-[#0F172A] placeholder:text-slate-400 focus:border-black/20 focus:ring-1 focus:ring-black/10"
+                      : "bg-[#111] border-white/10 text-white placeholder:text-neutral-600 focus:border-white/20 focus:ring-1 focus:ring-white/10"
+                  }`}
+                />
+              </div>
+
+              <div className="pt-4 flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setInviteModalType(null);
+                    setInviteName("");
+                    setInviteEmail("");
+                  }}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-colors ${isLightTheme ? "text-slate-600 hover:bg-black/5" : "text-neutral-400 hover:bg-white/5"}`}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSendingInvite || !inviteName || !inviteEmail}
+                  className={`h-10 px-6 rounded-xl text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-2 ${
+                    isLightTheme 
+                      ? "bg-[#0F172A] text-white hover:bg-[#1E293B] disabled:bg-slate-200 disabled:text-slate-400" 
+                      : "bg-white text-black hover:bg-neutral-200 disabled:bg-neutral-800 disabled:text-neutral-500"
+                  }`}
+                >
+                  {isSendingInvite ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    "Send Invitation"
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

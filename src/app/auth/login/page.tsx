@@ -101,12 +101,12 @@ export default function LoginPage() {
 
         if (userProfile.accountType === "agency") {
           const target = (safeNextPath && !safeNextPath.startsWith("/branddashboard")) ? safeNextPath : "/agencydashboard";
-          router.push(target);
+          router.push(`/auth/routing?destination=${encodeURIComponent(target)}`);
         } else if (userProfile.accountType === "brand") {
           const target = (safeNextPath && !safeNextPath.startsWith("/agencydashboard")) ? safeNextPath : "/branddashboard/invoices";
-          router.push(target);
+          router.push(`/auth/routing?destination=${encodeURIComponent(target)}`);
         } else {
-          router.push(safeNextPath || "/dashboard");
+          router.push(`/auth/routing?destination=${encodeURIComponent(safeNextPath || "/dashboard")}`);
         }
       }
     } catch (error: any) {
