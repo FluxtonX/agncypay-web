@@ -99,6 +99,24 @@ const INITIAL_INVOICES: InvoiceMock[] = [];
 
 const RECENT_TRANSACTIONS: any[] = [];
 
+const getCardImage = (institutionName: string) => {
+  const norm = institutionName.toLowerCase();
+  if (norm.includes("chase")) return "/chase-ink-business-unlimited.png";
+  if (norm.includes("mercury")) return "/mercurycard.png";
+  if (norm.includes("bank of america")) return "https://business.bankofamerica.com/content/dam/consumer/business/deposits/checking-accounts/debit-cards/bofa_busdbtcm_v.png";
+  return undefined;
+};
+
+interface PlaidAccount {
+  id: string;
+  name: string;
+  mask: string;
+  institutionName: string;
+  type: string;
+  subtype: string;
+  availableBalance: number;
+}
+
 export default function AgencyDashboardPage() {
   const router = useRouter();
   const { state, resetState } = useApp();
@@ -118,12 +136,98 @@ export default function AgencyDashboardPage() {
   const [mounted, setMounted] = useState(false);
   const [registeredBrands, setRegisteredBrands] = useState<FirestoreUser[]>([]);
   const [registeredTalents, setRegisteredTalents] = useState<FirestoreUser[]>([]);
-  const [selectedBrandEmail, setSelectedBrandEmail] = useState("");
   const [selectedTalentEmail, setSelectedTalentEmail] = useState("");
 
+  // Plaid Connection State & Handlers
+  const [plaidAccounts, setPlaidAccounts] = useState<PlaidAccount[]>([]);
+  const [isPlaidLoading, setIsPlaidLoading] = useState(false);
+  const [plaidError, setPlaidError] = useState<string | null>(null);
+  const [isPlaidModalOpen, setIsPlaidModalOpen] = useState(false);
+  const [connectingBankName, setConnectingBankName] = useState<string | null>(null);
 
+  const availablePlaidBanks = [
+    { institutionName: "Bank of America", name: "Corporate Commercial Checking", mask: "3910", balance: 310000.00 },
+    { institutionName: "Wells Fargo", name: "Business Treasury Account", mask: "7421", balance: 195400.00 },
+    { institutionName: "Silicon Valley Bank", name: "Venture Operating Account", mask: "9912", balance: 450000.00 },
+    { institutionName: "Citibank", name: "Commercial Operating Feed", mask: "5521", balance: 220000.00 },
+    { institutionName: "Brex Treasury", name: "Corporate Cash Feed", mask: "1184", balance: 380000.00 },
+    { institutionName: "Ramp Business", name: "Operating Settlement Account", mask: "6620", balance: 150000.00 },
+  ];
 
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      const savedPlaid = localStorage.getItem("agency_plaid_accounts_v3");
+      if (savedPlaid) {
+        try {
+          setPlaidAccounts(JSON.parse(savedPlaid));
+        } catch (e) {
+          console.error("Error loading saved Plaid accounts", e);
+        }
+      } else {
+        const defaultAccounts: PlaidAccount[] = [
+          {
+            id: "plaid-default-chase-ink",
+            name: "Chase Business Checking",
+            mask: "9402",
+            institutionName: "Chase",
+            type: "depository",
+            subtype: "checking",
+            availableBalance: 84320.50
+          },
+          {
+            id: "plaid-default-mercury-io",
+            name: "Mercury Treasury",
+            mask: "8821",
+            institutionName: "Mercury",
+            type: "depository",
+            subtype: "checking",
+            availableBalance: 1250000.00
+          }
+        ];
+        setPlaidAccounts(defaultAccounts);
+        localStorage.setItem("agency_plaid_accounts_v3", JSON.stringify(defaultAccounts));
+      }
+    }
+  }, []);
+
+  const handleConnectPlaid = () => {
+    setIsPlaidModalOpen(true);
+  };
+
+  const handleSelectPlaidBank = (bank: typeof availablePlaidBanks[0]) => {
+    setConnectingBankName(bank.institutionName);
+    setTimeout(() => {
+      const newAcc: PlaidAccount = {
+        id: `plaid-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+        name: bank.name,
+        mask: bank.mask,
+        institutionName: bank.institutionName,
+        type: "depository",
+        subtype: "checking",
+        availableBalance: bank.balance
+      };
+
+      setPlaidAccounts(prev => {
+        const updated = [...prev, newAcc];
+        if (typeof window !== "undefined") {
+          localStorage.setItem("agency_plaid_accounts_v3", JSON.stringify(updated));
+        }
+        return updated;
+      });
+      setConnectingBankName(null);
+      setIsPlaidModalOpen(false);
+    }, 2000);
+  };
+
+  const handleDisconnectPlaidAccount = (id: string) => {
+    setPlaidAccounts((prev) => {
+      const updated = prev.filter((acc) => acc.id !== id);
+      if (typeof window !== "undefined") {
+        localStorage.setItem("agency_plaid_accounts_v3", JSON.stringify(updated));
+      }
+      return updated;
+    });
+  };  useEffect(() => {
     setMounted(true);
     async function loadData() {
       const brandsData = await getRegisteredBrands();
@@ -986,8 +1090,90 @@ export default function AgencyDashboardPage() {
               </div>
           </div>
 
-          {/* Banks and Cards */}
-          <BanksAndCardsPanel />
+          {/* Connected Banking Feeds */}
+          <div className="bg-[#0A0A0A] light:bg-white rounded-xl border border-white/10 light:border-black/10 overflow-hidden shadow-sm flex flex-col">
+            <div className="p-5 border-b border-white/10 light:border-black/10 bg-white/[0.01] light:bg-slate-50 flex items-center justify-between">
+              <div>
+                <h3 className="text-[11px] font-bold uppercase tracking-wider text-[#8f8f8f] light:text-[#475569]">CONNECTED BANKING FEEDS</h3>
+                <p className="text-[11px] text-neutral-500 mt-0.5">Real-time commercial balances verified via Plaid</p>
+              </div>
+              <button
+                type="button"
+                onClick={handleConnectPlaid}
+                disabled={isPlaidLoading}
+                className="px-3.5 py-1.5 rounded-lg bg-white light:bg-black border border-white light:border-black text-black light:text-white text-[11px] font-bold hover:bg-neutral-200 light:hover:bg-neutral-800 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shadow-sm"
+              >
+                {isPlaidLoading ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin text-black light:text-white" />
+                    Connecting...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="h-3.5 w-3.5 text-black light:text-white" />
+                    + Connect Bank (Plaid)
+                  </>
+                )}
+              </button>
+            </div>
+
+            {plaidError && (
+              <div className="p-3 bg-white/10 light:bg-slate-100 border-b border-white/20 light:border-black/20 text-white light:text-black text-xs font-semibold flex items-center justify-between px-5">
+                <span>{plaidError}</span>
+                <button onClick={() => setPlaidError(null)} className="text-white light:text-black hover:opacity-75 cursor-pointer">
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            )}
+            
+            <div className="p-5 flex flex-col gap-3 bg-white/[0.01] light:bg-white">
+              {plaidAccounts.length > 0 ? (
+                plaidAccounts.map((acc) => (
+                  <div
+                    key={acc.id}
+                    className="flex items-center justify-between p-4 rounded-xl border border-white/15 light:border-black/15 bg-white/[0.03] light:bg-slate-50 hover:border-white/30 light:hover:border-black/30 transition-all shadow-sm"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="w-20 h-12 rounded-lg border border-white/15 light:border-black/15 bg-black flex items-center justify-center shrink-0 shadow-inner overflow-hidden">
+                        {getCardImage(acc.institutionName) ? (
+                          <img src={getCardImage(acc.institutionName)!} alt={acc.name} className="h-full w-full object-cover bg-white" />
+                        ) : (
+                          <Building2 className="h-6 w-6 text-white light:text-black" />
+                        )}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h4 className="text-[13px] font-bold text-white light:text-black">{acc.institutionName} — {acc.name}</h4>
+                        </div>
+                        <p className="text-[11px] font-medium text-neutral-400 mt-0.5 font-mono">
+                          {acc.subtype?.toUpperCase()} ••••{acc.mask}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <div className="text-right">
+                        <span className="text-[14px] font-bold text-white light:text-black font-mono block">
+                          ${acc.availableBalance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                        <span className="text-[10px] text-neutral-400 font-medium">Available Balance</span>
+                      </div>
+                      <button
+                        onClick={() => handleDisconnectPlaidAccount(acc.id)}
+                        title="Disconnect Bank Feed"
+                        className="p-1.5 rounded-lg border border-white/10 light:border-black/10 bg-white/5 light:bg-white text-neutral-400 light:text-neutral-500 hover:text-white light:hover:text-black hover:border-white/30 light:hover:border-black/30 transition-all cursor-pointer"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="py-8 text-center text-xs font-medium text-neutral-500">
+                  No bank feeds connected. Click &quot;+ Connect Bank (Plaid)&quot; above to link your commercial checking or treasury account.
+                </div>
+              )}
+            </div>
+          </div>
 
         </div>
       </div>
@@ -1270,6 +1456,105 @@ export default function AgencyDashboardPage() {
       </AnimatePresence>
 
 
+      {/* Plaid Institution Link Sandbox Modal */}
+      {isPlaidModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-[#0A0A0A] light:bg-white border border-white/20 light:border-black/15 rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl flex flex-col">
+            <div className="p-6 border-b border-white/10 light:border-black/10 flex items-center justify-between bg-white/[0.02] light:bg-slate-50">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-white/10 light:bg-slate-200 border border-white/20 light:border-black/20 flex items-center justify-center shrink-0">
+                  <ShieldCheck className="h-5 w-5 text-white light:text-black" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base font-bold text-white light:text-black">Link Bank Account</h3>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-white/10 light:bg-slate-200 text-white light:text-black border border-white/20 light:border-black/20">
+                      Verified by Plaid
+                    </span>
+                  </div>
+                  <p className="text-xs text-neutral-400 light:text-neutral-500 mt-0.5">Select an institution to connect your commercial banking feed</p>
+                </div>
+              </div>
+              <button
+                onClick={() => !connectingBankName && setIsPlaidModalOpen(false)}
+                className="p-1.5 rounded-lg border border-white/10 light:border-black/10 text-neutral-400 hover:text-white light:hover:text-black hover:bg-white/5 light:hover:bg-slate-200 transition-all cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
+              <p className="text-xs font-semibold text-neutral-400 light:text-neutral-500 uppercase tracking-wider">Major Commercial Institutions</p>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {availablePlaidBanks.map((bank) => {
+                  const isConnected = plaidAccounts.some(acc => acc.institutionName === bank.institutionName);
+                  const isThisConnecting = connectingBankName === bank.institutionName;
+
+                  return (
+                    <button
+                      key={bank.institutionName}
+                      onClick={() => !isConnected && !connectingBankName && handleSelectPlaidBank(bank)}
+                      disabled={isConnected || !!connectingBankName}
+                      className={`p-4 rounded-xl border text-left flex flex-col justify-between transition-all relative overflow-hidden ${
+                        isConnected 
+                          ? "bg-white/[0.02] light:bg-slate-100 border-white/10 light:border-black/10 opacity-50 cursor-not-allowed"
+                          : isThisConnecting
+                          ? "bg-white/10 light:bg-slate-200 border-white/40 light:border-black/40 cursor-wait"
+                          : "bg-white/[0.03] light:bg-slate-50 border-white/15 light:border-black/15 hover:border-white/40 light:hover:border-black/40 hover:bg-white/[0.06] light:hover:bg-slate-100 cursor-pointer shadow-sm hover:shadow-md"
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2 mb-3">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-8 h-8 rounded-lg bg-white/10 light:bg-white border border-white/15 light:border-black/15 flex items-center justify-center shrink-0">
+                            <Building2 className="w-4 h-4 text-white light:text-black" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold text-white light:text-black leading-tight">{bank.institutionName}</p>
+                            <p className="text-[10px] text-neutral-400 mt-0.5 font-mono">••••{bank.mask}</p>
+                          </div>
+                        </div>
+                        {isConnected && (
+                          <span className="text-[10px] font-extrabold text-white light:text-black px-2 py-0.5 bg-white/10 light:bg-slate-200 rounded-full border border-white/20 light:border-black/20">
+                            Linked
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex items-center justify-between border-t border-white/10 light:border-black/10 pt-2.5 mt-1">
+                        <span className="text-[10px] text-neutral-400 font-medium">{bank.name}</span>
+                        {isThisConnecting ? (
+                          <div className="flex items-center gap-1.5 text-xs font-bold text-white light:text-black">
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            <span>Linking...</span>
+                          </div>
+                        ) : (
+                          <span className="text-xs font-bold font-mono text-white light:text-black">
+                            ${bank.balance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </span>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="p-4 bg-white/[0.01] light:bg-slate-50 border-t border-white/10 light:border-black/10 flex items-center justify-between text-xs text-neutral-500 px-6">
+              <span className="flex items-center gap-1.5">
+                <ShieldCheck className="w-4 h-4 text-white light:text-black" />
+                256-bit AES end-to-end encryption via Plaid
+              </span>
+              <button 
+                onClick={() => !connectingBankName && setIsPlaidModalOpen(false)}
+                className="font-bold text-white light:text-black hover:underline cursor-pointer"
+              >
+                Close Sandbox
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

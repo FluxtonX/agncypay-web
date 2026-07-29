@@ -660,7 +660,7 @@ export default function InvoicesQueuePage() {
                 <img
                   src="/sendpaymenttoprightimage.png"
                   alt="Send Payment Info Card"
-                  className="absolute inset-0 w-full h-full object-contain object-center pointer-events-none"
+                  className="absolute inset-0 w-full h-full object-cover object-center pointer-events-none"
                 />
               </div>
 
