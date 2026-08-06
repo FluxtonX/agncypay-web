@@ -44,33 +44,30 @@ const secondaryNav = [
 const navByWorkspace: Record<WorkspaceType, DashboardNavItem[]> = {
   brand: [
     { label: "Dashboard", path: "/dashboard", activePath: "/dashboard", icon: LayoutGrid },
-    { label: "Wallet", path: "/dashboard/wallet", activePath: "/dashboard/wallet", icon: WalletCards },
     { label: "Invoices", path: "/dashboard/invoices", activePath: "/dashboard/invoices", icon: FileText },
-    { label: "Payments", path: "/dashboard/payments", activePath: "/dashboard/payments", icon: CreditCard, permission: "initiate_payments" },
+    { label: "Analytics", path: "/dashboard/analytics", activePath: "/dashboard/analytics", icon: ChartNoAxesColumnIncreasing },
     { label: "Agencies", path: "/dashboard/agencies", activePath: "/dashboard/agencies", icon: Users },
   ],
   agency: [
     { label: "Dashboard", path: "/dashboard", activePath: "/dashboard", icon: LayoutGrid },
-    { label: "Wallet", path: "/dashboard/wallet", activePath: "/dashboard/wallet", icon: WalletCards },
     { label: "Invoices", path: "/dashboard/invoices", activePath: "/dashboard/invoices", icon: FileText },
     { label: "Splits", path: "/dashboard/splits", activePath: "/dashboard/splits", icon: Network, permission: "view_splits" },
     { label: "Payouts", path: "/dashboard/payouts", activePath: "/dashboard/payouts", icon: BadgeDollarSign, permission: "approve_payouts" },
+    { label: "Analytics", path: "/dashboard/analytics", activePath: "/dashboard/analytics", icon: ChartNoAxesColumnIncreasing },
     { label: "Clients", path: "/dashboard/clients", activePath: "/dashboard/clients", icon: BriefcaseBusiness },
   ],
   talent_independent: [
     { label: "Dashboard", path: "/dashboard", activePath: "/dashboard", icon: LayoutGrid },
-    { label: "Wallet", path: "/dashboard/wallet", activePath: "/dashboard/wallet", icon: WalletCards },
     { label: "My Invoices", path: "/dashboard/invoices", activePath: "/dashboard/invoices", icon: FileText },
     { label: "Payouts", path: "/dashboard/payouts", activePath: "/dashboard/payouts", icon: BadgeDollarSign },
-    { label: "Payment History", path: "/dashboard/payments", activePath: "/dashboard/payments", icon: CreditCard },
+    { label: "Analytics", path: "/dashboard/analytics", activePath: "/dashboard/analytics", icon: ChartNoAxesColumnIncreasing },
     { label: "Profile", path: "/dashboard/profile", activePath: "/dashboard/profile", icon: UserRound },
   ],
   talent_agency: [
     { label: "Dashboard", path: "/dashboard", activePath: "/dashboard", icon: LayoutGrid },
     { label: "Payouts", path: "/dashboard/payouts", activePath: "/dashboard/payouts", icon: BadgeDollarSign },
     { label: "Assigned Invoices", path: "/dashboard/invoices", activePath: "/dashboard/invoices", icon: FileText },
-    { label: "Payment History", path: "/dashboard/payments", activePath: "/dashboard/payments", icon: CreditCard },
-    { label: "Payout Settings", path: "/dashboard/wallet", activePath: "/dashboard/wallet", icon: WalletCards },
+    { label: "Analytics", path: "/dashboard/analytics", activePath: "/dashboard/analytics", icon: ChartNoAxesColumnIncreasing },
     { label: "Profile", path: "/dashboard/profile", activePath: "/dashboard/profile", icon: UserRound },
   ],
   mother_agency: [
@@ -79,7 +76,7 @@ const navByWorkspace: Record<WorkspaceType, DashboardNavItem[]> = {
     { label: "Vendors", path: "/dashboard/vendors", activePath: "/dashboard/vendors", icon: BriefcaseBusiness },
     { label: "Treasury", path: "/dashboard/treasury", activePath: "/dashboard/treasury", icon: Landmark, permission: "view_treasury" },
     { label: "Payouts", path: "/dashboard/payouts", activePath: "/dashboard/payouts", icon: BadgeDollarSign, permission: "approve_payouts" },
-    { label: "Reports", path: "/dashboard/reports", activePath: "/dashboard/reports", icon: ChartNoAxesColumnIncreasing, permission: "view_reports" },
+    { label: "Analytics", path: "/dashboard/analytics", activePath: "/dashboard/analytics", icon: ChartNoAxesColumnIncreasing },
     { label: "Team", path: "/dashboard/team", activePath: "/dashboard/team", icon: UsersRound, permission: "manage_team" },
   ],
 };
@@ -108,7 +105,7 @@ function isNavActive(pathname: string, item: DashboardNavItem) {
 export function DashboardSidebar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { state, resetState, switchWorkspace } = useApp();
+  const { state, logoutUser, switchWorkspace } = useApp();
   const [isAccountOpen, setIsAccountOpen] = useState(false);
   const accountMenuRef = useRef<HTMLDivElement>(null);
   const workspaceType = state.user ? normalizeWorkspaceType(state.user.accountType) : "brand";
@@ -133,11 +130,16 @@ export function DashboardSidebar() {
     return () => document.removeEventListener("mousedown", closeAccountMenu);
   }, []);
 
-  const handleLogout = () => {
-    resetState();
-    localStorage.removeItem("agncypay_state");
-    setIsAccountOpen(false);
-    router.push("/auth/login");
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/quickbooks/disconnect", { method: "POST" });
+    } catch (error) {
+      console.warn("QuickBooks disconnect failed during logout; clearing local session anyway.", error);
+    } finally {
+      await logoutUser();
+      setIsAccountOpen(false);
+      router.push("/auth/login");
+    }
   };
 
   const handleWorkspaceSwitch = (workspaceId: string) => {
@@ -337,7 +339,7 @@ export function DashboardSidebar() {
 export function MobileDashboardNav() {
   const pathname = usePathname();
   const router = useRouter();
-  const { state, resetState, switchWorkspace } = useApp();
+  const { state, logoutUser, switchWorkspace } = useApp();
   const [isWorkspaceOpen, setIsWorkspaceOpen] = useState(false);
   const workspaceType = state.user ? normalizeWorkspaceType(state.user.accountType) : "brand";
   const activeWorkspace = state.workspaces.find((workspace) => workspace.id === state.activeWorkspaceId);
@@ -355,11 +357,16 @@ export function MobileDashboardNav() {
     router.push("/dashboard");
   };
 
-  const handleMobileLogout = () => {
-    resetState();
-    localStorage.removeItem("agncypay_state");
-    setIsWorkspaceOpen(false);
-    router.push("/auth/login");
+  const handleMobileLogout = async () => {
+    try {
+      await fetch("/api/quickbooks/disconnect", { method: "POST" });
+    } catch (error) {
+      console.warn("QuickBooks disconnect failed during logout; clearing local session anyway.", error);
+    } finally {
+      await logoutUser();
+      setIsWorkspaceOpen(false);
+      router.push("/auth/login");
+    }
   };
 
   return (

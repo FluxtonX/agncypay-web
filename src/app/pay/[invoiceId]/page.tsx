@@ -19,6 +19,7 @@ import {
   formatMainboardMoney,
   mainboardInvoices,
   type MainboardInvoice,
+  type MainboardInvoiceStatus,
 } from "../../../lib/mainboard";
 import { AgncyPayLogo } from "../../../components/payment/AgncyPayLogo";
 import { useApp } from "../../../context/AppContext";
@@ -194,7 +195,7 @@ function SummaryCard({
   );
 }
 
-export default function PayRequestPage() {
+function PayRequestPageContent() {
   const params = useParams<{ invoiceId: string }>();
   const searchParams = useSearchParams();
   const rawInvoiceId = Array.isArray(params.invoiceId) ? params.invoiceId[0] : params.invoiceId;
@@ -327,6 +328,30 @@ export default function PayRequestPage() {
     }, 1200);
     return () => window.clearTimeout(timeout);
   }, [stage, rawInvoiceId]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#333] border-t-white mx-auto mb-4"></div>
+          <p className="text-[14px] text-[#bdbdbd]">Loading checkout details...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!invoice) {
+    return (
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-[28px] font-black text-white">Invoice not found</h1>
+          <p className="mt-2 text-[#9a9a9a]">This checkout link does not match an active invoice.</p>
+        </div>
+      </div>
+    );
+  }
+
+
 
   const submitPayment = () => {
     setTransactionId(`TX-AP-${Math.floor(100000 + Math.random() * 900000)}`);
@@ -561,5 +586,20 @@ export default function PayRequestPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function PayRequestPage() {
+  return (
+    <React.Suspense fallback={
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#333] border-t-white mx-auto mb-4"></div>
+          <p className="text-[14px] text-[#bdbdbd]">Loading checkout details...</p>
+        </div>
+      </div>
+    }>
+      <PayRequestPageContent />
+    </React.Suspense>
   );
 }

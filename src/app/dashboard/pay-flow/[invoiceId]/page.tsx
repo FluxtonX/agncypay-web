@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import type { ReactNode } from "react";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import {
   CalendarDays,
   ChevronDown,
@@ -14,7 +14,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { cn } from "../../../../lib/utils";
-import { findMainboardInvoice, MainboardInvoice } from "../../../../lib/mainboard";
+import { findMainboardInvoice, MainboardInvoice, MainboardInvoiceStatus } from "../../../../lib/mainboard";
 import { downloadTableReportPdf } from "../../../../lib/pdfExport";
 import { AgncyPayLogo } from "../../../../components/payment/AgncyPayLogo";
 
@@ -286,7 +286,82 @@ export default function DashboardPayFlowPage() {
   const [note, setNote] = useState("");
   const [currencyCode, setCurrencyCode] = useState<SupportedCurrency["code"]>("USD");
   const [isCurrencyOpen, setIsCurrencyOpen] = useState(false);
-  const invoice = useMemo(() => findMainboardInvoice(params.invoiceId), [params.invoiceId]);
+
+  const [invoice, setInvoice] = useState<MainboardInvoice | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const cleanInvoiceId = params.invoiceId.replace(/^inv-/, "");
+    const localInv = findMainboardInvoice(cleanInvoiceId);
+    if (localInv) {
+      setInvoice(localInv);
+      setLoading(false);
+      return;
+    }
+
+    async function fetchQboInvoice() {
+      try {
+        const res = await fetch("/api/quickbooks/invoices");
+        if (res.ok) {
+          const data = await res.json();
+          const qboInv = data.invoices.find((inv: any) => inv.id === cleanInvoiceId || inv.id === params.invoiceId);
+          if (qboInv) {
+            const mapped: MainboardInvoice = {
+              id: qboInv.id,
+              invoiceNumber: qboInv.docNumber,
+              recipient: qboInv.name,
+              email: "qbo-recipient@agncypay.com",
+              walletId: "AGNCY-QBO-" + qboInv.id,
+              mobile: "+1 (555) 019-2834",
+              brand: "QuickBooks Online",
+              payer: "Client Workspace",
+              payerEmail: "billing@clientworkspace.com",
+              payerAddress: ["123 Business Way", "Suite 100", "New York, NY 10001"],
+              payeeAddress: ["QuickBooks Online Sync"],
+              amount: qboInv.amount,
+              fee: 0,
+              due: qboInv.daysText,
+              invoiceDate: qboInv.date,
+              settlementEta: "Immediate sync",
+              status: (qboInv.status === "Paid" ? "Paid" : "Ready") as MainboardInvoiceStatus,
+              source: "QuickBooks Online",
+              note: qboInv.detail,
+              jobType: "QuickBooks Invoice",
+              jobNumber: "QBO-" + qboInv.docNumber,
+              poNumber: "QBO-PO-" + qboInv.docNumber,
+              talentName: qboInv.name,
+              talentRealName: qboInv.name,
+              items: [
+                {
+                  title: qboInv.detail,
+                  qty: 1,
+                  rate: qboInv.amount,
+                  feeType: "Fee" as const,
+                }
+              ]
+            };
+            setInvoice(mapped);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch QBO invoice:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchQboInvoice();
+  }, [params.invoiceId]);
+
+  if (loading) {
+    return (
+      <main className="min-h-screen bg-[#070707] px-5 py-12 text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#333] border-t-white mx-auto mb-4"></div>
+          <p className="text-[14px] text-[#bdbdbd]">Loading invoice details...</p>
+        </div>
+      </main>
+    );
+  }
 
   if (!invoice) {
     return (
@@ -542,7 +617,13 @@ export default function DashboardPayFlowPage() {
               <div className="mt-3">
                 <p className="text-[14px] font-black">Recipient *</p>
                 <div className="mt-2 flex min-h-[54px] items-center gap-3 rounded-[6px] bg-[#1f1f1f] px-3">
-                  <MModelsAvatar />
+                  {invoice.brand === "QuickBooks Online" ? (
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[9px] bg-transparent">
+                      <img src="/quickbook.png" alt="QuickBooks" className="h-8 w-8 object-contain" />
+                    </div>
+                  ) : (
+                    <MModelsAvatar />
+                  )}
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-[15px] font-black text-[#d6d6d6]">{invoice.recipient}</p>
                     <p className="truncate text-[11px] font-semibold text-[#9b9b9b]">{invoice.email}</p>

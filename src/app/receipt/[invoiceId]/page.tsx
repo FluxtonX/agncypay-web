@@ -45,7 +45,7 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-export default function ReceiptPage() {
+function ReceiptPageContent() {
   const params = useParams<{ invoiceId: string }>();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -362,5 +362,20 @@ export default function ReceiptPage() {
         </section>
       </main>
     </div>
+  );
+}
+
+export default function ReceiptPage() {
+  return (
+    <React.Suspense fallback={
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#333] border-t-white mx-auto mb-4"></div>
+          <p className="text-[14px] text-[#bdbdbd]">Loading receipt...</p>
+        </div>
+      </div>
+    }>
+      <ReceiptPageContent />
+    </React.Suspense>
   );
 }

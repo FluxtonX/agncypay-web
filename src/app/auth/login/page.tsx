@@ -136,7 +136,7 @@ export default function LoginPage() {
         input:-webkit-autofill:active {
           -webkit-box-shadow: 0 0 0 1000px #0B0B0B inset !important;
           -webkit-text-fill-color: #F8FAFC !important;
-          border-color: #262626 !important;
+          border-color: #3A3A3A !important;
           transition: background-color 5000s ease-in-out 0s;
         }
       `}} />
@@ -326,6 +326,12 @@ export default function LoginPage() {
                 Remember me for 30 days
               </label>
             </div>
+
+            {errors.submit ? (
+              <div className="rounded-lg border border-red-950 bg-red-950/30 p-3 text-xs text-red-200">
+                {errors.submit}
+              </div>
+            ) : null}
 
             {/* Sign In CTA */}
             <button

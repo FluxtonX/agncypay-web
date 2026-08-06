@@ -451,10 +451,10 @@ export default function InvoiceDetailPage({ params }: PageProps) {
           This invoice is not available in the current frontend dataset.
         </p>
         <Link
-          href="/dashboard/invoices"
+          href="/dashboard"
           className="rounded-[7px] border border-[#555] px-5 py-2 text-[15px] font-semibold text-white hover:border-[#777]"
         >
-          Back to Invoices
+          Back to Dashboard
         </Link>
       </div>
     );
@@ -537,12 +537,12 @@ export default function InvoiceDetailPage({ params }: PageProps) {
     : "This action records approval for the invoice. Payment release remains with a finance or treasury user.";
 
   return (
-    <div className="w-full max-w-[1048px]">
+    <div className="mx-auto w-full max-w-[1048px] px-4 py-8 md:py-12">
       <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
         <div className="flex items-start gap-[18px]">
           <Link
-            href="/dashboard/invoices"
-            aria-label="Back to invoices"
+            href="/dashboard"
+            aria-label="Back to dashboard"
             className="mt-[27px] text-[24px] leading-none text-[#b7b7b7] transition-colors hover:text-white"
           >
             <ArrowLeft className="h-5 w-5" />

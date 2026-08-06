@@ -286,6 +286,7 @@ export function RoleFeaturePage({ kind }: { kind: FeatureKind }) {
     requiredPermissions.some((permission) => activeMembership?.permissions.includes(permission));
   const config = useMemo(() => configFor(kind, workspaceType), [kind, workspaceType]);
   const [records, setRecords] = useState(config.records);
+  const [metrics, setMetrics] = useState(config.metrics);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<FeatureRecord | null>(null);
   const [search, setSearch] = useState("");
@@ -294,9 +295,57 @@ export function RoleFeaturePage({ kind }: { kind: FeatureKind }) {
 
   useEffect(() => {
     setRecords(config.records);
+    setMetrics(config.metrics);
     setSearch("");
     setSelectedRecord(null);
-  }, [config.records]);
+  }, [config.records, config.metrics]);
+
+  useEffect(() => {
+    if (kind === "payouts") {
+      let active = true;
+      fetch("/api/quickbooks/payouts", { cache: "no-store" })
+        .then((res) => res.json())
+        .then((data) => {
+          if (!active) return;
+          if (data.connected && data.payouts && data.payouts.length > 0) {
+            const mappedRecords = data.payouts.map((p: any) => ({
+              title: p.name,
+              detail: `${p.detail} - Synced via QBO`,
+              value: p.amount,
+              status: "Settled",
+            }));
+            setRecords(mappedRecords);
+
+            // Calculate total and unique recipients
+            let totalAmount = 0;
+            const uniqueVendors = new Set<string>();
+            data.payouts.forEach((p: any) => {
+              const amtStr = p.amount.replace(/[^0-9.]/g, "");
+              const amt = parseFloat(amtStr) || 0;
+              totalAmount += amt;
+              if (p.name) uniqueVendors.add(p.name);
+            });
+            const formattedTotal = new Intl.NumberFormat("en-US", {
+              style: "currency",
+              currency: "USD",
+              maximumFractionDigits: 0,
+            }).format(totalAmount);
+
+            setMetrics([
+              { label: "Total Synced", value: formattedTotal, detail: "Across all records" },
+              { label: "Processing", value: "$0", detail: "All settled in QBO" },
+              { label: "Recipients", value: uniqueVendors.size.toString(), detail: "Unique talent/vendors" },
+            ]);
+          }
+        })
+        .catch((err) => {
+          console.error("Failed to fetch payouts on features page:", err);
+        });
+      return () => {
+        active = false;
+      };
+    }
+  }, [kind]);
 
   const filteredRecords = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -427,7 +476,7 @@ export function RoleFeaturePage({ kind }: { kind: FeatureKind }) {
       </div>
 
       <div className="mt-[31px] grid grid-cols-1 gap-4 md:grid-cols-3 md:gap-[29px]">
-        {config.metrics.map((metric) => (
+        {metrics.map((metric) => (
           <section key={metric.label} className="rounded-[13px] border border-[#676767] bg-black px-5 py-[24px]">
             <p className="text-[17px] leading-5 text-[#777]">{metric.label}</p>
             <p className="mt-[18px] break-words text-[31px] font-semibold leading-tight text-white">

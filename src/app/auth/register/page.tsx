@@ -18,6 +18,7 @@ function FormField({
   placeholder,
   error,
   type = "text",
+  autoComplete,
 }: {
   id: string;
   label: string;
@@ -26,6 +27,7 @@ function FormField({
   placeholder: string;
   error?: string;
   type?: string;
+  autoComplete?: string;
 }) {
   const [showPassword, setShowPassword] = useState(false);
   const isPasswordType = type === "password";
@@ -87,6 +89,8 @@ export default function RegisterPage() {
     setEmail(DEMO_EMAIL);
     setWorkspaceName("Adidas");
     setPassword(DEMO_PASSWORD);
+    setConfirmPassword(DEMO_PASSWORD);
+    setRoleType("brand");
     setAgree(true);
     setErrors({});
     setShowDemoHelper(false);
@@ -108,6 +112,9 @@ export default function RegisterPage() {
       nextErrors.password = "Password is required";
     } else if (password.length < 8) {
       nextErrors.password = "Password must be at least 8 characters";
+    }
+    if (password && password !== confirmPassword) {
+      nextErrors.confirmPassword = "Passwords do not match";
     }
     if (!agree) {
       nextErrors.agree = "You must agree to the Terms of Service and Privacy Policy";
@@ -160,7 +167,7 @@ export default function RegisterPage() {
         input:-webkit-autofill:active {
           -webkit-box-shadow: 0 0 0 1000px #0B0B0B inset !important;
           -webkit-text-fill-color: #F8FAFC !important;
-          border-color: #262626 !important;
+          border-color: #3A3A3A !important;
           transition: background-color 5000s ease-in-out 0s;
         }
       ` }} />
@@ -297,12 +304,26 @@ export default function RegisterPage() {
                   type="password"
                   label="Password"
                   value={password}
+                  autoComplete="new-password"
                   onChange={(value) => {
                     setPassword(value);
                     if (errors.password) setErrors({});
                   }}
                   placeholder="Minimum 8 characters"
                   error={errors.password}
+                />
+                <FormField
+                  id="confirmPassword"
+                  type="password"
+                  label="Confirm Password"
+                  value={confirmPassword}
+                  autoComplete="new-password"
+                  onChange={(value) => {
+                    setConfirmPassword(value);
+                    if (errors.confirmPassword) setErrors({});
+                  }}
+                  placeholder="Confirm your password"
+                  error={errors.confirmPassword}
                 />
               </div>
             </div>
@@ -335,6 +356,12 @@ export default function RegisterPage() {
                 {errors.agree}
               </span>
             )}
+
+            {errors.submit ? (
+              <div className="rounded-lg border border-red-950 bg-red-950/30 p-3 text-xs text-red-200">
+                {errors.submit}
+              </div>
+            ) : null}
 
             <button
               type="submit"
