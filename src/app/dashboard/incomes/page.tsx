@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
-import { useRouter } from "next/navigation";
+import React from "react";
+import Link from "next/link";
 import { Download, ArrowLeft } from "lucide-react";
 import { cn } from "../../../lib/utils";
 import { useDynamicIncomes, modelIncomeItems, RemoteBrandImage } from "../../../components/dashboard/ModelAgencyDashboard";
@@ -157,13 +157,15 @@ export default function IncomesPage() {
   return (
     <div className="mx-auto w-full max-w-[1048px] px-4 py-8 sm:px-6 lg:px-8">
       {/* Back Button */}
-      <button
-        onClick={() => router.push("/dashboard")}
-        className="group mb-6 inline-flex items-center gap-2 text-[13px] font-medium text-[#8d8d8d] transition-colors hover:text-white"
-      >
-        <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" />
-        Back to Dashboard
-      </button>
+      <div className="mb-6">
+        <Link
+          href="/dashboard"
+          className="inline-flex items-center gap-2 rounded-[7px] border border-white/20 bg-[#050505] px-3 py-2 text-[13px] font-semibold text-white hover:bg-white/5 transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Dashboard
+        </Link>
+      </div>
 
       <div>
         <h1 className="text-[34px] font-semibold leading-none text-white">
@@ -174,7 +176,7 @@ export default function IncomesPage() {
         </p>
       </div>
 
-      <section className="mt-[29px] rounded-[13px] border border-[#676767] bg-black px-[29px] py-[31px]">
+      <section className="mt-[29px] rounded-[13px] border border-white/20 bg-black px-[29px] py-[31px]">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-[29px] font-semibold leading-none text-white">
@@ -184,7 +186,7 @@ export default function IncomesPage() {
 
           <button
             type="button"
-            className="inline-flex h-[40px] items-center justify-center gap-[12px] rounded-[7px] border border-[#5a5a5a] bg-[#0c0c0c] px-[16px] text-[16px] font-semibold text-white transition-colors hover:border-[#777]"
+            className="inline-flex h-[40px] items-center justify-center gap-[12px] rounded-[7px] border border-white/20 bg-[#0c0c0c] px-[16px] text-[16px] font-semibold text-white transition-colors hover:bg-white/5"
           >
             <Download className="h-4 w-4" />
             Export
@@ -208,14 +210,17 @@ export default function IncomesPage() {
               </tr>
             </thead>
             <tbody>
-              {isLoadingIncomes ? (
-                // Skeleton rows while data is loading
-                Array.from({ length: 5 }).map((_, i) => (
-                  <tr key={`skeleton-${i}`} className="h-[64px] border-b border-[#303030] last:border-b-0">
-                    <td className="pl-[10px] pr-4">
-                      <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 shrink-0 rounded-[8px] bg-[#1a1a1a] animate-pulse" />
-                        <div className="h-4 w-32 rounded-md bg-[#1a1a1a] animate-pulse" />
+              {allIncomes.map((item, i) => (
+                <tr
+                  key={`${item.name}-${i}`}
+                  className="h-[64px] border-b border-[#303030] last:border-b-0 text-[17px] leading-none transition-colors hover:bg-white/[0.02]"
+                >
+                  <td className="pl-[10px] pr-4">
+                    <div className="flex items-center gap-3">
+                      <div className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-[8px] border border-white/20 bg-[#060606] p-[2px]")}>
+                        <div className={cn("h-full w-full overflow-hidden rounded-[6px]", item.className)}>
+                          <RemoteBrandImage src={item.src} alt={item.name} fallback={item.fallback} className="h-full w-full" imageClassName={item.imageClassName} />
+                        </div>
                       </div>
                     </td>
                     <td><div className="h-4 w-40 rounded-md bg-[#1a1a1a] animate-pulse" /></td>

@@ -20,9 +20,11 @@ export default function VerifyEmailPage() {
 
   const workspaceType = state.user ? normalizeWorkspaceType(state.user.accountType) : "brand";
   const verificationRoute =
-    workspaceType === "talent_agency" || workspaceType === "talent_independent"
-      ? "/verification/representative"
-      : "/verification/business-info";
+    workspaceType === "brand"
+      ? "/branddashboard/invoices"
+      : workspaceType === "agency"
+      ? "/agencydashboard"
+      : "/dashboard";
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

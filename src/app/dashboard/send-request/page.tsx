@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
+import { useApp } from "../../../context/AppContext";
 import {
   ArrowLeft,
   ArrowRight,
@@ -205,21 +207,28 @@ function RecipientAvatar({ recipient, size = "md" }: { recipient: Recipient; siz
   );
 }
 
-function StepPill({ active, done, label }: { active: boolean; done: boolean; label: string }) {
+function TopBar() {
+  const { state } = useApp();
+  const router = useRouter();
+  const isAgency = state.user?.accountType === "agency" || state.workspaces.some(w => w.id === state.activeWorkspaceId && w.type === "agency");
+
   return (
-    <div className="flex items-center gap-2">
-      <span
-        className={cn(
-          "flex h-6 w-6 items-center justify-center rounded-full border text-[11px] font-black",
-          done && "border-white bg-white text-black",
-          active && !done && "border-white text-white",
-          !active && !done && "border-[#333] text-[#777]"
-        )}
-      >
-        {done ? <CheckCircle2 className="h-3.5 w-3.5" /> : null}
-      </span>
-      <span className={cn("text-[12px] font-semibold", active || done ? "text-white" : "text-[#777]")}>{label}</span>
-    </div>
+    <header className="flex items-center justify-between gap-4 pb-4">
+      <div className="flex items-center gap-4">
+        <img src="/agncypaybrand.png" alt="AgncyPay" className="h-[52px] w-auto shrink-0 object-contain scale-[1.5] origin-left" />
+      </div>
+
+      {isAgency && (
+        <button
+          type="button"
+          onClick={() => router.push("/agencydashboard/agencybanking")}
+          className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-black font-bold text-xs transition-all shadow-md flex items-center gap-1.5 cursor-pointer"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          <span>Back to Agency Dashboard</span>
+        </button>
+      )}
+    </header>
   );
 }
 

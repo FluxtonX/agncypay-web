@@ -22,6 +22,8 @@ import {
   type MainboardInvoiceStatus,
 } from "../../../lib/mainboard";
 import { AgncyPayLogo } from "../../../components/payment/AgncyPayLogo";
+import { useApp } from "../../../context/AppContext";
+import { fetchSingleInvoice, updateInvoiceStatus, type FirestoreInvoice } from "../../../lib/firebaseInvoices";
 
 type CheckoutStage = "payment" | "processing" | "success";
 type CardRail = "agncypay" | "visa" | "mastercard" | "discover" | "amex" | "plaid";
@@ -197,86 +199,66 @@ function PayRequestPageContent() {
   const params = useParams<{ invoiceId: string }>();
   const searchParams = useSearchParams();
   const rawInvoiceId = Array.isArray(params.invoiceId) ? params.invoiceId[0] : params.invoiceId;
-  const isLoggedInMode = searchParams.get("mode") === "logged_in";
-  const returnTo = searchParams.get("returnTo") === "dashboard" ? "dashboard" : "mainboard";
-  const returnHref = returnTo === "dashboard" ? "/dashboard" : "/mainboard";
-  const returnLabel = returnTo === "dashboard" ? "Dashboard" : "Mainboard";
+  const { state } = useApp();
 
-  const [invoice, setInvoice] = useState<MainboardInvoice | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [dbInvoice, setDbInvoice] = useState<FirestoreInvoice | null>(null);
+  const [loadingDb, setLoadingDb] = useState(true);
+  const [stage, setStage] = useState<CheckoutStage>("payment");
+  const [activeRail, setActiveRail] = useState<CardRail>("agncypay");
   const [cardNumber, setCardNumber] = useState("1234 5678 9000 0000");
   const [expiry, setExpiry] = useState("MM/YY");
   const [cvc, setCvc] = useState("123");
-  const [nameOnCard, setNameOnCard] = useState("");
-  const [stage, setStage] = useState<CheckoutStage>("payment");
-  const [activeRail, setActiveRail] = useState<CardRail>("agncypay");
   const [transactionId, setTransactionId] = useState("");
 
   useEffect(() => {
-    const cleanInvoiceId = (rawInvoiceId || "").replace(/^inv-/, "");
-    const localInv = findMainboardInvoice(cleanInvoiceId);
-    if (localInv) {
-      setInvoice(localInv);
-      setNameOnCard(localInv.payer);
-      setLoading(false);
-      return;
-    }
-
-    async function fetchQboInvoice() {
+    async function loadInvoice() {
       try {
-        const res = await fetch("/api/quickbooks/invoices");
-        if (res.ok) {
-          const data = await res.json();
-          const qboInv = data.invoices.find((inv: any) => inv.id === cleanInvoiceId || inv.id === rawInvoiceId);
-          if (qboInv) {
-            const mapped: MainboardInvoice = {
-              id: qboInv.id,
-              invoiceNumber: qboInv.docNumber,
-              recipient: qboInv.name,
-              email: "qbo-recipient@agncypay.com",
-              walletId: "AGNCY-QBO-" + qboInv.id,
-              mobile: "+1 (555) 019-2834",
-              brand: "QuickBooks Online",
-              payer: "Client Workspace",
-              payerEmail: "billing@clientworkspace.com",
-              payerAddress: ["123 Business Way", "Suite 100", "New York, NY 10001"],
-              payeeAddress: ["QuickBooks Online Sync"],
-              amount: qboInv.amount,
-              fee: 0,
-              due: qboInv.daysText,
-              invoiceDate: qboInv.date,
-              settlementEta: "Immediate sync",
-              status: (qboInv.status === "Paid" ? "Paid" : "Ready") as MainboardInvoiceStatus,
-              source: "QuickBooks Online",
-              note: qboInv.detail,
-              jobType: "QuickBooks Invoice",
-              jobNumber: "QBO-" + qboInv.docNumber,
-              poNumber: "QBO-PO-" + qboInv.docNumber,
-              talentName: qboInv.name,
-              talentRealName: qboInv.name,
-              items: [
-                {
-                  title: qboInv.detail,
-                  qty: 1,
-                  rate: qboInv.amount,
-                  feeType: "Fee" as const,
-                }
-              ]
-            };
-            setInvoice(mapped);
-            setNameOnCard(mapped.payer);
-          }
+        const inv = await fetchSingleInvoice(rawInvoiceId || "");
+        if (inv) {
+          setDbInvoice(inv);
         }
-      } catch (err) {
-        console.error("Failed to fetch QBO invoice:", err);
+      } catch (e) {
+        console.error("Error loading invoice from Firestore:", e);
       } finally {
-        setLoading(false);
+        setLoadingDb(false);
       }
     }
-    fetchQboInvoice();
+    loadInvoice();
   }, [rawInvoiceId]);
 
-  const total = invoice ? invoice.amount + invoice.fee : 0;
+  const invoice = useMemo(() => {
+    const defaultMock = findMainboardInvoice(rawInvoiceId || "") || mainboardInvoices[0];
+    if (dbInvoice) {
+      return {
+        ...defaultMock,
+        id: dbInvoice.id,
+        amount: dbInvoice.amount,
+        fee: dbInvoice.amount * 0.015, // 1.5% fee
+        payer: dbInvoice.brandName || (dbInvoice.payerId === "MB-6984" ? "Adidas AG" : "CCA Client Workspace"),
+        payerEmail: dbInvoice.payerEmail,
+        payerAddress: dbInvoice.payerAddress,
+        recipient: dbInvoice.agency,
+        invoiceNumber: dbInvoice.id,
+        due: dbInvoice.due,
+        campaignName: dbInvoice.campaign,
+      };
+    }
+    return defaultMock;
+  }, [dbInvoice, rawInvoiceId]);
+
+  const [nameOnCard, setNameOnCard] = useState(invoice.payer);
+
+  useEffect(() => {
+    if (dbInvoice) {
+      setNameOnCard(invoice.payer);
+    }
+  }, [invoice]);
+
+  const isLoggedInMode = searchParams.get("mode") === "logged_in";
+  const returnTo = searchParams.get("returnTo") === "dashboard" ? "dashboard" : "mainboard";
+  const returnHref = returnTo === "dashboard" ? "/branddashboard" : "/mainboard";
+  const returnLabel = returnTo === "dashboard" ? "Dashboard" : "Mainboard";
+  const total = invoice.amount + invoice.fee;
 
   const paymentLabel = useMemo(
     () => (isLoggedInMode ? "Signed-in AgncyPay payment" : "Pay without AgncyPay account"),
@@ -285,9 +267,67 @@ function PayRequestPageContent() {
 
   useEffect(() => {
     if (stage !== "processing") return;
-    const timeout = window.setTimeout(() => setStage("success"), 1200);
+    const timeout = window.setTimeout(async () => {
+      setStage("success");
+      
+      const invoiceId = rawInvoiceId;
+      let mappedId = invoiceId;
+      if (invoiceId === "MB-6984") mappedId = "W-INV-001";
+      if (invoiceId === "MB-7044") mappedId = "W-INV-002";
+
+      try {
+        // Update database to paid
+        await updateInvoiceStatus(mappedId, "paid", "pending");
+
+        // Sync with dashboard stats and local notification feeds
+        const inv = await fetchSingleInvoice(mappedId);
+        if (inv) {
+          const amt = inv.amount;
+          const brandEmail = inv.brandEmail;
+          const agencyEmail = inv.agencyEmail;
+          
+          const savedVolume = localStorage.getItem(`brand_stats_paid_volume_${brandEmail}`);
+          const v = savedVolume ? parseFloat(savedVolume) : 424500.00;
+          localStorage.setItem(`brand_stats_paid_volume_${brandEmail}`, (v + amt).toString());
+
+          const savedSavings = localStorage.getItem(`brand_stats_autosplit_savings_${brandEmail}`);
+          const s = savedSavings ? parseFloat(savedSavings) : 4250.00;
+          localStorage.setItem(`brand_stats_autosplit_savings_${brandEmail}`, (s + amt * 0.015).toString());
+
+          const localNotifs = localStorage.getItem(`agency_notifications_${agencyEmail}`);
+          const notifs = localNotifs ? JSON.parse(localNotifs) : [];
+          const newNotif = {
+            id: `notif-${Date.now()}`,
+            message: `Brand paid invoice to ${inv.agency} ($${inv.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}) for ${inv.campaign}`,
+            timestamp: "Just now",
+            unread: true,
+          };
+          localStorage.setItem(`agency_notifications_${agencyEmail}`, JSON.stringify([newNotif, ...notifs]));
+        }
+      } catch (error) {
+        console.error("Error finalizing checkout payment in Firestore:", error);
+      }
+
+      // Update main queue invoices
+      const localQueue = localStorage.getItem("brand_queue_invoices");
+      if (localQueue) {
+        const parsed = JSON.parse(localQueue);
+        const next = parsed.map((inv: any) => {
+          if (inv.id === invoiceId || 
+              ((invoiceId === "MB-6984" || invoiceId === "W-INV-001") && inv.id === "AP-INV-9024") || 
+              ((invoiceId === "MB-7044" || invoiceId === "W-INV-002") && inv.id === "AP-INV-8911")) {
+            return { ...inv, status: "settled" };
+          }
+          return inv;
+        });
+        localStorage.setItem("brand_queue_invoices", JSON.stringify(next));
+      }
+
+      // Dispatch sync event
+      window.dispatchEvent(new Event("syncBrandDashboard"));
+    }, 1200);
     return () => window.clearTimeout(timeout);
-  }, [stage]);
+  }, [stage, rawInvoiceId]);
 
   if (loading) {
     return (
@@ -344,9 +384,17 @@ function PayRequestPageContent() {
     await navigator.clipboard.writeText(`${window.location.origin}/pay/${invoice.id}?mode=guest&returnTo=${returnTo}`);
   };
 
+  if (loadingDb) {
+    return (
+      <div className="min-h-screen bg-background text-foreground flex items-center justify-center font-sans transition-colors duration-200">
+        <div className="animate-spin h-6 w-6 border-2 border-white border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-black text-white">
-      <header className="sticky top-0 z-30 border-b border-[#111] bg-black/95 backdrop-blur">
+    <div className="min-h-screen bg-background text-foreground transition-colors duration-200">
+      <header className="sticky top-0 z-30 border-b border-border-custom bg-background/95 backdrop-blur">
         <div className="mx-auto flex h-[76px] max-w-[1480px] items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
           <Link href={returnHref} className="inline-flex h-10 items-center gap-2 rounded-[7px] border border-[#252525] bg-[#050505] px-3 text-[13px] font-semibold text-white hover:border-[#555]">
             <ArrowLeft className="h-4 w-4" />
@@ -367,96 +415,140 @@ function PayRequestPageContent() {
             <span className="pb-2 text-[13px] font-semibold text-[#d7d7d7]">Due Date</span>
           </div>
 
-          <div className="mt-16 flex flex-wrap gap-2">
-            {cardRails.map((rail) => (
-              <button
-                key={rail}
-                type="button"
-                aria-pressed={activeRail === rail}
-                onClick={() => setActiveRail(rail)}
-                className={cardRailClasses(rail, activeRail === rail)}
-              >
-                <CardRailLogo rail={rail} />
-              </button>
-            ))}
-          </div>
-
-          <div className="mt-5">
-            <h2 className="text-[16px] font-semibold text-white">Your information</h2>
-            <div className="mt-5 space-y-4">
-              <label className="block">
-                <span className="text-[14px] font-semibold text-white">Email</span>
-                <input
-                  value={invoice.payerEmail}
-                  readOnly
-                  className="mt-2 h-12 w-full border border-[#1c1c1c] bg-[#1a1a1a] px-4 text-[14px] font-semibold text-[#d7d7d7] outline-none"
-                />
-              </label>
-
-              <div>
-                <span className="text-[14px] font-semibold text-white">Phone Number</span>
-                <div className="mt-2 grid grid-cols-[174px_1fr] gap-1">
-                  <div className="flex h-12 items-center gap-3 border border-[#1c1c1c] bg-[#1a1a1a] px-4 text-[16px] font-semibold text-white">
-                    <span>US</span>
-                    <span>+1</span>
-                  </div>
-                  <input
-                    value={invoice.mobile.replace("+1 ", "")}
-                    readOnly
-                    className="h-12 border border-[#1c1c1c] bg-[#1a1a1a] px-4 text-[14px] font-semibold text-[#d7d7d7] outline-none"
-                  />
+          {isLoggedInMode ? (
+            <div className="mt-8 space-y-6">
+              <div className="p-6 bg-white/[0.02] border border-white/20 rounded-xl space-y-4">
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-neutral-400">Payer corporate workspace</span>
+                  <span className="text-white font-bold">
+                    {state?.workspaces?.find(w => w.id === state.activeWorkspaceId)?.name || state?.user?.fullName || "Adidas Corporate"}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-neutral-400">Recipient agency</span>
+                  <span className="text-white font-bold">{invoice.recipient}</span>
+                </div>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-neutral-400">AgncyPay client identifier</span>
+                  <span className="text-white font-mono font-bold">{state?.user?.agncyId || "USR-ADIDAS-9021"}</span>
+                </div>
+                <div className="flex justify-between items-center text-sm border-t border-white/10 pt-4">
+                  <span className="text-neutral-400">Direct settlement routing</span>
+                  <span className="text-[#10b95f] font-semibold flex items-center gap-1">
+                    <ShieldCheck className="h-4 w-4" />
+                    Treasury ACH Instant
+                  </span>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 gap-6 md:grid-cols-[1fr_174px_130px]">
-                <label className="block">
-                  <span className="text-[14px] font-semibold text-white">Card Number</span>
-                  <input
-                    value={cardNumber}
-                    onChange={(event) => setCardNumber(event.target.value)}
-                    className="mt-2 h-12 w-full border border-[#1c1c1c] bg-[#1a1a1a] px-4 text-[14px] font-semibold text-[#d7d7d7] outline-none focus:border-[#555]"
-                  />
-                </label>
-                <label className="block">
-                  <span className="text-[14px] font-semibold text-white">Exp date</span>
-                  <input
-                    value={expiry}
-                    onChange={(event) => setExpiry(event.target.value)}
-                    className="mt-2 h-12 w-full border border-[#1c1c1c] bg-[#1a1a1a] px-4 text-[14px] font-semibold text-[#d7d7d7] outline-none focus:border-[#555]"
-                  />
-                </label>
-                <label className="block">
-                  <span className="text-[14px] font-semibold text-white">CVV code</span>
-                  <input
-                    value={cvc}
-                    onChange={(event) => setCvc(event.target.value)}
-                    className="mt-2 h-12 w-full border border-[#1c1c1c] bg-[#1a1a1a] px-4 text-[14px] font-semibold text-[#d7d7d7] outline-none focus:border-[#555]"
-                  />
-                </label>
-              </div>
-
-              <label className="block">
-                <span className="text-[14px] font-semibold text-white">Name on card</span>
-                <input
-                  value={nameOnCard}
-                  onChange={(event) => setNameOnCard(event.target.value)}
-                  className="mt-2 h-12 w-full border border-[#1c1c1c] bg-[#1a1a1a] px-4 text-[14px] font-semibold text-[#d7d7d7] outline-none focus:border-[#555]"
-                />
-              </label>
-
-              <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:items-center">
+              <div className="flex flex-col gap-3 pt-2">
                 <button
                   type="button"
                   onClick={submitPayment}
-                  className="inline-flex h-12 flex-1 items-center justify-center gap-2 overflow-hidden rounded-[7px] border border-[#333] bg-black px-5 text-[14px] font-bold text-white hover:border-[#666] hover:bg-[#111]"
+                  className="w-full h-12 rounded-xl bg-white hover:bg-neutral-200 text-black text-sm font-black transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-md"
                 >
-                  <AgncyPayLogo className="h-[18px] w-[50px]" imageClassName="h-full w-full" />
-                  <span>Now</span>
+                  <Lock className="h-4 w-4" />
+                  Confirm & Pay {formatMainboardMoney(total)}
                 </button>
-                <span className="text-[12px] font-semibold text-[#8f8f8f]">{paymentLabel}</span>
+                <span className="text-[12px] font-semibold text-center text-[#8f8f8f]">
+                  Direct settlement via secure AgncyPay network clearance
+                </span>
               </div>
             </div>
-          </div>
+          ) : (
+            <>
+              <div className="mt-16 flex flex-wrap gap-2">
+                {cardRails.map((rail) => (
+                  <button
+                    key={rail}
+                    type="button"
+                    aria-pressed={activeRail === rail}
+                    onClick={() => setActiveRail(rail)}
+                    className={cardRailClasses(rail, activeRail === rail)}
+                  >
+                    <CardRailLogo rail={rail} />
+                  </button>
+                ))}
+              </div>
+
+              <div className="mt-5">
+                <h2 className="text-[16px] font-semibold text-white">Your information</h2>
+                <div className="mt-5 space-y-4">
+                  <label className="block">
+                    <span className="text-[14px] font-semibold text-white">Email</span>
+                    <input
+                      value={invoice.payerEmail}
+                      readOnly
+                      className="mt-2 h-12 w-full border border-[#1c1c1c] bg-[#1a1a1a] px-4 text-[14px] font-semibold text-[#d7d7d7] outline-none"
+                    />
+                  </label>
+
+                  <div>
+                    <span className="text-[14px] font-semibold text-white">Phone Number</span>
+                    <div className="mt-2 grid grid-cols-[174px_1fr] gap-1">
+                      <div className="flex h-12 items-center gap-3 border border-[#1c1c1c] bg-[#1a1a1a] px-4 text-[16px] font-semibold text-white">
+                        <span>US</span>
+                        <span>+1</span>
+                      </div>
+                      <input
+                        value={invoice.mobile.replace("+1 ", "")}
+                        readOnly
+                        className="h-12 border border-[#1c1c1c] bg-[#1a1a1a] px-4 text-[14px] font-semibold text-[#d7d7d7] outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-6 md:grid-cols-[1fr_174px_130px]">
+                    <label className="block">
+                      <span className="text-[14px] font-semibold text-white">Card Number</span>
+                      <input
+                        value={cardNumber}
+                        onChange={(event) => setCardNumber(event.target.value)}
+                        className="mt-2 h-12 w-full border border-[#1c1c1c] bg-[#1a1a1a] px-4 text-[14px] font-semibold text-[#d7d7d7] outline-none focus:border-[#555]"
+                      />
+                    </label>
+                    <label className="block">
+                      <span className="text-[14px] font-semibold text-white">Exp date</span>
+                      <input
+                        value={expiry}
+                        onChange={(event) => setExpiry(event.target.value)}
+                        className="mt-2 h-12 w-full border border-[#1c1c1c] bg-[#1a1a1a] px-4 text-[14px] font-semibold text-[#d7d7d7] outline-none focus:border-[#555]"
+                      />
+                    </label>
+                    <label className="block">
+                      <span className="text-[14px] font-semibold text-white">CVV code</span>
+                      <input
+                        value={cvc}
+                        onChange={(event) => setCvc(event.target.value)}
+                        className="mt-2 h-12 w-full border border-[#1c1c1c] bg-[#1a1a1a] px-4 text-[14px] font-semibold text-[#d7d7d7] outline-none focus:border-[#555]"
+                      />
+                    </label>
+                  </div>
+
+                  <label className="block">
+                    <span className="text-[14px] font-semibold text-white">Name on card</span>
+                    <input
+                      value={nameOnCard}
+                      onChange={(event) => setNameOnCard(event.target.value)}
+                      className="mt-2 h-12 w-full border border-[#1c1c1c] bg-[#1a1a1a] px-4 text-[14px] font-semibold text-[#d7d7d7] outline-none focus:border-[#555]"
+                    />
+                  </label>
+
+                  <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:items-center">
+                    <button
+                      type="button"
+                      onClick={submitPayment}
+                      className="inline-flex h-12 flex-1 items-center justify-center gap-2 overflow-hidden rounded-[7px] border border-[#333] bg-black px-5 text-[14px] font-bold text-white hover:border-[#666] hover:bg-[#111]"
+                    >
+                      <AgncyPayLogo className="h-[18px] w-[50px]" imageClassName="h-full w-full" />
+                      <span>Now</span>
+                    </button>
+                    <span className="text-[12px] font-semibold text-[#8f8f8f]">{paymentLabel}</span>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
         </section>
 
         <SummaryCard invoice={invoice} total={total} returnTo={returnTo} onCopy={copyLink} onDownload={downloadPdf} />

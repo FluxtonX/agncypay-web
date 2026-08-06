@@ -1,66 +1,98 @@
 import { NextResponse } from "next/server";
-import { plaidClient, savePlaidToken, isPlaidConfigured } from "@/lib/plaid";
-
-export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
-  const body = await req.json();
-  const { public_token, institution } = body;
-
   try {
-    if (!public_token) {
-      return NextResponse.json({ error: "Missing public_token" }, { status: 400 });
-    }
+    const clientId = process.env.PLAID_CLIENT_ID;
+    const secret = process.env.PLAID_SECRET;
+    const env = process.env.PLAID_ENV || "sandbox";
 
-    // Check if we should use mock exchange
-    if (!isPlaidConfigured() || public_token.startsWith("mock-")) {
-      console.warn("Plaid keys not configured or mock public token received. Saving mock connection...");
-      await savePlaidToken({
-        accessToken: "mock-access-token-12345",
-        itemId: "item_mock_sandbox_9988",
-        institutionName: institution?.name || "Plaid Sandbox Bank",
-        institutionId: institution?.institution_id || "ins_sandbox",
-      });
-      return NextResponse.json({ success: true, item_id: "item_mock_sandbox_9988", isMock: true });
-    }
-
-    console.log("Exchanging Plaid public token for access token...");
-    
-    const response = await plaidClient.itemPublicTokenExchange({
-      public_token: public_token,
-    });
-
-    const accessToken = response.data.access_token;
-    const itemId = response.data.item_id;
-
-    console.log("Token exchanged successfully. Item ID:", itemId);
-
-    // Save tokens locally in encrypted format
-    await savePlaidToken({
-      accessToken,
-      itemId,
-      institutionName: institution?.name || "Sandbox Institution",
-      institutionId: institution?.institution_id || "ins_sandbox",
-    });
-
-    return NextResponse.json({ success: true, item_id: itemId });
-  } catch (error: any) {
-    console.error("Error exchanging Plaid token (falling back to mock):", error.response?.data || error.message || error);
-    
-    // Graceful fallback to mock token writing so the UI success flow operates
-    try {
-      await savePlaidToken({
-        accessToken: "mock-access-token-12345",
-        itemId: "item_mock_sandbox_9988",
-        institutionName: institution?.name || "Plaid Sandbox Bank",
-        institutionId: institution?.institution_id || "ins_sandbox",
-      });
-      return NextResponse.json({ success: true, item_id: "item_mock_sandbox_9988", isMock: true });
-    } catch (saveErr) {
+    if (!clientId || !secret) {
       return NextResponse.json(
-        { error: "Failed to exchange token", details: error.response?.data || error.message },
+        { error: "Plaid credentials not configured." },
         { status: 500 }
       );
     }
+
+    const { public_token, institution } = await req.json();
+
+    if (!public_token) {
+      return NextResponse.json(
+        { error: "Missing public_token in request body." },
+        { status: 400 }
+      );
+    }
+
+    // Step 1: Exchange public_token for access_token
+    const exchangeRes = await fetch(`https://${env}.plaid.com/item/public_token/exchange`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        client_id: clientId,
+        secret: secret,
+        public_token: public_token,
+      }),
+    });
+
+    const exchangeData = await exchangeRes.json();
+
+    if (!exchangeRes.ok) {
+      console.error("Plaid exchange error:", exchangeData);
+      return NextResponse.json(
+        { error: exchangeData.error_message || "Failed to exchange Plaid public token" },
+        { status: exchangeRes.status }
+      );
+    }
+
+    const accessToken = exchangeData.access_token;
+    const itemId = exchangeData.item_id;
+
+    // Step 2: Fetch account balance & details using access_token
+    const balanceRes = await fetch(`https://${env}.plaid.com/accounts/balance/get`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        client_id: clientId,
+        secret: secret,
+        access_token: accessToken,
+      }),
+    });
+
+    const balanceData = await balanceRes.json();
+
+    if (!balanceRes.ok) {
+      console.error("Plaid balance error:", balanceData);
+      return NextResponse.json(
+        { error: balanceData.error_message || "Failed to fetch account balances" },
+        { status: balanceRes.status }
+      );
+    }
+
+    const instName = institution?.name || "Connected Bank Feed";
+
+    const formattedAccounts = (balanceData.accounts || []).map((acc: any) => ({
+      id: acc.account_id,
+      itemId: itemId,
+      institutionName: instName,
+      name: acc.name || acc.official_name || "Plaid Account",
+      officialName: acc.official_name || acc.name,
+      mask: acc.mask || "0000",
+      type: acc.type,
+      subtype: acc.subtype || acc.type,
+      availableBalance: acc.balances?.available ?? acc.balances?.current ?? 0,
+      currentBalance: acc.balances?.current ?? 0,
+      currency: acc.balances?.iso_currency_code || "USD",
+      connectedAt: new Date().toISOString(),
+    }));
+
+    return NextResponse.json({
+      success: true,
+      accounts: formattedAccounts,
+    });
+  } catch (err: any) {
+    console.error("Error in /api/plaid/exchange-token:", err);
+    return NextResponse.json(
+      { error: err?.message || "Internal server error during token exchange" },
+      { status: 500 }
+    );
   }
 }

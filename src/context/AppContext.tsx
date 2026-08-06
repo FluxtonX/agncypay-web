@@ -19,11 +19,13 @@ import {
   getVerificationTrack,
   normalizeWorkspaceType,
 } from "../types/workspace";
-import { supabase } from "../supabase/client";
-import { getUserProfileAndWorkspaces } from "../supabase/auth";
+import { auth, db } from "../lib/firebase";
+import { onAuthStateChanged } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
 
 interface AppState {
   user: {
+    uid: string;
     agncyId: string;
     fullName: string;
     email: string;
@@ -31,6 +33,8 @@ interface AppState {
     isLoggedIn: boolean;
     emailVerified: boolean;
     activeWorkspaceId?: string;
+    parentAgencyEmail?: string;
+    parentAgencyUid?: string;
   } | null;
   workspaces: Workspace[];
   memberships: Membership[];
@@ -42,6 +46,14 @@ interface AppState {
     businessState?: string;
     zipCode?: string;
     companyDescription?: string;
+    addressLine1?: string;
+    addressLine2?: string;
+    stateOrProvince?: string;
+    postalCode?: string;
+    firstName?: string;
+    lastName?: string;
+    dob?: string;
+    ssnLast4?: string;
   };
   representative: {
     fullName: string;
@@ -115,15 +127,15 @@ const DEFAULT_STATE: AppState = {
   memberships: [],
   activeWorkspaceId: null,
   businessSetup: {
-    legalName: "Adidas AG",
-    brandName: "Adidas",
-    businessType: "Public Company",
-    country: "Germany",
-    website: "https://www.adidas.com",
-    email: "compliance@adidas-group.com",
-    phone: "+49 9132 84-0",
+    legalName: "",
+    brandName: "",
+    businessType: "",
+    country: "",
+    website: "",
+    email: "",
+    phone: "",
     verificationStatus: "draft",
-    industry: "Sportswear / Apparel",
+    industry: "",
   },
   representative: {
     fullName: "",
@@ -152,27 +164,18 @@ const DEFAULT_STATE: AppState = {
     incorporationState: "",
     employeeRange: "",
     monthlyPaymentVolume: "",
-    owners: [
-      {
-        fullName: "Bjørn Gulden",
-        role: "CEO / Director",
-        ownership: 0.1,
-        country: "Norway",
-        email: "bjorn.gulden@adidas.com",
-        idRequired: true,
-      }
-    ],
+    owners: [],
   },
   documents: INITIAL_DOCUMENTS,
   brand: {
-    id: "brand-adidas-001",
-    brandName: "Adidas",
-    officialWebsite: "https://www.adidas.com",
+    id: "",
+    brandName: "",
+    officialWebsite: "",
     officialEmail: "",
     domainVerified: false,
-    trademarkNumber: "US-TM-89429402",
+    trademarkNumber: "",
     status: "draft",
-    brandCategory: "Sportswear & Footwear",
+    brandCategory: "",
     logoUploaded: false,
     brandProofUploaded: false,
     trademarkCertUploaded: false,
@@ -184,9 +187,9 @@ const DEFAULT_STATE: AppState = {
     emailDomainWarning: false,
   },
   bankDetails: {
-    accountHolderName: "Adidas AG",
-    bankName: "Deutsche Bank",
-    country: "Germany",
+    accountHolderName: "",
+    bankName: "",
+    country: "",
     currency: "USD",
     accountNumber: "",
     routingNumber: "",
@@ -210,6 +213,9 @@ interface AppContextType {
       workspaceName?: string;
       workspaceType?: WorkspaceType;
       agencyId?: string;
+      uid?: string;
+      parentAgencyEmail?: string;
+      parentAgencyUid?: string;
     }
   ) => void;
   verifyEmail: (code: string) => boolean;
@@ -246,8 +252,11 @@ function normalizeStoredState(state: AppState): AppState {
     user: state.user
       ? {
           ...state.user,
+          uid: state.user.uid ?? "",
           agncyId: state.user.agncyId ?? createAgncyId("USR"),
           activeWorkspaceId: state.user.activeWorkspaceId ?? state.activeWorkspaceId ?? undefined,
+          parentAgencyEmail: state.user.parentAgencyEmail,
+          parentAgencyUid: state.user.parentAgencyUid,
         }
       : null,
   };
@@ -257,7 +266,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<AppState>(DEFAULT_STATE);
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // Load state from localStorage on mount
+  // Load state from localStorage on mount & listen to Firebase Auth
   useEffect(() => {
     try {
       const stored = localStorage.getItem("agncypay_state");
@@ -268,6 +277,65 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       console.error("Failed to load local storage state:", e);
     }
     setIsLoaded(true);
+
+    // Set up Firebase Auth listener
+
+
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: any) => {
+      if (firebaseUser) {
+        try {
+          const docRef = doc(db, "users", firebaseUser.uid);
+          const docSnap = await getDoc(docRef);
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            
+            // Sync user data to local context state
+            setState((prev) => {
+              if (prev.user && prev.user.email === data.email && prev.user.isLoggedIn) {
+                return prev;
+              }
+
+              const workspaceType = data.accountType === "brand" ? "brand" : data.accountType === "agency" ? "agency" : "talent_independent";
+              const workspaceId = prev.activeWorkspaceId || `${workspaceType}-${Date.now()}`;
+              
+              const existingWorkspace = prev.workspaces.find(w => w.id === workspaceId);
+              const workspace = existingWorkspace || {
+                id: workspaceId,
+                type: workspaceType,
+                name: data.workspaceName,
+                agncyId: data.agencyId,
+                verificationTrack: getVerificationTrack(workspaceType),
+                verificationStatus: "draft" as const,
+              };
+
+              return {
+                ...prev,
+                user: {
+                  uid: firebaseUser.uid,
+                  agncyId: prev.user?.agncyId || data.agencyId || `USR-${Math.floor(100000 + Math.random() * 900000)}`,
+                  fullName: data.fullName,
+                  email: data.email,
+                  accountType: data.accountType,
+                  isLoggedIn: true,
+                  emailVerified: true,
+                  activeWorkspaceId: workspaceId,
+                  parentAgencyEmail: data.parentAgencyEmail,
+                  parentAgencyUid: data.parentAgencyUid,
+                },
+                workspaces: existingWorkspace ? prev.workspaces : [...prev.workspaces, workspace],
+                activeWorkspaceId: workspaceId,
+              };
+            });
+          }
+        } catch (error) {
+          console.error("Error restoring Firebase Auth session:", error);
+        }
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
   }, []);
 
   // Listen to Supabase Auth state changes
@@ -398,6 +466,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       workspaceName?: string;
       workspaceType?: WorkspaceType;
       agencyId?: string;
+      uid?: string;
+      parentAgencyEmail?: string;
+      parentAgencyUid?: string;
     }
   ) => {
     const normalizedEmail = email.trim().toLowerCase();
@@ -430,13 +501,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setState((prev) => ({
       ...prev,
       user: {
-        agncyId: prev.user?.email === normalizedEmail ? prev.user.agncyId : createAgncyId("USR"),
+        uid: workspaceOptions?.uid || prev.user?.uid || "",
+        agncyId: prev.user?.email === normalizedEmail ? prev.user.agncyId : (workspaceOptions?.agencyId || createAgncyId("USR")),
         fullName,
         email: normalizedEmail,
         accountType,
         isLoggedIn: true,
         emailVerified: false,
         activeWorkspaceId: workspaceId,
+        parentAgencyEmail: workspaceOptions?.parentAgencyEmail,
+        parentAgencyUid: workspaceOptions?.parentAgencyUid,
       },
       workspaces: [
         ...prev.workspaces.filter((existingWorkspace) => existingWorkspace.id !== workspaceId),
@@ -539,7 +613,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const sendBrandDomainCode = (email: string) => {
-    const isEnterprise = email.endsWith("@adidas.com") || email.endsWith("@adidas-group.com");
+    // Check if email uses a professional domain (not generic like gmail, yahoo, etc.)
+    const genericDomains = ["gmail.com", "yahoo.com", "hotmail.com", "outlook.com", "icloud.com", "aol.com"];
+    const emailDomain = email.split("@")[1]?.toLowerCase() || "";
+    const isEnterprise = emailDomain.length > 0 && !genericDomains.includes(emailDomain);
     setState((prev) => ({
       ...prev,
       brand: {
@@ -696,7 +773,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
-  const resetState = () => {
+  const resetState = async () => {
+    try {
+      const { logoutWithFirebase } = require("../lib/firebaseAuth");
+      await logoutWithFirebase();
+    } catch (e) {
+      console.error("Firebase logout failed during resetState:", e);
+    }
     setState(DEFAULT_STATE);
   };
 

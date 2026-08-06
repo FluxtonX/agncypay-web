@@ -22,13 +22,21 @@ import {
   Unplug,
   Users,
   X,
-  Lock,
-  Building2,
+  Loader2,
+  Sparkles,
+  RefreshCw,
   Check,
+  Wallet,
+  Lock,
+  Clock,
+  LogOut,
+  Sun,
+  Moon
 } from "lucide-react";
 import { cn } from "../../lib/utils";
-import { mainboardInvoices, formatMainboardMoney } from "../../lib/mainboard";
+import { mainboardInvoices, formatMainboardMoney, type MainboardInvoice } from "../../lib/mainboard";
 import { useApp } from "../../context/AppContext";
+import { subscribeInvoicesByAgency, subscribeInvoicesByTalent } from "../../lib/firebaseInvoices";
 import { ModelIncomeList, ModelPayoutsList, CsvDropzonePanel } from "../../components/dashboard/ModelAgencyDashboard";
 
 const BOFA_BUSINESS_DEBIT_VISA_IMAGE =
@@ -228,15 +236,9 @@ const yearlyActivity = [
   { month: "Dec", label: "D", height: 86, revenue: "$407K", streams: "8.1M", growth: "+26.9%" },
 ] as const;
 
-const dashboardInvoices = mainboardInvoices.slice(0, 5);
+const dashboardInvoices: MainboardInvoice[] = [];
 
-const dashboardPeopleByInvoiceId: Record<string, string> = {
-  "MB-6984": "Nike",
-  "MB-7012": "Zara",
-  "MB-7044": "Adidas",
-  "MB-6890": "Spotify",
-  "MB-6815": "Netflix",
-};
+const dashboardPeopleByInvoiceId: Record<string, string> = {};
 
 const payeeLogoByInvoiceId: Record<
   string,
@@ -248,38 +250,7 @@ const payeeLogoByInvoiceId: Record<
     className: string;
     markClassName?: string;
   }
-> = {
-  "MB-6984": {
-    mark: "Nike",
-    label: "Nike",
-    src: "https://cdn.simpleicons.org/nike/FFFFFF",
-    className: "bg-black text-white",
-  },
-  "MB-7012": {
-    mark: "Zara",
-    label: "Zara",
-    src: "https://cdn.simpleicons.org/zara/000000",
-    className: "bg-white text-black",
-  },
-  "MB-7044": {
-    mark: "Adidas",
-    label: "Adidas",
-    src: "https://upload.wikimedia.org/wikipedia/commons/2/20/Adidas_Logo.svg",
-    className: "bg-white",
-  },
-  "MB-6890": {
-    mark: "Spotify",
-    label: "Spotify",
-    src: "https://cdn.simpleicons.org/spotify/1DB954",
-    className: "bg-black text-white",
-  },
-  "MB-6815": {
-    mark: "Netflix",
-    label: "Netflix",
-    src: "https://cdn.simpleicons.org/netflix/E50914",
-    className: "bg-black text-white",
-  },
-};
+> = {};
 
 const activityDates = ["Today, 10:24 AM", "Today, 9:42 AM", "Yesterday", "May 31", "May 24"];
 
@@ -378,7 +349,7 @@ function Panel({
   children: React.ReactNode;
   className?: string;
 }) {
-  return <section className={cn("rounded-[13px] border border-[#3a3a3a] bg-[#050505]", className)}>{children}</section>;
+  return <section className={cn("rounded-[13px] border border-white/20 bg-[#050505]", className)}>{children}</section>;
 }
 
 function FinanceAppPromoCard({ className }: { className?: string }) {
@@ -715,6 +686,8 @@ function MusicIncomeLogo({ item }: { item: (typeof musicIncomeItems)[number] }) 
 }
 
 function CatalogValuationPanel() {
+  const [liveTotalIncome] = useState(3657001);
+
   return (
     <div className="space-y-3">
       <Link
@@ -725,45 +698,45 @@ function CatalogValuationPanel() {
         <Play className="ml-2 h-6 w-6 fill-current" />
       </Link>
 
-      <Panel className="p-4 sm:p-6">
+      <Panel className="p-4 sm:p-6 bg-[#050505] light:bg-white border-white/20 light:border-black/10">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-[1fr_1fr]">
-          <div className="flex min-h-[170px] flex-col items-center justify-center rounded-[14px] border border-[#242424] bg-[#171717] p-5 text-center">
-            <p className="text-[24px] leading-8 text-[#a7a7a7]">
+          <div className="flex min-h-[170px] flex-col items-center justify-center rounded-[14px] border border-[#242424] light:border-black/10 bg-[#171717] light:bg-slate-50 p-5 text-center">
+            <p className="text-[24px] leading-8 text-[#a7a7a7] light:text-[#475569]">
               Total Income
               <br />
               2026:
             </p>
-            <p className="mt-3 text-[36px] font-black leading-none text-[#13d463]">$3,657,001</p>
+            <p className="mt-3 text-[36px] font-black leading-none text-[#13d463]">${liveTotalIncome.toLocaleString()}</p>
           </div>
 
-          <div className="flex min-h-[170px] flex-col justify-between rounded-[14px] border border-[#242424] bg-[#171717] p-5">
+          <div className="flex min-h-[170px] flex-col justify-between rounded-[14px] border border-[#242424] light:border-black/10 bg-[#171717] light:bg-slate-50 p-5">
             <div>
-              <p className="text-[20px] text-[#a7a7a7]">Payment Due</p>
-              <p className="mt-3 text-[31px] font-semibold leading-none text-white">1 Apr</p>
+              <p className="text-[20px] text-[#a7a7a7] light:text-[#475569]">Payment Due</p>
+              <p className="mt-3 text-[31px] font-semibold leading-none text-white light:text-[#0F172A]">1 Apr</p>
             </div>
             <button
               type="button"
-              className="h-10 rounded-[8px] border border-[#454545] bg-[#222] text-[18px] font-semibold text-white transition-colors hover:border-[#777]"
+              className="h-10 rounded-[8px] border border-[#454545] light:border-black/15 bg-[#222] light:bg-[#0F172A] text-[18px] font-semibold text-white light:text-white transition-colors hover:border-[#777] cursor-pointer"
             >
               Pay Early
             </button>
           </div>
         </div>
 
-        <div className="mt-4 rounded-[14px] border border-[#242424] bg-[#171717] px-5 py-6">
-          <p className="text-[20px] text-[#a7a7a7]">Yearly Activity</p>
+        <div className="mt-4 rounded-[14px] border border-[#242424] light:border-black/10 bg-[#171717] light:bg-slate-50 px-5 py-6">
+          <p className="text-[20px] text-[#a7a7a7] light:text-[#475569]">Yearly Activity</p>
           <div className="mt-5 grid h-[128px] grid-cols-12 items-end gap-3 overflow-visible">
             {yearlyActivity.map((month) => (
               <button
                 key={month.month}
                 type="button"
-                className="group relative flex h-full min-w-0 flex-col items-center justify-end gap-2 outline-none"
+                className="group relative flex h-full min-w-0 flex-col items-center justify-end gap-2 outline-none cursor-pointer"
                 aria-label={`${month.month}: ${month.revenue} revenue, ${month.streams} streams, ${month.growth} growth`}
               >
-                <span className="pointer-events-none absolute bottom-[calc(100%+10px)] left-1/2 z-10 w-[124px] -translate-x-1/2 translate-y-1 rounded-[7px] border border-[#2f2f2f] bg-[#0b0b0b] px-3 py-2 text-left opacity-0 shadow-2xl transition-all duration-200 group-hover:translate-y-0 group-hover:opacity-100 group-focus-visible:translate-y-0 group-focus-visible:opacity-100">
-                  <span className="block text-[11px] font-black text-white">{month.month}</span>
-                  <span className="mt-1 block text-[10px] font-semibold text-[#8f8f8f]">Revenue {month.revenue}</span>
-                  <span className="block text-[10px] font-semibold text-[#8f8f8f]">Streams {month.streams}</span>
+                <span className="pointer-events-none absolute bottom-[calc(100%+10px)] left-1/2 z-10 w-[124px] -translate-x-1/2 translate-y-1 rounded-[7px] border border-[#2f2f2f] light:border-black/15 bg-[#0b0b0b] light:bg-white px-3 py-2 text-left opacity-0 shadow-2xl transition-all duration-200 group-hover:translate-y-0 group-hover:opacity-100 group-focus-visible:translate-y-0 group-focus-visible:opacity-100">
+                  <span className="block text-[11px] font-black text-white light:text-[#0F172A]">{month.month}</span>
+                  <span className="mt-1 block text-[10px] font-semibold text-[#8f8f8f] light:text-[#475569]">Revenue {month.revenue}</span>
+                  <span className="block text-[10px] font-semibold text-[#8f8f8f] light:text-[#475569]">Streams {month.streams}</span>
                   <span className={cn("mt-1 block text-[10px] font-black", month.growth.startsWith("-") ? "text-[#ff6b5f]" : "text-[#13d463]")}>
                     {month.growth}
                   </span>
@@ -772,7 +745,7 @@ function CatalogValuationPanel() {
                   className="w-full max-w-[30px] rounded-t-[4px] bg-[#13d463] shadow-[0_0_0_rgba(19,212,99,0)] transition-all duration-300 ease-out group-hover:-translate-y-1 group-hover:bg-[#20f076] group-hover:shadow-[0_0_18px_rgba(19,212,99,0.45)] group-focus-visible:-translate-y-1 group-focus-visible:bg-[#20f076] group-focus-visible:shadow-[0_0_18px_rgba(19,212,99,0.45)]"
                   style={{ height: `${month.height}%` }}
                 />
-                <span className="text-[14px] font-semibold text-[#676767] transition-colors duration-200 group-hover:text-white group-focus-visible:text-white">
+                <span className="text-[14px] font-semibold text-[#676767] light:text-[#475569] transition-colors duration-200 group-hover:text-white light:group-hover:text-[#0F172A] group-focus-visible:text-white">
                   {month.label}
                 </span>
               </button>
@@ -878,34 +851,34 @@ function WalletContactsOverlay({
     <div className="fixed inset-0 z-40 bg-black/55 px-4 py-16 backdrop-blur-[1px]">
       <div className="mx-auto w-full max-w-[760px]">
         <div className="relative">
-          <Search className="pointer-events-none absolute left-5 top-1/2 h-5 w-5 -translate-y-1/2 text-[#8b8b8b]" />
+          <Search className="pointer-events-none absolute left-5 top-1/2 h-5 w-5 -translate-y-1/2 text-[#8b8b8b] light:text-[#64748B]" />
           <input
             autoFocus
             value={query}
             onChange={(event) => onQueryChange(event.target.value)}
             placeholder="Name, Agncy ID, email, mobile"
-            className="h-[58px] w-full rounded-full border border-[#555] bg-[#2b2929] pl-14 pr-14 text-[14px] font-black text-white outline-none placeholder:text-[#a7a7a7]"
+            className="h-[58px] w-full rounded-full border border-[#555] light:border-black/20 bg-[#2b2929] light:bg-white pl-14 pr-14 text-[14px] font-black text-white light:text-[#0F172A] outline-none placeholder:text-[#a7a7a7] light:placeholder:text-[#64748B] shadow-lg"
           />
           <button
             type="button"
             onClick={onClose}
-            className="absolute right-5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full text-white hover:bg-white/[0.08]"
+            className="absolute right-5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full text-white light:text-[#0F172A] hover:bg-white/[0.08] light:hover:bg-slate-200"
             aria-label="Close wallet contacts"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
-        <div className="mt-2 rounded-[7px] border border-[#343434] bg-black px-8 py-8">
-          <p className="text-[14px] font-black text-white">Recent searches</p>
+        <div className="mt-2 rounded-[7px] border border-[#343434] light:border-black/10 bg-black light:bg-white px-8 py-8 shadow-2xl">
+          <p className="text-[14px] font-black text-white light:text-[#0F172A]">Recent searches</p>
           <div className="mt-6 space-y-4">
             {filteredContacts.map((contact) => {
               const active = autosplitContactIds.includes(contact.id);
               return (
-                <div key={contact.id} className="flex items-center justify-between gap-4">
+                <div key={contact.id} className="flex items-center justify-between gap-4 p-2 rounded-lg light:bg-slate-50 light:border light:border-black/5">
                   <div className="min-w-0">
-                    <p className="truncate text-[20px] font-black text-white">{contact.name}</p>
-                    <p className="mt-1 truncate text-[13px] font-semibold text-[#9b9b9b]">{contact.handle}</p>
+                    <p className="truncate text-[18px] font-black text-white light:text-[#0F172A]">{contact.name}</p>
+                    <p className="mt-0.5 truncate text-[13px] font-semibold text-[#9b9b9b] light:text-[#475569]">{contact.handle}</p>
                   </div>
                   <AutoSplitToggle
                     active={active}
@@ -920,14 +893,14 @@ function WalletContactsOverlay({
             <button
               type="button"
               onClick={() => onQueryChange("")}
-              className="text-[13px] font-black text-[#22e03b] underline"
+              className="text-[13px] font-black text-[#22e03b] light:text-[#16a34a] underline cursor-pointer"
             >
               Clear all
             </button>
             <button
               type="button"
               onClick={onEnableAll}
-              className="h-10 rounded-[7px] border border-[#13e56d] bg-[#0d2b18] px-4 text-[13px] font-black text-white"
+              className="h-10 rounded-[7px] border border-[#13e56d] light:border-emerald-500 bg-[#0d2b18] light:bg-[#0F172A] px-4 text-[13px] font-black text-white light:text-white cursor-pointer"
             >
               Autosplit all talent invoices
             </button>
@@ -938,9 +911,101 @@ function WalletContactsOverlay({
   );
 }
 
+function CreativeBankingPanel({
+  liquidity,
+  crystallised,
+  pending,
+  onWithdraw,
+  onNet0,
+}: {
+  liquidity: number;
+  crystallised: number;
+  pending: number;
+  onWithdraw: () => void;
+  onNet0: () => void;
+}) {
+  return (
+    <Panel className="p-5 relative overflow-hidden border-white/20 light:border-black/10 bg-[#050505] light:bg-white">
+      <div>
+        <h2 className="text-[20px] font-bold text-white light:text-[#0F172A] tracking-tight">Payout Balance</h2>
+        <p className="text-[12px] text-[#8E8E93] light:text-[#475569] mt-1">Your available balances and earnings.</p>
+      </div>
+
+      <div className="mt-5 space-y-4">
+        {/* Pending Balance Row */}
+        <div className="p-5 bg-[#050505] light:bg-slate-50 border border-white/10 light:border-black/10 rounded-xl flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#261a03] light:bg-amber-100 text-amber-500 light:text-amber-700 border border-amber-500/20 light:border-amber-400">
+              <Clock className="h-5 w-5" />
+            </div>
+            <div>
+              <span className="text-[12px] font-semibold text-neutral-400 light:text-[#475569]">Pending Balance</span>
+              <p className="mt-1 text-[26px] font-black text-white light:text-[#0F172A] tracking-tight leading-none">
+                ${pending.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </p>
+              <p className="text-[11px] text-[#8E8E93] light:text-[#475569] mt-1.5">Invoiced but awaiting brand payment.</p>
+            </div>
+          </div>
+          <span className={`text-[11px] font-semibold px-3 py-1.5 rounded-lg shrink-0 ${pending > 0 ? "text-amber-400 bg-amber-500/10 border border-amber-500/20" : "text-neutral-600 light:text-slate-500 bg-white/[0.02] light:bg-slate-200 border border-white/[0.06] light:border-black/10"}`}>
+            {pending > 0 ? "Awaiting" : "None"}
+          </span>
+        </div>
+
+        {/* Liquidity Balance Row */}
+        <div className="p-5 bg-[#050505] light:bg-slate-50 border border-white/10 light:border-black/10 rounded-xl flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#0A2616] light:bg-emerald-100 text-[#14C96B] light:text-emerald-700 border border-[#10b95f]/20 light:border-emerald-400">
+              <Wallet className="h-5 w-5" />
+            </div>
+            <div>
+              <span className="text-[12px] font-semibold text-neutral-400 light:text-[#475569]">Liquidity Balance</span>
+              <p className="mt-1 text-[26px] font-black text-white light:text-[#0F172A] tracking-tight leading-none">
+                ${liquidity.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </p>
+              <p className="text-[11px] text-[#8E8E93] light:text-[#475569] mt-1.5">Available to send, withdraw, or spend anytime.</p>
+            </div>
+          </div>
+          <button
+            onClick={onWithdraw}
+            disabled={liquidity <= 0}
+            className="h-10 px-4 rounded-xl border border-white/20 light:border-black/15 hover:border-white/40 bg-black light:bg-[#0F172A] hover:bg-white/[0.02] text-white light:text-white text-[12px] font-bold transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+          >
+            Withdraw
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* Crystallised Balance Row */}
+        <div className="p-5 bg-[#050505] light:bg-slate-50 border border-white/10 light:border-black/10 rounded-xl flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#1A0B2E] light:bg-purple-100 text-[#9b51e0] light:text-purple-700 border border-[#8a2be2]/20 light:border-purple-400">
+              <Lock className="h-5 w-5" />
+            </div>
+            <div>
+              <span className="text-[12px] font-semibold text-neutral-400 light:text-[#475569]">Crystallised Balance</span>
+              <p className="mt-1 text-[26px] font-black text-white light:text-[#0F172A] tracking-tight leading-none">
+                ${crystallised.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </p>
+              <p className="text-[11px] text-[#8E8E93] light:text-[#475569] mt-1.5">Earnings locked from completed settlements.</p>
+            </div>
+          </div>
+          <button
+            onClick={onNet0}
+            disabled={crystallised <= 0}
+            className="h-10 px-4 rounded-xl border border-white/20 light:border-black/15 hover:border-white/40 bg-black light:bg-[#0F172A] hover:bg-white/[0.02] text-white light:text-white text-[12px] font-bold transition-all flex items-center gap-1 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+          >
+            Early Payout
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+    </Panel>
+  );
+}
+
 function DashboardFooter() {
   return (
-    <footer className="mt-8 border-y border-[#343434]">
+    <footer className="mt-8 border-y border-white/20">
       <div className="mx-auto flex max-w-[1040px] flex-wrap items-center justify-center gap-8 px-4 py-8 text-[12px] font-bold text-white">
         <img src="/agncypaybrand.png" alt="AgncyPay" className="h-[48px] w-auto object-contain scale-[1.45]" />
         <Link href="/dashboard/support">Help</Link>
@@ -1265,10 +1330,57 @@ function QuickBooksOnlinePanel({
 
 export default function DashboardHomePage() {
   const router = useRouter();
-  const { state } = useApp();
+  const { state, resetState } = useApp();
   const activeWorkspace = state.workspaces.find((w) => w.id === state.activeWorkspaceId);
   const workspaceType = activeWorkspace?.type || state.user?.accountType || "brand";
   const workspaceName = activeWorkspace?.name || "Acme Corp";
+
+  const [isLightTheme, setIsLightTheme] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const savedTheme = localStorage.getItem("agncypay_theme_talent");
+      if (savedTheme) {
+        if (savedTheme === "light") {
+          document.documentElement.classList.add("light");
+          document.documentElement.classList.remove("dark");
+          setIsLightTheme(true);
+        } else {
+          document.documentElement.classList.add("dark");
+          document.documentElement.classList.remove("light");
+          setIsLightTheme(false);
+        }
+      } else {
+        if (false) {
+          document.documentElement.classList.add("light");
+          document.documentElement.classList.remove("dark");
+          setIsLightTheme(true);
+        } else {
+          document.documentElement.classList.add("dark");
+          document.documentElement.classList.remove("light");
+          setIsLightTheme(false);
+        }
+      }
+    }
+  }, []);
+
+  const toggleTheme = () => {
+    if (typeof window !== "undefined") {
+      const isLight = document.documentElement.classList.toggle("light");
+      if (isLight) {
+        document.documentElement.classList.remove("dark");
+      } else {
+        document.documentElement.classList.add("dark");
+      }
+      setIsLightTheme(isLight);
+      localStorage.setItem("agncypay_theme_talent", isLight ? "light" : "dark");
+    }
+  };
+
+  const handleLogout = () => {
+    resetState();
+    router.push("/auth/login");
+  };
 
   const [autosplitInvoiceIds, setAutosplitInvoiceIds] = useState<string[]>([dashboardInvoices[0]?.id || ""]);
   const [autosplitContactIds, setAutosplitContactIds] = useState<string[]>([]);
@@ -1561,243 +1673,230 @@ export default function DashboardHomePage() {
   // Check if we are resuming from an OAuth redirect
   const [dashboardReceivedRedirectUri, setDashboardReceivedRedirectUri] = useState<string | undefined>(undefined);
 
+  const [widgetInvoices, setWidgetInvoices] = useState<any[]>([]);
+  const [sessionWithdrawAmount, setSessionWithdrawAmount] = useState(0);
+  const [sessionNet0Advanced, setSessionNet0Advanced] = useState(0);
+
+  const [mounted, setMounted] = useState(false);
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const url = window.location.href;
-      if (url.includes("oauth_state_id=") || url.includes("link_session_id=")) {
-        setDashboardReceivedRedirectUri(url);
-      }
-    }
-  }, []);
+    setMounted(true);
+    const userEmail = state.user?.email || "";
+    const accountType = state.user?.accountType || "agency";
 
-  const fetchPlaidLinkToken = async () => {
-    try {
-      setDashboardPlaidError(null);
-      const res = await fetch("/api/plaid/create-link-token", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+    // Scope subscription by account type
+    let unsubscribe: () => void;
+    if (accountType === "agency") {
+      unsubscribe = subscribeInvoicesByAgency(userEmail, (invoicesList) => {
+        setWidgetInvoices(invoicesList);
       });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.link_token) {
-          setPlaidLinkToken(data.link_token);
-          setIsDashboardMockPlaid(false);
-        } else if (data.isMock) {
-          setIsDashboardMockPlaid(true);
-        }
-      } else {
-        const errData = await res.json().catch(() => ({}));
-        const errMsg = errData.details
-          ? (typeof errData.details === "object" ? JSON.stringify(errData.details) : errData.details)
-          : errData.error || "Server response error";
-        console.error("Plaid Link initialization failed in dashboard API:", errMsg);
-        setDashboardPlaidError(errMsg || "Failed to retrieve link token");
-      }
-    } catch (err: any) {
-      console.error("Error fetching Plaid link token on dashboard:", err);
-      setDashboardPlaidError(err.message || "Failed to retrieve link token");
+    } else {
+      // Talent accounts
+      unsubscribe = subscribeInvoicesByTalent(userEmail, (invoicesList) => {
+        setWidgetInvoices(invoicesList);
+      });
     }
-  };
+    return () => unsubscribe();
+  }, [state.user]);
 
-  const triggerDashboardMockPlaidFlow = useCallback(async () => {
-    setLinkModalStep("plaid_verifying");
-    setModalLoadingText("Connecting to simulated Plaid Sandbox environment...");
-    
-    setTimeout(async () => {
-      setModalLoadingText("Exchanging credentials and verifying checking account...");
-      
-      setTimeout(async () => {
-        try {
-          const res = await fetch("/api/plaid/exchange-token", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              public_token: "mock-public-token-12345",
-              institution: { name: "Plaid Sandbox Bank", institution_id: "ins_sandbox" },
-            }),
+  useEffect(() => {
+    const userEmail = state.user?.email || "guest";
+    const savedWithdraw = localStorage.getItem(`talent_withdraw_adjust_${userEmail}`);
+    if (savedWithdraw) setSessionWithdrawAmount(parseFloat(savedWithdraw));
+
+    const savedNet0 = localStorage.getItem(`talent_net0_advanced_${userEmail}`);
+    if (savedNet0) setSessionNet0Advanced(parseFloat(savedNet0));
+  }, [state.user]);
+
+  const [liveAvailable] = useState(24500.00);
+  const [liveSpent] = useState(1200.00);
+
+  const [liquidityBalance, setLiquidityBalance] = useState(0);
+  const [crystallisedBalance, setCrystallisedBalance] = useState(0);
+  const [pendingBalance, setPendingBalance] = useState(0);
+
+  useEffect(() => {
+    const userEmail = state.user?.email || "guest";
+    const normalizedEmail = userEmail.trim().toLowerCase();
+
+    const dynamicCrystallised = widgetInvoices.reduce((sum, i) => {
+      if (i.splits && i.splits.length > 0) {
+        const mySplit = i.splits.find((s: any) => s.talentEmail.trim().toLowerCase() === normalizedEmail);
+        if (mySplit && i.status === "paid" && mySplit.status === "pending") {
+          return sum + mySplit.amount;
+        }
+      } else if (i.talentEmail.trim().toLowerCase() === normalizedEmail && i.status === "paid" && i.talentPayoutStatus === "pending") {
+        return sum + i.amount * 0.85;
+      }
+      return sum;
+    }, 0);
+
+    const dynamicLiquidity = widgetInvoices.reduce((sum, i) => {
+      if (i.splits && i.splits.length > 0) {
+        const mySplit = i.splits.find((s: any) => s.talentEmail.trim().toLowerCase() === normalizedEmail);
+        if (mySplit && mySplit.status === "disbursed") {
+          return sum + mySplit.amount;
+        }
+      } else if (i.talentEmail.trim().toLowerCase() === normalizedEmail && i.talentPayoutStatus === "disbursed") {
+        return sum + i.amount * 0.85;
+      }
+      return sum;
+    }, 0);
+
+    // Pending balance: invoices assigned to this talent where brand hasn't paid yet
+    const dynamicPending = widgetInvoices.reduce((sum, i) => {
+      if (i.status === "pending") {
+        if (i.splits && i.splits.length > 0) {
+          const mySplit = i.splits.find((s: any) => s.talentEmail.trim().toLowerCase() === normalizedEmail);
+          if (mySplit) return sum + mySplit.amount;
+        } else if (i.talentEmail.trim().toLowerCase() === normalizedEmail) {
+          return sum + i.amount * 0.85;
+        }
+      }
+      return sum;
+    }, 0);
+
+    // Start at $0 — balances build from real Firestore data
+    const defaultLiq = 0;
+    const defaultCry = 0;
+
+    const finalCry = Math.max(0, (defaultCry + dynamicCrystallised) - sessionNet0Advanced);
+    const finalLiq = Math.max(0, (defaultLiq + dynamicLiquidity) + (sessionNet0Advanced * 0.985) - sessionWithdrawAmount);
+
+    setLiquidityBalance(finalLiq);
+    setCrystallisedBalance(finalCry);
+    setPendingBalance(dynamicPending);
+  }, [widgetInvoices, sessionWithdrawAmount, sessionNet0Advanced, state.user]);
+
+  const [isNet0Open, setIsNet0Open] = useState(false);
+  const [isWithdrawOpen, setIsWithdrawOpen] = useState(false);
+  const [net0Stage, setNet0Stage] = useState<"idle" | "verifying" | "advancing" | "crediting" | "success">("idle");
+  const [withdrawStage, setWithdrawStage] = useState<"idle" | "submitting" | "success">("idle");
+  const [withdrawAmount, setWithdrawAmount] = useState("");
+  const [withdrawError, setWithdrawError] = useState("");
+  const [selectedWithdrawCard, setSelectedWithdrawCard] = useState(0);
+
+  const handleProcessNet0 = () => {
+    const userEmail = state.user?.email || "guest";
+    const net0Key = `brand_stats_net0_funded_${userEmail}`;
+    const incomesKey = `uploadedIncomes_${userEmail}`;
+
+    setNet0Stage("verifying");
+    setTimeout(() => {
+      setNet0Stage("advancing");
+      setTimeout(() => {
+        setNet0Stage("crediting");
+        setTimeout(() => {
+          setNet0Stage("success");
+          
+          const advAmt = crystallisedBalance;
+          const fee = advAmt * 0.015;
+          const netCredit = advAmt - fee;
+
+          setSessionNet0Advanced((prev) => {
+            const next = prev + advAmt;
+            localStorage.setItem(`talent_net0_advanced_${userEmail}`, next.toString());
+            return next;
           });
-          if (res.ok) {
-            setPlaidConnected(true);
-            setPlaidInstitutionName("Plaid Sandbox Bank");
-            setSelectedBank("Plaid Sandbox Bank");
-            const newBank = {
-              name: "Plaid Sandbox Bank Business Account",
-              detail: "Checking ****9988",
-              cardImage: CHASE_INK_BUSINESS_UNLIMITED_IMAGE,
-              fallback: "Plaid Sandbox Bank",
-            };
-            setLinkedCards((prev) => {
-              const exists = prev.some((card) => card.name.includes(newBank.name));
-              if (exists) return prev;
-              return [newBank, ...prev];
-            });
-            setLinkModalStep("plaid_success");
-          } else {
-            const errData = await res.json().catch(() => ({}));
-            const errMsg = errData.details || errData.error || "Failed to exchange Plaid token";
-            console.error("Mock exchange failed:", errMsg);
-            setDashboardPlaidError(`Exchange Error: ${errMsg}`);
-            setLinkModalStep("plaid_intro");
-          }
-        } catch (err: any) {
-          console.error("Plaid mock exchange error:", err);
-          setDashboardPlaidError(`Exchange Error: ${err.message || err}`);
-          setLinkModalStep("plaid_intro");
-        }
-      }, 1000);
-    }, 1000);
-  }, []);
 
-  const onPlaidSuccess = useCallback(async (public_token: string, metadata: any) => {
-    setLinkModalStep("plaid_verifying");
-    setModalLoadingText("Exchanging credentials and verifying checking account...");
-    try {
-      const res = await fetch("/api/plaid/exchange-token", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          public_token,
-          institution: metadata.institution,
-        }),
+          // Sync with Brand/Agency Net-0 Funded stats card
+          const currentNet0 = localStorage.getItem(net0Key);
+          const defaultNet0 = 0;
+          const nextNet0 = (currentNet0 ? parseFloat(currentNet0) : defaultNet0) + advAmt;
+          localStorage.setItem(net0Key, nextNet0.toString());
+
+          const newIncome = {
+            slug: `net0-advance-${Date.now()}`,
+            name: "AgncyPay Net-0 Treasury",
+            detail: "Instant Campaign Cash Advance",
+            date: "Today, Just now",
+            amount: `+$${netCredit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+            src: "/agncypaybrand.png",
+            fallback: "AP",
+            className: "bg-white/10",
+            imageClassName: "scale-[1.1] p-1",
+          };
+
+          const stored = localStorage.getItem(incomesKey);
+          const existing = stored ? JSON.parse(stored) : [];
+          const nextIncomes = [newIncome, ...existing];
+          localStorage.setItem(incomesKey, JSON.stringify(nextIncomes));
+
+          window.dispatchEvent(new Event("incomesUpdated"));
+          window.dispatchEvent(new Event("syncBrandDashboard"));
+
+          setTimeout(() => {
+            setIsNet0Open(false);
+            setNet0Stage("idle");
+          }, 2000);
+        }, 1500);
+      }, 1500);
+    }, 1200);
+  };
+
+  const handleProcessWithdrawal = (e: React.FormEvent) => {
+    e.preventDefault();
+    const amt = parseFloat(withdrawAmount);
+    if (isNaN(amt) || amt <= 0) {
+      setWithdrawError("Please enter a valid amount.");
+      return;
+    }
+    if (amt > liquidityBalance) {
+      setWithdrawError("Amount exceeds your available liquidity balance.");
+      return;
+    }
+
+    const userEmail = state.user?.email || "guest";
+    const incomesKey = `uploadedIncomes_${userEmail}`;
+
+    setWithdrawError("");
+    setWithdrawStage("submitting");
+
+    setTimeout(() => {
+      setWithdrawStage("success");
+      setSessionWithdrawAmount((prev) => {
+        const next = prev + amt;
+        localStorage.setItem(`talent_withdraw_adjust_${userEmail}`, next.toString());
+        return next;
       });
-      if (res.ok) {
-        setPlaidConnected(true);
-        setPlaidInstitutionName(metadata.institution?.name || "Plaid Connected Bank");
-        setSelectedBank(metadata.institution?.name || "Plaid Connected Bank");
-        const newBank = {
-          name: `${metadata.institution?.name || "Plaid Connected Bank"} Business Account`,
-          detail: `Checking ****${metadata.accounts?.[0]?.mask || "8827"}`,
-          cardImage: CHASE_INK_BUSINESS_UNLIMITED_IMAGE,
-          fallback: metadata.institution?.name || "Bank",
-        };
-        setLinkedCards((prev) => {
-          const exists = prev.some((card) => card.name.includes(newBank.name));
-          if (exists) return prev;
-          return [newBank, ...prev];
-        });
-        setLinkModalStep("plaid_success");
-      } else {
-        const errData = await res.json().catch(() => ({}));
-        const errMsg = errData.details || errData.error || "Failed to exchange Plaid token";
-        console.error("Failed to exchange Plaid token:", errMsg);
-        setDashboardPlaidError(`Plaid Token Exchange Error: ${errMsg}`);
-        setLinkModalStep("plaid_intro");
-      }
-    } catch (err: any) {
-      console.error("Plaid token exchange error:", err);
-      setDashboardPlaidError(`Plaid Token Exchange Error: ${err.message || err}`);
-      setLinkModalStep("plaid_intro");
-    }
-  }, []);
 
-  const { open: openDashboardPlaid, ready: dashboardPlaidReady } = usePlaidLink({
-    token: plaidLinkToken,
-    onSuccess: onPlaidSuccess,
-    receivedRedirectUri: dashboardReceivedRedirectUri,
-    onExit: (error, metadata) => {
-      if (error) {
-        console.error("Dashboard Plaid Link onExit Error:", error);
-        setDashboardPlaidError(`Plaid Link Error: ${error.error_message} (${error.error_code})`);
-      } else {
-        console.log("Dashboard Plaid Link exited. Metadata:", metadata);
-      }
-      if (linkModalStep === "plaid_verifying") {
-        setLinkModalStep("plaid_intro");
-      }
-    },
-    onEvent: (eventName, metadata) => {
-      console.log(`Dashboard Plaid Link Event: ${eventName}`, metadata);
-      if (eventName === "ERROR" && metadata.error_code) {
-        console.error("Dashboard Plaid Link error event:", metadata);
-        setDashboardPlaidError(`Plaid Link Error Event: ${metadata.error_message || metadata.error_code}`);
-      }
-    },
-  });
+      const newIncome = {
+        slug: `withdrawal-${Date.now()}`,
+        name: `Transfer to ${bankCards[selectedWithdrawCard].fallback}`,
+        detail: bankCards[selectedWithdrawCard].name,
+        date: "Today, Just now",
+        amount: `-$${amt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+        src: bankCards[selectedWithdrawCard].cardImage,
+        fallback: bankCards[selectedWithdrawCard].fallback.substring(0, 2),
+        className: "bg-[#111]",
+        imageClassName: "object-cover",
+      };
 
-  useEffect(() => {
-    fetchStatus();
-    fetchPlaidStatus();
-    fetchPlaidLinkToken();
-  }, []);
+      const stored = localStorage.getItem(incomesKey);
+      const existing = stored ? JSON.parse(stored) : [];
+      const nextIncomes = [newIncome, ...existing];
+      localStorage.setItem(incomesKey, JSON.stringify(nextIncomes));
 
-  const handleDisconnect = async () => {
-    setDisconnecting(true);
-    try {
-      const res = await fetch("/api/quickbooks/disconnect", { method: "POST" });
-      if (res.ok) {
-        setQboConnected(false);
-        setQboInvoices([]);
-        setQboPayouts([]);
-        setQboVendors([]);
-      }
-    } catch (err) {
-      console.error("Failed to disconnect QuickBooks:", err);
-    } finally {
-      setDisconnecting(false);
-    }
-  };
+      window.dispatchEvent(new Event("incomesUpdated"));
 
-  const handlePlaidDisconnect = async () => {
-    setPlaidDisconnecting(true);
-    try {
-      const res = await fetch("/api/plaid/disconnect", { method: "POST" });
-      if (res.ok) {
-        setPlaidConnected(false);
-        // Clear bank cards from dynamic UI state
-        setLinkedCards((prev) =>
-          prev.filter((card) => !card.name.includes("Business Account") && !card.name.includes("Plaid"))
-        );
-      }
-    } catch (err) {
-      console.error("Failed to disconnect Plaid bank account:", err);
-    } finally {
-      setPlaidDisconnecting(false);
-    }
+      setTimeout(() => {
+        setIsWithdrawOpen(false);
+        setWithdrawStage("idle");
+        setWithdrawAmount("");
+      }, 2000);
+    }, 2000);
   };
 
   useEffect(() => {
-    const fetchRealData = async () => {
-      // 1. Synchronously check and load from localStorage first (Stale-While-Revalidate)
-      let uploadId = "";
-      let cachedVendors = "";
+    const userEmail = state.user?.email || "guest";
+    const incomesKey = `uploadedIncomes_${userEmail}`;
+
+    const loadIncomes = () => {
       try {
-        uploadId = localStorage.getItem("uploadedUploadId") || "";
-        cachedVendors = localStorage.getItem("uploadedVendors") || "";
-      } catch {}
-
-      const userHasUpload = !!(uploadId || cachedVendors);
-      setHasUpload(userHasUpload);
-
-      // Load cached data immediately so there is zero delay for the user
-      let hasRenderedCache = false;
-      if (cachedVendors) {
-        try {
-          const parsed = JSON.parse(cachedVendors);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            const mapped = parsed.map((v: any) => {
-              const vName = v.vendor || "Unknown Vendor";
-              const vRowCount = typeof v.rowCount === "number" ? v.rowCount : 0;
-              const vNetIncome = typeof v.totalNetIncome === "number" ? v.totalNetIncome : 0;
-              return {
-                slug: "uploaded-preview",
-                name: vName,
-                detail: `${vRowCount.toLocaleString()} transactions parsed`,
-                date: "Parsed from Excel",
-                amount: `$${vNetIncome.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-                rawAmount: vNetIncome,
-                src: `https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://${vName.toLowerCase().replace(/[^a-z0-9]/g, "")}.com&size=128`,
-                fallback: vName.substring(0, 2).toUpperCase(),
-                className: "bg-[#111]",
-                imageClassName: "scale-[1]",
-              };
-            });
-            mapped.sort((a: any, b: any) => b.rawAmount - a.rawAmount);
-            setDynamicIncomes(mapped);
-            setIsLoadingIncomes(false);
-            hasRenderedCache = true;
-          }
-        } catch (e) {
-          console.error("Error parsing cached vendors on dashboard load:", e);
+        const stored = localStorage.getItem(incomesKey);
+        if (stored) {
+          setDynamicIncomes(JSON.parse(stored));
+        } else {
+          setDynamicIncomes([]);
         }
       }
 
@@ -1879,14 +1978,12 @@ export default function DashboardHomePage() {
         setIsLoadingIncomes(false);
       }
     };
+    loadIncomes();
+    window.addEventListener("incomesUpdated", loadIncomes);
+    return () => window.removeEventListener("incomesUpdated", loadIncomes);
+  }, [state.user]);
 
-    fetchRealData();
-    window.addEventListener("incomesUpdated", fetchRealData);
-    return () => window.removeEventListener("incomesUpdated", fetchRealData);
-  }, []);
-
-  // Only fall back to static data if user has NEVER uploaded anything
-  const allIncomes = (hasUpload || dynamicIncomes.length > 0) ? dynamicIncomes : musicIncomeItems;
+  const allIncomes = dynamicIncomes;
 
   const toggleAutosplitInvoice = (invoiceId: string) => {
     const isActive = autosplitInvoiceIds.includes(invoiceId);
@@ -1909,15 +2006,38 @@ export default function DashboardHomePage() {
     setIsAutosplitNoticeOpen(true);
   };
 
+  if (!mounted) return null;
+
   return (
-    <main className="min-h-screen bg-black text-white">
+    <main className="min-h-screen bg-background text-foreground transition-colors duration-200">
       <div className="mx-auto max-w-[1520px] px-4 py-4 sm:px-6 lg:px-8">
-        <div className="flex flex-nowrap items-center justify-start gap-4 pb-4">
-          <img src="/agncypaybrand.png" alt="AgncyPay" className="h-[52px] w-auto shrink-0 object-contain scale-[1.5] origin-left" />
-          <div className="h-6 w-[1px] bg-[#333] self-center ml-8"></div>
-          <span className="text-[17px] font-semibold text-[#A1A1AA] tracking-wide self-center ml-2">
-            {workspaceType === "talent_independent" ? "Talent" : workspaceName}
-          </span>
+        <div className="flex flex-nowrap items-center justify-between gap-4 pb-4">
+          <div className="relative flex items-center">
+            <img src="/agncypaybrand.png" alt="AgncyPay" className="h-[52px] w-auto shrink-0 object-contain scale-[1.5] origin-left" />
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="h-8 w-8 rounded-full bg-white/[0.05] border border-white/20 flex items-center justify-center font-bold text-xs text-white">
+              {state.user?.fullName ? state.user.fullName.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2) : "TL"}
+            </div>
+            <span className="text-xs font-bold text-[#E5E5EA] hidden sm:inline">
+              {state.user?.fullName || "Talent"}
+            </span>
+            <button
+              onClick={toggleTheme}
+              className="p-2 text-neutral-400 hover:text-white transition-colors cursor-pointer"
+              title="Toggle Theme"
+            >
+              {isLightTheme ? <Moon className="h-4 w-4 text-neutral-400 hover:text-white" /> : <Sun className="h-4 w-4 text-neutral-400 hover:text-white" />}
+            </button>
+
+            <button
+              onClick={handleLogout}
+              className="p-2 text-neutral-400 hover:text-white transition-colors"
+              title="Log Out"
+            >
+              <LogOut className="h-4 w-4" />
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(360px,0.85fr)]">
@@ -2061,115 +2181,9 @@ export default function DashboardHomePage() {
               </div>
             </Panel>
 
-              <div className="mt-4 space-y-2">
-                {isLoadingIncomes ? (
-                  // Skeleton loader — never shows static data while fetching
-                  [1, 2, 3].map((i) => (
-                    <div key={i} className="flex items-center gap-3 rounded-[8px] border border-[#222] bg-black px-3 py-2 animate-pulse">
-                      <div className="h-12 w-12 shrink-0 rounded-[10px] bg-[#1a1a1a]" />
-                      <div className="flex-1 space-y-2">
-                        <div className="h-3 w-32 rounded bg-[#1a1a1a]" />
-                        <div className="h-2 w-20 rounded bg-[#141414]" />
-                      </div>
-                      <div className="h-3 w-16 rounded bg-[#1a1a1a]" />
-                    </div>
-                  ))
-                ) : allIncomes.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-8 text-center">
-                    <p className="text-[13px] text-[#555]">No income data yet.</p>
-                    <p className="mt-1 text-[12px] text-[#444]">Upload a Digital Sales Excel file to see your income here.</p>
-                  </div>
-                ) : (
-                  allIncomes.slice(0, 5).map((item) => (
-                    <Link
-                      key={`${item.name}-${item.date}`}
-                      href={item.slug === "uploaded-preview" ? "/dashboard/incomes/preview" : `/dashboard/income/${item.slug}`}
-                      className="flex items-center gap-3 rounded-[8px] border border-[#333] bg-black px-3 py-2 transition-colors hover:border-[#555] hover:bg-white/[0.04]"
-                    >
-                      <MusicIncomeLogo item={item} />
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-[13px] font-semibold text-white">{item.name}</p>
-                        <p className="truncate text-[11px] text-[#7f7f7f]">{item.detail}</p>
-                      </div>
-                      <div className="hidden text-right text-[11px] text-[#7f7f7f] sm:block">{item.date}</div>
-                      <div className="min-w-[92px] text-right text-[13px] font-semibold text-white">
-                        {item.amount}
-                      </div>
-                      <span className="flex h-8 w-8 items-center justify-center rounded-full text-[#7f7f7f]">
-                        <EllipsisVertical className="h-4 w-4" />
-                      </span>
-                    </Link>
-                  ))
-                )}
-              </div>
-
-              <div className="mt-4">
-                {qboLoading ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className="h-5 w-5 animate-spin text-[#8f8f8f]" />
-                  </div>
-                ) : !qboConnected ? (
-                  /* Disconnected Empty Payouts State */
-                  <div className="flex flex-col items-center rounded-[10px] border border-dashed border-[#2d2d2d] bg-[#060606] px-5 py-8 text-center animate-in fade-in duration-300">
-                    <h3 className="text-[14px] font-semibold text-[#8f8f8f]">No payouts recorded</h3>
-                    <p className="mt-1.5 max-w-[280px] text-[11px] leading-[16px] text-[#555]">
-                      Connect QuickBooks to sync talent payment records and configure split payout options.
-                    </p>
-                    <Link
-                      href="/dashboard/wallet"
-                      className="mt-4 inline-flex h-[32px] items-center rounded-[6px] border border-white bg-white px-3.5 text-[11px] font-semibold text-black transition-colors hover:bg-[#e8e8e8]"
-                    >
-                      Set Up Payouts
-                    </Link>
-                  </div>
-                ) : (
-                  /* Connected Payouts list (Table structure) */
-                  <div className="overflow-x-auto animate-in fade-in duration-300">
-                    {qboPayouts.length === 0 ? (
-                      <p className="py-4 text-center text-[13px] text-[#7f7f7f]">No payouts found in QuickBooks.</p>
-                    ) : (
-                      <table className="w-full text-left text-[13px] border-collapse">
-                        <thead>
-                          <tr className="border-b border-[#2a2a2a] text-[#7f7f7f] font-semibold">
-                            <th className="py-2.5 pr-3">Recipient / Company</th>
-                            <th className="py-2.5 px-3">Detail</th>
-                            <th className="py-2.5 px-3 hidden sm:table-cell">Method</th>
-                            <th className="py-2.5 px-3 text-right">Amount</th>
-                            <th className="py-2.5 pl-3 text-right">Status</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {qboPayouts.slice(0, 5).map((item) => (
-                            <tr
-                              key={item.id}
-                              className="border-b border-[#1a1a1a] last:border-0 hover:bg-white/[0.02] transition-colors"
-                            >
-                              <td className="py-3 pr-3 flex items-center gap-3">
-                                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[6px] border border-[#303030] bg-[#060606]">
-                                  <span className="text-[11px] font-black text-white">{item.fallback}</span>
-                                </div>
-                                <div className="min-w-0">
-                                  <p className="font-semibold text-white truncate">{item.name}</p>
-                                  <p className="text-[11px] text-[#7f7f7f] truncate">{item.type || "Payout"}</p>
-                                </div>
-                              </td>
-                              <td className="py-3 px-3 text-[#d1d1d6] max-w-[150px] truncate">{item.detail}</td>
-                              <td className="py-3 px-3 text-[#8f8f8f] hidden sm:table-cell">{item.method || "Bank Transfer"}</td>
-                              <td className="py-3 px-3 text-right font-semibold text-white">{item.amount}</td>
-                              <td className="py-3 pl-3 text-right">
-                                <span className="inline-flex h-6 items-center rounded-full border border-[#10b95f]/30 bg-[#082315] text-[#70ff9e] px-2.5 text-[10px] font-bold">
-                                  {item.status || "Paid"}
-                                </span>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    )}
-                  </div>
-                )}
-              </div>
-            </Panel>
+            {workspaceType === "agency" && (
+              <ModelPayoutsList invoices={widgetInvoices} />
+            )}
 
             {/* Recent Vendors Panel */}
             <Panel className="p-4 sm:p-5">
@@ -2288,9 +2302,9 @@ export default function DashboardHomePage() {
                 </div>
                 <div className="mt-5 grid grid-cols-3 gap-2">
                   {[
-                    ["Available", qboConnected ? "$24,500" : "N/A"],
-                    ["Pending", qboConnected ? "$3,200" : "N/A"],
-                    ["Cards", qboConnected ? "4" : "N/A"],
+                    ["Available", `$${liveAvailable.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`],
+                    ["Pending", "$3,200.00"],
+                    ["Cards", "4"],
                   ].map(([label, value]) => (
                     <div key={label} className="rounded-[8px] border border-[#2f2f2f] bg-black px-3 py-3">
                       <p className="text-[11px] font-semibold text-[#777]">{label}</p>
@@ -2315,9 +2329,9 @@ export default function DashboardHomePage() {
               <Panel className="flex flex-col overflow-hidden p-4 sm:p-5 gap-4">
                 <div className="grid grid-cols-3 gap-2">
                   {[
-                    ["Limit", qboConnected ? "$10k" : "N/A"],
-                    ["Spent", qboConnected ? "$1.2k" : "N/A"],
-                    ["Review", qboConnected ? "3" : "N/A"],
+                    ["Limit", "$10,000.00"],
+                    ["Spent", `$${liveSpent.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`],
+                    ["Review", "3"],
                   ].map(([label, value]) => (
                     <div key={label} className="rounded-[8px] border border-[#2f2f2f] bg-black px-3 py-3">
                       <p className="text-[11px] font-semibold text-[#777]">{label}</p>
@@ -2352,7 +2366,7 @@ export default function DashboardHomePage() {
                 {quickActions.map((action) => {
                   const Icon = action.icon;
                   const baseClassName =
-                    "flex flex-col items-center gap-2 rounded-[10px] border border-[#3a3a3a] bg-[#090909] px-2 py-3 text-center transition-colors hover:border-[#666]";
+                    "flex flex-col items-center gap-2.5 rounded-[10px] border border-[#3a3a3a] light:border-black/15 bg-[#090909] light:bg-[#F8FAFC] px-2 py-3.5 text-center transition-colors hover:border-white/60 light:hover:border-black/40 group cursor-pointer";
 
                   if (action.label === "Wallet ID contacts") {
                     return (
@@ -2362,10 +2376,10 @@ export default function DashboardHomePage() {
                         onClick={() => setIsWalletContactsOpen(true)}
                         className={baseClassName}
                       >
-                        <span className="flex h-10 w-10 items-center justify-center rounded-[9px] border border-[#4a4a4a] bg-black">
-                          <Icon className="h-5 w-5 text-white" />
+                        <span className="flex h-10 w-10 items-center justify-center rounded-[9px] border border-[#4a4a4a] light:border-black/10 bg-black light:bg-[#0F172A] text-white group-hover:scale-105 transition-transform">
+                          <Icon className="h-5 w-5 text-white light:text-white" />
                         </span>
-                        <span className="text-[10px] leading-4 text-white">{action.label}</span>
+                        <span className="text-[10px] font-semibold leading-4 text-white light:text-[#0F172A]">{action.label}</span>
                       </button>
                     );
                   }
@@ -2376,17 +2390,20 @@ export default function DashboardHomePage() {
                       href={action.href}
                       className={baseClassName}
                     >
-                      <span className="flex h-10 w-10 items-center justify-center rounded-[9px] border border-[#4a4a4a] bg-black">
-                        <Icon className="h-5 w-5 text-white" />
+                      <span className="flex h-10 w-10 items-center justify-center rounded-[9px] border border-[#4a4a4a] light:border-black/10 bg-black light:bg-[#0F172A] text-white group-hover:scale-105 transition-transform">
+                        <Icon className="h-5 w-5 text-white light:text-white" />
                       </span>
-                      <span className="text-[10px] leading-4 text-white">{action.label}</span>
+                      <span className="text-[10px] font-semibold leading-4 text-white light:text-[#0F172A]">{action.label}</span>
                     </Link>
                   );
                 })}
               </div>
             </Panel>
 
-            {/* 2. Shortcuts */}
+            {["individual", "talent_independent", "talent_agency"].includes(workspaceType) && (
+              <ModelIncomeList invoices={widgetInvoices} />
+            )}
+
             <Panel className="p-4 sm:p-5">
               <div className="flex items-center justify-between gap-4">
                 <div>
@@ -2401,26 +2418,13 @@ export default function DashboardHomePage() {
               </div>
             </Panel>
 
-            {/* 3. Integrations */}
-            <IntegrationsShortcutsPanel
-              connectedIntegrations={connectedIntegrations}
-              onAddClick={() => {
-                setAddIntegrationModalStep("select");
-                setSelectedIntegration(null);
-                setIsAddIntegrationModalOpen(true);
-              }}
+            <CreativeBankingPanel
+              liquidity={liquidityBalance}
+              crystallised={crystallisedBalance}
+              pending={pendingBalance}
+              onWithdraw={() => setIsWithdrawOpen(true)}
+              onNet0={() => setIsNet0Open(true)}
             />
-
-            {/* 4. QuickBooks Online Panel (renders only when connected) */}
-            {qboConnected && (
-              <QuickBooksOnlinePanel
-                connected={qboConnected}
-                invoices={qboInvoices}
-                loading={qboLoading}
-                disconnecting={disconnecting}
-                onDisconnect={handleDisconnect}
-              />
-            )}
 
             {/* 5. Upload File Section */}
             {/* <CsvDropzonePanel /> */}
@@ -2546,470 +2550,246 @@ export default function DashboardHomePage() {
       )}
       {isAutosplitNoticeOpen && <AutoSplitNotice onClose={() => setIsAutosplitNoticeOpen(false)} />}
       
-      {isLinkModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="relative w-full max-w-[500px] rounded-[16px] border border-[#2d2d2d] bg-[#0c0c0c] p-6 shadow-2xl text-left overflow-hidden">
-            {/* Header */}
-            <div className="flex items-center justify-between border-b border-[#1f1f1f] pb-4">
-              <div>
-                <h3 className="text-[18px] font-bold text-white">Link Account or Card</h3>
-                <p className="mt-1 text-[12px] text-[#7f7f7f]">Connect your payouts and payment cards securely.</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsLinkModalOpen(false)}
-                className="flex h-8 w-8 items-center justify-center rounded-full border border-[#222] bg-[#111] text-[#8f8f8f] transition-colors hover:text-white"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
+      {/* Net-0 Early Payout Modal */}
+      {isNet0Open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 px-4 backdrop-blur-[2px]">
+          <div className="w-full max-w-[460px] rounded-2xl border border-white/20 bg-[#0A0A0A] p-6 text-white shadow-2xl relative overflow-hidden">
+            
+            {net0Stage === "idle" && (
+              <>
+                <div className="flex justify-between items-start mb-6">
+                  <div>
+                    <h2 className="text-xl font-bold text-white flex items-center gap-1.5">
+                      <Sparkles className="h-4.5 w-4.5 text-white" />
+                      Net-0 Early Payout
+                    </h2>
+                    <p className="text-xs text-neutral-400 mt-1 font-semibold">Advance secure campaign earnings instantly.</p>
+                  </div>
+                  <button type="button" onClick={() => setIsNet0Open(false)} className="text-neutral-400 hover:text-white transition-colors">
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
 
-            <div className="mt-6">
-              {linkModalStep === "select" && (
                 <div className="space-y-4">
+                  {/* Campaign List */}
+                  <div className="p-4 bg-white/[0.02] border border-white/10 rounded-xl">
+                    <span className="text-[9px] font-bold uppercase tracking-wider text-[#A3A3A3]">Locked Campaign Invoice</span>
+                    <div className="flex justify-between items-center mt-2">
+                      <div>
+                        <h4 className="text-xs font-bold text-white">Adidas Originals Summer Campaign</h4>
+                        <p className="text-[10px] text-neutral-400 mt-0.5">Payout due date: July 20, 2026</p>
+                      </div>
+                      <span className="text-sm font-bold text-white">$38,275.80</span>
+                    </div>
+                  </div>
+
+                  {/* Calculations */}
+                  <div className="p-4 bg-white/[0.01] border border-white/10 rounded-xl space-y-3 text-xs">
+                    <div className="flex justify-between">
+                      <span className="text-neutral-400">Total Crystallised Value</span>
+                      <span className="text-white font-semibold">$38,275.80</span>
+                    </div>
+                    <div className="flex justify-between text-[#ff453a]">
+                      <span>Early Routing Fee (1.5%)</span>
+                      <span className="font-semibold">-$574.14</span>
+                    </div>
+                    <div className="flex justify-between border-t border-white/10 pt-3 text-sm font-bold">
+                      <span className="text-white">Net Advanced Credit</span>
+                      <span className="text-[#13d463] font-black">$37,701.66</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-2 mt-6">
                   <button
                     type="button"
-                    onClick={() => setLinkModalStep("plaid_intro")}
-                    className="flex w-full items-center gap-4 rounded-[12px] border border-[#2a2a2a] bg-[#080808] p-4 text-left transition-all hover:border-[#555] hover:bg-white/[0.02]"
+                    onClick={handleProcessNet0}
+                    className="w-full h-11 rounded-xl bg-white hover:bg-neutral-200 text-black text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-md"
                   >
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[8px] bg-white p-2">
-                      <img src="/plaid-logo.svg" alt="Plaid" className="h-full w-full object-contain" />
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-white">Bank Account via Plaid</h4>
-                      <p className="mt-1 text-[12px] text-[#7f7f7f]">Instantly verify checking/savings accounts for royalty payouts.</p>
-                    </div>
+                    Confirm & Deposit Instantly
                   </button>
-
                   <button
                     type="button"
-                    onClick={() => setLinkModalStep("card_form")}
-                    className="flex w-full items-center gap-4 rounded-[12px] border border-[#2a2a2a] bg-[#080808] p-4 text-left transition-all hover:border-[#555] hover:bg-white/[0.02]"
+                    onClick={() => setIsNet0Open(false)}
+                    className="w-full h-11 rounded-xl bg-white/5 border border-white/20 text-white text-xs font-bold transition-all hover:bg-white/10 cursor-pointer"
                   >
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[8px] bg-[#222] text-white">
-                      <CreditCard className="h-6 w-6" />
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-white">Debit or Credit Card</h4>
-                      <p className="mt-1 text-[12px] text-[#7f7f7f]">Link Visa, Mastercard or Amex for automated payment splits.</p>
-                    </div>
+                    Cancel
                   </button>
                 </div>
-              )}
+              </>
+            )}
 
-              {/* Plaid Intro */}
-              {linkModalStep === "plaid_intro" && (
-                <div className="text-center">
-                  <div className="mx-auto flex h-12 w-[140px] items-center justify-center rounded-[8px] bg-white p-2.5">
-                    <img src="/plaid-logo.svg" alt="Plaid" className="h-6 object-contain" />
-                  </div>
-                  <h4 className="mt-6 text-[18px] font-bold text-white">AgncyPay connects with Plaid</h4>
-                  <p className="mt-2 text-[13px] leading-relaxed text-[#8f8f8f]">
-                    Connecting your bank allows you to instantly verify account credentials, balances, and routing numbers securely.
-                  </p>
-                  
-                  {dashboardPlaidError && (
-                    <div className="mt-4 rounded-[6px] border border-red-500/20 bg-red-500/5 p-3 text-left text-[12px] text-red-400 font-semibold leading-relaxed">
-                      <p className="font-bold mb-1">Plaid Connection Error:</p>
-                      <pre className="whitespace-pre-wrap font-mono text-[10px] select-text">{dashboardPlaidError}</pre>
-                    </div>
-                  )}
+            {net0Stage !== "idle" && net0Stage !== "success" && (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <RefreshCw className="h-8 w-8 text-white animate-spin mb-4" />
+                <h3 className="text-base font-bold text-white">Processing Net-0 Advance</h3>
+                <p className="text-xs text-neutral-400 mt-2 max-w-[280px]">
+                  {net0Stage === "verifying" && "Verifying campaign contract clearance..."}
+                  {net0Stage === "advancing" && "Advancing funds from Net-0 treasury pool..."}
+                  {net0Stage === "crediting" && "Crediting active liquidity balance..."}
+                </p>
+              </div>
+            )}
 
-                  <div className="mt-4 flex flex-col gap-2 rounded-[8px] border border-[#222] bg-[#070707] p-3 text-left">
-                    <div className="flex items-center gap-2 text-[12px] text-[#8f8f8f]">
-                      <Lock className="h-3.5 w-3.5 text-green-400 shrink-0" />
-                      <span>End-to-end 256-bit encryption.</span>
-                    </div>
-                  </div>
-
-                  <div className="mt-6 flex gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setLinkModalStep("select")}
-                      className="flex-1 h-10 rounded-[7px] border border-[#333] bg-[#0b0b0b] text-[13px] font-semibold text-white hover:border-[#555]"
-                    >
-                      Back
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (isDashboardMockPlaid) {
-                          triggerDashboardMockPlaidFlow();
-                        } else if (dashboardPlaidReady) {
-                          setLinkModalStep("plaid_verifying");
-                          setModalLoadingText("Connecting to secure Plaid Link portal...");
-                          openDashboardPlaid();
-                        } else {
-                          alert("Plaid Link is loading, please try again in a moment.");
-                        }
-                      }}
-                      disabled={!dashboardPlaidReady && !isDashboardMockPlaid}
-                      className="flex-1 h-10 rounded-[7px] bg-white text-[13px] font-semibold text-black hover:bg-[#e8e8e8] disabled:opacity-50"
-                    >
-                      Continue
-                    </button>
-                  </div>
+            {net0Stage === "success" && (
+              <div className="flex flex-col items-center justify-center py-8 text-center animate-in zoom-in duration-300">
+                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#13d463]/20 text-[#13d463] mb-4 border border-[#13d463]/30">
+                  <Check className="h-6 w-6" />
                 </div>
-              )}
+                <h3 className="text-lg font-bold text-white">Advance Complete!</h3>
+                <p className="text-xs text-[#13d463] mt-2 max-w-[260px] font-semibold">
+                  $37,701.66 has been credited to your Liquidity Balance.
+                </p>
+                <p className="text-[10px] text-neutral-500 font-semibold mt-3 font-mono">
+                  TX-ADV-AP{Date.now().toString().slice(-6)}
+                </p>
+              </div>
+            )}
 
-              {/* Plaid Bank Select */}
-              {linkModalStep === "plaid_banks" && (
-                <div>
-                  <h4 className="text-[14px] font-semibold text-white mb-3">Select your bank</h4>
-                  <div className="grid grid-cols-2 gap-2">
-                    {[
-                      { name: "Chase", logo: CHASE_INK_BUSINESS_UNLIMITED_IMAGE },
-                      { name: "Bank of America", logo: BOFA_BUSINESS_DEBIT_VISA_IMAGE },
-                      { name: "Mercury", logo: MERCURY_IO_CARD_IMAGE },
-                      { name: "Wells Fargo", logo: "/quickbook.png" },
-                      { name: "Capital One", logo: "/quickbook.png" },
-                      { name: "Citi", logo: "/quickbook.png" }
-                    ].map((bank) => (
-                      <button
-                        key={bank.name}
-                        type="button"
-                        onClick={() => {
-                          setSelectedBank(bank.name);
-                          setLinkModalStep("plaid_login");
-                        }}
-                        className="flex items-center gap-3 rounded-[8px] border border-[#222] bg-[#070707] p-3 text-left hover:border-[#555] hover:bg-white/[0.01]"
-                      >
-                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[4px] border border-[#333] bg-black overflow-hidden p-0.5">
-                          {bank.logo.endsWith(".png") || bank.logo.endsWith(".svg") ? (
-                            <img src={bank.logo} alt={bank.name} className="h-full w-full object-cover" />
-                          ) : (
-                            <Building2 className="h-4 w-4 text-white" />
-                          )}
-                        </div>
-                        <span className="text-[13px] font-semibold text-white">{bank.name}</span>
-                      </button>
-                    ))}
-                  </div>
-
-                  <div className="mt-6 flex gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setLinkModalStep("plaid_intro")}
-                      className="w-full h-10 rounded-[7px] border border-[#333] bg-[#0b0b0b] text-[13px] font-semibold text-white hover:border-[#555]"
-                    >
-                      Back
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* Plaid Login Form */}
-              {linkModalStep === "plaid_login" && (
-                <form onSubmit={handlePlaidLogin}>
-                  <div className="text-center mb-6">
-                    <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-white/[0.04] text-white">
-                      <Building2 className="h-5 w-5" />
-                    </div>
-                    <h4 className="mt-3 text-[16px] font-bold text-white">Log in to {selectedBank}</h4>
-                    <p className="mt-1 text-[12px] text-[#7f7f7f]">Enter credentials to link your business account</p>
-                  </div>
-
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-[12px] font-semibold text-[#8f8f8f] mb-1.5">Username or User ID</label>
-                      <input
-                        type="text"
-                        value={plaidUsername}
-                        onChange={(e) => setPlaidUsername(e.target.value)}
-                        placeholder="Online User ID"
-                        className="h-10 w-full rounded-[6px] border border-[#333] bg-black px-3 text-[14px] text-white outline-none focus:border-white placeholder:text-[#444]"
-                      />
-                      {plaidErrors.username && <p className="mt-1 text-[11px] text-red-400">{plaidErrors.username}</p>}
-                    </div>
-
-                    <div>
-                      <label className="block text-[12px] font-semibold text-[#8f8f8f] mb-1.5">Password</label>
-                      <input
-                        type="password"
-                        value={plaidPassword}
-                        onChange={(e) => setPlaidPassword(e.target.value)}
-                        placeholder="Banking Password"
-                        className="h-10 w-full rounded-[6px] border border-[#333] bg-black px-3 text-[14px] text-white outline-none focus:border-white placeholder:text-[#444]"
-                      />
-                      {plaidErrors.password && <p className="mt-1 text-[11px] text-red-400">{plaidErrors.password}</p>}
-                    </div>
-                  </div>
-
-                  <div className="mt-6 flex gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setLinkModalStep("plaid_banks")}
-                      className="flex-1 h-10 rounded-[7px] border border-[#333] bg-[#0b0b0b] text-[13px] font-semibold text-white hover:border-[#555]"
-                    >
-                      Back
-                    </button>
-                    <button
-                      type="submit"
-                      className="flex-1 h-10 rounded-[7px] bg-white text-[13px] font-semibold text-black hover:bg-[#e8e8e8]"
-                    >
-                      Sign In
-                    </button>
-                  </div>
-                </form>
-              )}
-
-              {/* Plaid Verifying Spinner */}
-              {linkModalStep === "plaid_verifying" && (
-                <div className="flex flex-col items-center justify-center py-8 text-center">
-                  <Loader2 className="h-10 w-10 animate-spin text-[#8f8f8f]" />
-                  <h4 className="mt-5 text-[15px] font-semibold text-white">{modalLoadingText}</h4>
-                  <p className="mt-2 text-[12px] text-[#555] max-w-[280px]">Establishing secure channel. Do not close this dialog.</p>
-                </div>
-              )}
-
-              {/* Plaid Success Screen */}
-              {linkModalStep === "plaid_success" && (
-                <div className="flex flex-col items-center justify-center py-6 text-center">
-                  <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-500/10 text-green-400">
-                    <Check className="h-8 w-8" strokeWidth={3} />
-                  </div>
-                  <h4 className="mt-5 text-[18px] font-bold text-white">Account Linked Successfully!</h4>
-                  <p className="mt-2 text-[13px] text-[#8f8f8f] max-w-[320px]">
-                    Your {selectedBank} account is now connected to AgncyPay.
-                  </p>
-
-                  <button
-                    type="button"
-                    onClick={() => setIsLinkModalOpen(false)}
-                    className="mt-8 w-full h-10 rounded-[7px] bg-white text-[13px] font-semibold text-black hover:bg-[#e8e8e8]"
-                  >
-                    Go to Dashboard
-                  </button>
-                </div>
-              )}
-
-              {/* Card Form */}
-              {linkModalStep === "card_form" && (
-                <form onSubmit={handleCardSubmit} className="space-y-4">
-                  <div>
-                    <label className="block text-[12px] font-semibold text-[#8f8f8f] mb-1.5">Cardholder Name</label>
-                    <input
-                      type="text"
-                      value={cardHolder}
-                      onChange={(e) => setCardHolder(e.target.value)}
-                      placeholder="Jane Doe"
-                      className="h-10 w-full rounded-[6px] border border-[#333] bg-black px-3 text-[14px] text-white outline-none focus:border-white placeholder:text-[#444]"
-                    />
-                    {cardErrors.holder && <p className="mt-1 text-[11px] text-red-400">{cardErrors.holder}</p>}
-                  </div>
-
-                  <div>
-                    <label className="block text-[12px] font-semibold text-[#8f8f8f] mb-1.5">Card Number</label>
-                    <input
-                      type="text"
-                      value={cardNumber}
-                      onChange={(e) => {
-                        const clean = e.target.value.replace(/\D/g, "").slice(0, 16);
-                        const parts = clean.match(/.{1,4}/g) || [];
-                        setCardNumber(parts.join(" "));
-                      }}
-                      placeholder="4111 2222 3333 4444"
-                      className="h-10 w-full rounded-[6px] border border-[#333] bg-black px-3 text-[14px] text-white outline-none focus:border-white placeholder:text-[#444]"
-                    />
-                    {cardErrors.number && <p className="mt-1 text-[11px] text-red-400">{cardErrors.number}</p>}
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-3">
-                    <div>
-                      <label className="block text-[12px] font-semibold text-[#8f8f8f] mb-1.5">Expiry Date</label>
-                      <input
-                        type="text"
-                        value={cardExpiry}
-                        onChange={(e) => {
-                          const clean = e.target.value.replace(/\D/g, "").slice(0, 4);
-                          if (clean.length > 2) {
-                            setCardExpiry(clean.slice(0, 2) + "/" + clean.slice(2));
-                          } else {
-                            setCardExpiry(clean);
-                          }
-                        }}
-                        placeholder="MM/YY"
-                        className="h-10 w-full rounded-[6px] border border-[#333] bg-black px-3 text-[14px] text-white outline-none focus:border-white placeholder:text-[#444]"
-                      />
-                      {cardErrors.expiry && <p className="mt-1 text-[11px] text-red-400">{cardErrors.expiry}</p>}
-                    </div>
-
-                    <div>
-                      <label className="block text-[12px] font-semibold text-[#8f8f8f] mb-1.5">CVC</label>
-                      <input
-                        type="text"
-                        value={cardCVC}
-                        onChange={(e) => setCardCVC(e.target.value.replace(/\D/g, "").slice(0, 4))}
-                        placeholder="123"
-                        className="h-10 w-full rounded-[6px] border border-[#333] bg-black px-3 text-[14px] text-white outline-none focus:border-white placeholder:text-[#444]"
-                      />
-                      {cardErrors.cvc && <p className="mt-1 text-[11px] text-red-400">{cardErrors.cvc}</p>}
-                    </div>
-
-                    <div>
-                      <label className="block text-[12px] font-semibold text-[#8f8f8f] mb-1.5">ZIP Code</label>
-                      <input
-                        type="text"
-                        value={cardZip}
-                        onChange={(e) => setCardZip(e.target.value.replace(/\D/g, "").slice(0, 5))}
-                        placeholder="90210"
-                        className="h-10 w-full rounded-[6px] border border-[#333] bg-black px-3 text-[14px] text-white outline-none focus:border-white placeholder:text-[#444]"
-                      />
-                      {cardErrors.zip && <p className="mt-1 text-[11px] text-red-400">{cardErrors.zip}</p>}
-                    </div>
-                  </div>
-
-                  <div className="mt-6 flex gap-3 pt-2">
-                    <button
-                      type="button"
-                      onClick={() => setLinkModalStep("select")}
-                      className="flex-1 h-10 rounded-[7px] border border-[#333] bg-[#0b0b0b] text-[13px] font-semibold text-white hover:border-[#555]"
-                    >
-                      Back
-                    </button>
-                    <button
-                      type="submit"
-                      className="flex-1 h-10 rounded-[7px] bg-white text-[13px] font-semibold text-black hover:bg-[#e8e8e8]"
-                    >
-                      Link Card
-                    </button>
-                  </div>
-                </form>
-              )}
-
-              {/* Card Verifying Spinner */}
-              {linkModalStep === "card_verifying" && (
-                <div className="flex flex-col items-center justify-center py-8 text-center">
-                  <Loader2 className="h-10 w-10 animate-spin text-[#8f8f8f]" />
-                  <h4 className="mt-5 text-[15px] font-semibold text-white">{modalLoadingText}</h4>
-                  <p className="mt-2 text-[12px] text-[#555] max-w-[280px]">Verifying with card network. Do not close this dialog.</p>
-                </div>
-              )}
-
-              {/* Card Success Screen */}
-              {linkModalStep === "card_success" && (
-                <div className="flex flex-col items-center justify-center py-6 text-center">
-                  <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-500/10 text-green-400">
-                    <Check className="h-8 w-8" strokeWidth={3} />
-                  </div>
-                  <h4 className="mt-5 text-[18px] font-bold text-white">Card Linked Successfully!</h4>
-                  <p className="mt-2 text-[13px] text-[#8f8f8f] max-w-[320px]">
-                    Your credit/debit card ending in ****{cardNumber.replace(/\s+/g, "").slice(-4)} is now connected.
-                  </p>
-
-                  <button
-                    type="button"
-                    onClick={() => setIsLinkModalOpen(false)}
-                    className="mt-8 w-full h-10 rounded-[7px] bg-white text-[13px] font-semibold text-black hover:bg-[#e8e8e8]"
-                  >
-                    Go to Dashboard
-                  </button>
-                </div>
-              )}
-            </div>
           </div>
         </div>
       )}
 
-      {isAddIntegrationModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="relative w-full max-w-[500px] rounded-[16px] border border-[#2d2d2d] bg-[#0c0c0c] p-6 shadow-2xl text-left overflow-hidden">
-            {/* Header */}
-            <div className="flex items-center justify-between border-b border-[#1f1f1f] pb-4">
-              <div>
-                <h3 className="text-[18px] font-bold text-white">Connect New Integration</h3>
-                <p className="mt-1 text-[12px] text-[#7f7f7f]">Sync external accounting ledgers or bank feeds.</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsAddIntegrationModalOpen(false)}
-                className="flex h-8 w-8 items-center justify-center rounded-full border border-[#222] bg-[#111] text-[#8f8f8f] transition-colors hover:text-white"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
+      {/* Withdraw Funds Modal */}
+      {isWithdrawOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 px-4 backdrop-blur-[2px]">
+          <div className="w-full max-w-[440px] rounded-2xl border border-white/20 bg-[#0A0A0A] p-6 text-white shadow-2xl relative overflow-hidden">
+            
+            {withdrawStage === "idle" && (
+              <form onSubmit={handleProcessWithdrawal}>
+                <div className="flex justify-between items-start mb-6">
+                  <div>
+                    <h2 className="text-xl font-bold text-white flex items-center gap-1.5">
+                      <Wallet className="h-4.5 w-4.5 text-white" />
+                      Withdraw Funds
+                    </h2>
+                    <p className="text-xs text-neutral-400 mt-1 font-semibold">Transfer cleared liquidity to your bank.</p>
+                  </div>
+                  <button type="button" onClick={() => setIsWithdrawOpen(false)} className="text-neutral-400 hover:text-white transition-colors">
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
 
-            <div className="mt-6">
-              {addIntegrationModalStep === "select" && (
-                <div>
-                  <h4 className="text-[14px] font-semibold text-[#8f8f8f] mb-4">Select an available service to connect:</h4>
-                  <div className="space-y-3">
-                    {[
-                      { label: "QuickBooks", src: "/quickbook.png", desc: "Sync invoices, payments and chart of accounts." },
-                      { label: "Mercury", src: "/mercuryLogo.png", desc: "Sync business bank accounts & cards feeds.", bg: "bg-white" },
-                      { label: "Xero", src: "/xero.png", desc: "Keep Xero ledger accounts updated in real-time." },
-                      { label: "Sage", src: "/sage.png", desc: "Automate reporting and sync payables to Sage." },
-                      { label: "NetSuite", src: "/netsuite.png", desc: "Enterprise multi-entity chart of accounts syncing." }
-                    ]
-                      .filter((item) => !connectedIntegrations.includes(item.label))
-                      .map((item) => (
+                <div className="space-y-4">
+                  {/* Select Card */}
+                  <div className="flex flex-col gap-2">
+                    <label className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider">Select Destination Card</label>
+                    <div className="grid grid-cols-1 gap-2">
+                      {bankCards.slice(0, 2).map((card, idx) => (
                         <button
-                          key={item.label}
+                          key={card.name}
                           type="button"
-                          onClick={() => handleConnectIntegration(item)}
-                          className="flex w-full items-center gap-4 rounded-[12px] border border-[#222] bg-[#070707] p-3 text-left hover:border-[#555] hover:bg-white/[0.01] transition-all"
+                          onClick={() => setSelectedWithdrawCard(idx)}
+                          className={cn(
+                            "flex items-center gap-3 p-3 rounded-xl border text-left transition-all cursor-pointer",
+                            selectedWithdrawCard === idx
+                              ? "border-white bg-white/[0.05]"
+                              : "border-white/10 bg-white/[0.01] hover:border-white/20"
+                          )}
                         >
-                          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[8px] border border-[#333] bg-black overflow-hidden p-1">
-                            <div className={cn("h-full w-full rounded-[6px] flex items-center justify-center overflow-hidden", item.bg || "bg-transparent")}>
-                              <img src={item.src} alt={item.label} className="max-h-full max-w-full object-contain" />
-                            </div>
+                          <div className="h-8 w-14 shrink-0 rounded bg-black overflow-hidden border border-white/15">
+                            <img src={card.cardImage} alt={card.name} className="h-full w-full object-cover" />
                           </div>
                           <div className="min-w-0 flex-1">
-                            <h5 className="text-[14px] font-bold text-white leading-none">{item.label}</h5>
-                            <p className="mt-1 text-[11px] text-[#7f7f7f] truncate">{item.desc}</p>
+                            <h4 className="text-xs font-bold text-white truncate">{card.name}</h4>
+                            <p className="text-[10px] text-neutral-400 mt-0.5">{card.detail}</p>
                           </div>
-                          <ChevronRight className="h-4 w-4 text-[#555]" />
+                          {selectedWithdrawCard === idx && (
+                            <div className="h-4 w-4 rounded-full bg-white flex items-center justify-center text-black shrink-0">
+                              <Check className="h-2.5 w-2.5" />
+                            </div>
+                          )}
                         </button>
                       ))}
+                    </div>
+                  </div>
 
-                    {[
-                      { label: "QuickBooks", src: "/quickbook.png", desc: "Sync invoices, payments and chart of accounts." },
-                      { label: "Mercury", src: "/mercuryLogo.png", desc: "Sync business bank accounts & cards feeds.", bg: "bg-white" },
-                      { label: "Xero", src: "/xero.png", desc: "Keep Xero ledger accounts updated in real-time." },
-                      { label: "Sage", src: "/sage.png", desc: "Automate reporting and sync payables to Sage." },
-                      { label: "NetSuite", src: "/netsuite.png", desc: "Enterprise multi-entity chart of accounts syncing." }
-                    ].filter((item) => !connectedIntegrations.includes(item.label)).length === 0 && (
-                      <p className="text-center py-6 text-[13px] text-[#555]">All available integrations are connected.</p>
+                  {/* Input Amount */}
+                  <div className="flex flex-col gap-2">
+                    <div className="flex justify-between items-center">
+                      <label htmlFor="withdrawAmount" className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider">Amount to Withdraw</label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setWithdrawAmount(liquidityBalance.toString());
+                          setWithdrawError("");
+                        }}
+                        className="text-[10px] font-bold text-white hover:underline cursor-pointer"
+                      >
+                        Use Max (${liquidityBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
+                      </button>
+                    </div>
+                    <div className="relative">
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400 text-sm font-semibold">$</span>
+                      <input
+                        id="withdrawAmount"
+                        type="number"
+                        step="0.01"
+                        min="0.01"
+                        max={liquidityBalance}
+                        value={withdrawAmount}
+                        onChange={(e) => {
+                          setWithdrawAmount(e.target.value);
+                          if (withdrawError) setWithdrawError("");
+                        }}
+                        className={cn(
+                          "w-full h-11 bg-black border rounded-xl pl-8 pr-4 text-sm text-white focus:outline-none transition-colors focus:border-white/30",
+                          withdrawError ? "border-[#ff453a]/50 focus:border-[#ff453a]" : "border-white/15"
+                        )}
+                        placeholder="0.00"
+                        required
+                      />
+                    </div>
+                    {withdrawError && (
+                      <span className="text-xs text-[#ff453a] font-semibold mt-0.5">{withdrawError}</span>
                     )}
                   </div>
                 </div>
-              )}
 
-              {/* Connecting Loading Spinner */}
-              {addIntegrationModalStep === "connecting" && (
-                <div className="flex flex-col items-center justify-center py-8 text-center animate-in fade-in duration-200">
-                  <Loader2 className="h-10 w-10 animate-spin text-[#8f8f8f]" />
-                  <h4 className="mt-5 text-[15px] font-semibold text-white">{integrationLoadingText}</h4>
-                  <p className="mt-2 text-[12px] text-[#555] max-w-[280px]">Establishing secure OAuth handshake tunnel. Do not close this dialog.</p>
-                </div>
-              )}
-
-              {/* Success Screen */}
-              {addIntegrationModalStep === "success" && (
-                <div className="flex flex-col items-center justify-center py-6 text-center animate-in fade-in duration-200">
-                  <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-500/10 text-green-400">
-                    <Check className="h-8 w-8" strokeWidth={3} />
-                  </div>
-                  <h4 className="mt-5 text-[18px] font-bold text-white">{selectedIntegration?.label} Integrated Successfully!</h4>
-                  <p className="mt-2 text-[13px] text-[#8f8f8f] max-w-[320px]">
-                    Your {selectedIntegration?.label} account is now connected to AgncyPay and syncing ledger records automatically.
-                  </p>
-
+                <div className="flex flex-col gap-2 mt-6">
+                  <button
+                    type="submit"
+                    className="w-full h-11 rounded-xl bg-white hover:bg-neutral-200 text-black text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-md"
+                  >
+                    Withdraw Funds
+                  </button>
                   <button
                     type="button"
-                    onClick={() => setIsAddIntegrationModalOpen(false)}
-                    className="mt-8 w-full h-10 rounded-[7px] bg-white text-[13px] font-semibold text-black hover:bg-[#e8e8e8] transition-colors"
+                    onClick={() => setIsWithdrawOpen(false)}
+                    className="w-full h-11 rounded-xl bg-white/5 border border-white/20 text-white text-xs font-bold transition-all hover:bg-white/10 cursor-pointer"
                   >
-                    Go to Dashboard
+                    Cancel
                   </button>
                 </div>
-              )}
-            </div>
+              </form>
+            )}
+
+            {withdrawStage === "submitting" && (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <RefreshCw className="h-8 w-8 text-white animate-spin mb-4" />
+                <h3 className="text-base font-bold text-white">Initiating Bank Transfer</h3>
+                <p className="text-xs text-neutral-400 mt-2">Routing instant ACH payment splits...</p>
+              </div>
+            )}
+
+            {withdrawStage === "success" && (
+              <div className="flex flex-col items-center justify-center py-8 text-center animate-in zoom-in duration-300">
+                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#13d463]/20 text-[#13d463] mb-4 border border-[#13d463]/30">
+                  <Check className="h-6 w-6" />
+                </div>
+                <h3 className="text-lg font-bold text-white">Transfer Successful!</h3>
+                <p className="text-xs text-[#13d463] mt-2 max-w-[260px] font-semibold">
+                  ${parseFloat(withdrawAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} has been sent to your {bankCards[selectedWithdrawCard].fallback} account.
+                </p>
+                <p className="text-[10px] text-neutral-500 font-semibold mt-3 font-mono">
+                  TX-WIT-AP{Date.now().toString().slice(-6)}
+                </p>
+              </div>
+            )}
+
           </div>
         </div>
       )}
-
-      {isAutosplitNoticeOpen && <AutoSplitNotice onClose={() => setIsAutosplitNoticeOpen(false)} />}
       <DashboardFooter />
     </main>
   );

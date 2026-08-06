@@ -2,7 +2,7 @@ export interface Transaction {
   id: string;
   invoiceId: string;
   amount: number;
-  currency: "USD";
+  currency: string;
   timestamp: string;
   paymentMethod: string;
   status: "success" | "failed" | "processing";

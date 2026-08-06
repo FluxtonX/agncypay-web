@@ -3,7 +3,8 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Check, ShieldCheck, Eye, EyeOff } from "lucide-react";
+import { Check, ShieldCheck, Eye, EyeOff, Loader2, ArrowRight } from "lucide-react";
+import { registerWithFirebase } from "../../../lib/firebaseAuth";
 import { WorkspaceType } from "../../../types/workspace";
 
 const DEMO_EMAIL = "martin.safi@adidas.com";
@@ -29,37 +30,38 @@ function FormField({
   autoComplete?: string;
 }) {
   const [showPassword, setShowPassword] = useState(false);
-  const isPassword = type === "password";
-  const inputType = isPassword ? (showPassword ? "text" : "password") : type;
+  const isPasswordType = type === "password";
+  const inputType = isPasswordType ? (showPassword ? "text" : "password") : type;
 
   return (
-    <label className="flex w-full flex-col gap-2" htmlFor={id}>
-      <span className="text-[13px] font-medium text-[#E5E5EA]">{label}</span>
-      <div className="relative w-full">
+    <div className="space-y-2">
+      <label className="text-[12px] font-semibold text-[#A1A1AA]" htmlFor={id}>{label}</label>
+      <div className="relative group w-full">
         <input
           id={id}
-          name={id}
           type={inputType}
           value={value}
-          autoComplete={autoComplete}
           onChange={(event) => onChange(event.target.value)}
-          className={`w-full rounded-lg border bg-[#0B0B0B] pl-4 ${isPassword ? 'pr-10' : 'pr-4'} py-3 text-sm text-[#F8FAFC] placeholder-[#5A5A62] transition-colors focus:border-white/50 focus:outline-none ${
-            error ? "border-red-500/50" : "border-[#3A3A3A]"
-          }`}
+          className={`w-full bg-[#0B0B0B] border ${error ? "border-[#ff453a]/50" : "border-[#262626] group-hover:border-white/20"} ${isPasswordType ? "pr-12" : ""} focus:border-white/40 focus:ring-4 focus:ring-white/5 rounded-xl px-4 py-3 text-xs text-white placeholder-[#5A5A62] transition-all outline-none`}
           placeholder={placeholder}
         />
-        {isPassword && (
+        {isPasswordType && (
           <button
             type="button"
             onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8E8E93] hover:text-white transition-colors cursor-pointer"
+            className="absolute right-4 top-1/2 -translate-y-1/2 text-[#8E8E93] hover:text-white transition-colors"
           >
             {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
           </button>
         )}
       </div>
-      {error ? <span className="text-xs text-white">{error}</span> : null}
-    </label>
+      {error && (
+        <span className="text-xs text-[#ff453a] flex items-center gap-1 mt-1">
+          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+          {error}
+        </span>
+      )}
+    </div>
   );
 }
 
@@ -70,8 +72,13 @@ export default function RegisterPage() {
   const [email, setEmail] = useState("");
   const [workspaceName, setWorkspaceName] = useState("");
   const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [roleType, setRoleType] = useState<"brand" | "agency" | "talent">("brand");
+  const [roleType, setRoleType] = useState<"brand" | "agency" | "individual">("brand");
+  const accountType: WorkspaceType =
+    roleType === "brand"
+      ? "brand"
+      : roleType === "agency"
+      ? "agency"
+      : "talent_independent";
   const [agree, setAgree] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
@@ -98,7 +105,7 @@ export default function RegisterPage() {
     } else if (!/\S+@\S+\.\S+/.test(email)) {
       nextErrors.email = "Invalid email format";
     }
-    if (roleType !== "talent" && !workspaceName.trim()) {
+    if (roleType !== "individual" && !workspaceName.trim()) {
       nextErrors.workspaceName = "Workspace name is required";
     }
     if (!password) {
@@ -117,46 +124,43 @@ export default function RegisterPage() {
     return Object.keys(nextErrors).length === 0;
   };
 
-  const handleSubmit = (event: React.FormEvent) => {
+  const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!validate()) return;
 
     const normalizedEmail = email.trim().toLowerCase();
     const normalizedName = fullName.trim();
-    const normalizedWorkspaceName = roleType === "talent" ? `${normalizedName}'s Workspace` : workspaceName.trim();
+    const normalizedWorkspaceName = roleType === "individual" ? `${normalizedName} Workspace` : workspaceName.trim();
 
     setIsLoading(true);
-    fetch("/api/auth/register", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        email: normalizedEmail,
+    try {
+      await registerWithFirebase(
+        normalizedEmail,
         password,
-        fullName: normalizedName,
-        roleType,
-        workspaceName: normalizedWorkspaceName,
-      }),
-    })
-      .then(async (res) => {
-        const data = await res.json();
-        setIsLoading(false);
-        if (!res.ok) {
-          setErrors({ submit: data.error || "Failed to register." });
-        } else {
-          router.push("/auth/login?registered=true");
-        }
-      })
-      .catch((err) => {
-        setIsLoading(false);
-        setErrors({ submit: err?.message || "An unexpected error occurred." });
-      });
+        normalizedName,
+        accountType,
+        normalizedWorkspaceName
+      );
+      router.push("/auth/login");
+    } catch (error: any) {
+      console.error("Firebase registration failed:", error);
+      setErrors({ email: error.message || "Failed to create account. Please try again." });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
-    <div className="grid min-h-screen w-full grid-cols-1 bg-black font-sans text-white lg:grid-cols-[minmax(360px,0.95fr)_minmax(520px,1.05fr)]">
+    <div className="min-h-screen w-full bg-[#000000] text-[#F8FAFC] font-sans relative overflow-hidden flex flex-col items-center justify-start pt-16 sm:pt-24 pb-12 px-4 transition-colors duration-200">
       <style dangerouslySetInnerHTML={{ __html: `
+        #fullName, #email, #workspaceName, #password {
+          background-color: #0B0B0B !important;
+          border-color: #262626 !important;
+          color: #F8FAFC !important;
+        }
+        #fullName:focus, #email:focus, #workspaceName:focus, #password:focus {
+          border-color: rgba(255, 255, 255, 0.4) !important;
+        }
         input:-webkit-autofill,
         input:-webkit-autofill:hover,
         input:-webkit-autofill:focus,
@@ -168,23 +172,30 @@ export default function RegisterPage() {
         }
       ` }} />
 
-      <div className="fixed right-4 top-4 z-50">
+      {/* Abstract Background Effects */}
+      <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0 pointer-events-none">
+        <div className="absolute top-[-20%] left-[25%] w-[50%] h-[50%] rounded-full bg-white/[0.03] blur-[120px]" />
+        <div className="absolute bottom-[-10%] right-[10%] w-[40%] h-[40%] rounded-full bg-white/[0.02] blur-[100px]" />
+      </div>
+
+      {/* Demo Helper */}
+      <div className="fixed top-6 right-6 z-50">
         <button
           type="button"
           onClick={() => setShowDemoHelper(!showDemoHelper)}
-          className="rounded-md border border-[#2D2D2D] bg-[#1F1F1F] px-3 py-1.5 text-[11px] text-[#A1A1AA] shadow-lg transition-colors hover:bg-[#2D2D2D]"
+          className="px-4 py-2 bg-[#121212]/80 backdrop-blur-md border border-white/10 hover:bg-white/10 text-xs font-medium text-[#A1A1AA] hover:text-white rounded-full transition-all shadow-2xl cursor-pointer"
         >
-          {showDemoHelper ? "Hide Demo Helper" : "Show Demo Credentials"}
+          {showDemoHelper ? "Hide Demo" : "Demo Credentials"}
         </button>
 
         {showDemoHelper && (
-          <div className="absolute right-0 z-50 mt-2 w-72 rounded-lg border border-[#2D2D2D] bg-[#121212] p-4 text-xs shadow-2xl">
-            <h4 className="mb-2 font-semibold text-white">Demo Registration</h4>
-            <p className="mb-1 text-[#8E8E93]">Prefills a clean AgncyPay brand workspace.</p>
+          <div className="absolute right-0 mt-3 w-72 bg-[#121212]/95 backdrop-blur-xl border border-white/10 rounded-2xl p-5 shadow-2xl z-50 text-xs">
+            <h4 className="font-semibold text-white mb-2 text-sm">Demo Registration</h4>
+            <p className="mb-4 text-[#8E8E93]">Prefills a clean AgncyPay brand workspace with test data.</p>
             <button
               type="button"
               onClick={handlePrefillDemo}
-              className="mt-2 w-full rounded bg-white py-2 font-semibold text-black transition-colors hover:bg-neutral-200"
+              className="w-full py-2.5 bg-white text-black font-semibold rounded-xl hover:bg-neutral-200 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
             >
               Prefill Demo Data
             </button>
@@ -192,125 +203,102 @@ export default function RegisterPage() {
         )}
       </div>
 
-      <aside className="hidden min-h-screen flex-col bg-black px-12 pb-12 pt-[78px] lg:flex xl:px-20">
-        <div className="max-w-[650px]">
-          <Link href="/" className="mb-5 ml-3 inline-block">
-            <img
-              src="/agncypayLogo.png"
-              alt="AgncyPay"
-              style={{ width: "520px", height: "122px", objectFit: "contain", objectPosition: "left" }}
-            />
-          </Link>
+      {/* Logo Header */}
+      <div className="mb-10 text-center z-10">
+        <Link href="/" className="inline-block transition-transform hover:scale-105 duration-300">
+          <img
+            src="/agncypayLogo.png"
+            alt="AgncyPay"
+            style={{ width: "240px", height: "auto", objectFit: "contain" }}
+          />
+        </Link>
+      </div>
 
-          <h1 className="text-[44px] font-semibold leading-[1.08] text-white">
-            One identity for every payment
-          </h1>
-          <p className="mt-5 max-w-[520px] text-[16px] leading-7 text-[#8E8E93]">
-            Create one AgncyPay account and open the payment experience without a separate role wizard.
-          </p>
+      {/* Auth Form Card - Placed in Center Top */}
+      <div className="w-full max-w-[500px] z-10">
+        <div className="bg-[#0A0A0A]/90 backdrop-blur-2xl border border-white/10 rounded-[28px] p-8 sm:p-10 shadow-[0_0_80px_rgba(255,255,255,0.03)] relative overflow-hidden">
+          
+          {/* Glossy top highlight */}
+          <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
 
-          <div className="mt-10 rounded-[8px] border border-[#272727] bg-[#070707] p-5">
-            <div className="flex items-center gap-3">
-              <ShieldCheck className="h-5 w-5 text-white" />
-              <p className="text-[15px] font-semibold text-white">Clean signup flow</p>
-            </div>
-            <ul className="mt-5 space-y-3 text-[14px] leading-5 text-[#8E8E93]">
-              {[
-                "One account setup for the full product",
-                "Redirect to sign in after signup",
-                "Guest pay and logged-in pay stay separate",
-              ].map((bullet) => (
-                <li key={bullet} className="flex items-center gap-3">
-                  <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#8E8E93]" />
-                  {bullet}
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-      </aside>
-
-      <main className="flex min-h-screen flex-col bg-[#121212] px-5 py-8 sm:px-8 md:px-12 lg:px-14 xl:px-20">
-        <div className="mb-8 lg:hidden">
-          <Link href="/" className="inline-flex items-center">
-            <img
-              src="/agncypayLogo.png"
-              alt="AgncyPay"
-              style={{ width: "240px", height: "55px", objectFit: "contain", objectPosition: "left" }}
-            />
-          </Link>
-        </div>
-
-        <div className="mx-auto flex w-full max-w-[760px] flex-1 flex-col justify-center">
-          <div className="mb-7">
-            <h2 className="text-[31px] font-medium leading-tight text-white">Create Account</h2>
-            <p className="mt-2 text-sm leading-5 text-[#8E8E93]">
+          <div className="mb-8 text-center">
+            <h2 className="text-2xl font-bold text-white tracking-tight">Create Account</h2>
+            <p className="mt-1.5 text-xs text-[#8E8E93]">
               Sign up once and go straight into the AgncyPay payment experience.
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="rounded-[10px] border border-[#3A3A3A] bg-black/30 p-4 sm:p-5 shadow-[0_0_15px_rgba(0,0,0,0.5)]">
-              <div className="mb-6">
-                <label className="text-[13px] font-medium text-[#E5E5EA] mb-3 block" htmlFor="roleType">Account Type</label>
-                <div className="relative w-full">
-                  <select
-                    id="roleType"
-                    value={roleType}
-                    onChange={(e) => setRoleType(e.target.value as "brand" | "agency" | "talent")}
-                    className="w-full appearance-none rounded-lg border border-[#3A3A3A] bg-[#0B0B0B] px-4 py-3 text-sm text-[#F8FAFC] transition-colors focus:border-white/50 focus:outline-none cursor-pointer"
+          <form onSubmit={handleSubmit} className="space-y-5">
+            
+            <div className="space-y-2">
+              <label className="text-[12px] font-semibold text-[#A1A1AA]">Account Type</label>
+              <div className="p-1.5 bg-[#050505] border border-white/10 rounded-2xl flex items-center justify-between gap-1">
+                {[
+                  { id: "brand", label: "Brand" },
+                  { id: "agency", label: "Agency" },
+                  { id: "individual", label: "Talent" },
+                ].map((role) => (
+                  <label
+                    key={role.id}
+                    className={`flex-1 flex justify-center py-2.5 text-xs font-semibold rounded-xl transition-all duration-300 cursor-pointer select-none ${
+                      roleType === role.id
+                        ? "bg-white text-black shadow-lg scale-[1.02]"
+                        : "text-[#8E8E93] hover:text-white hover:bg-white/5"
+                    }`}
                   >
-                    <option value="brand" className="bg-[#0B0B0B] text-white">Brand</option>
-                    <option value="agency" className="bg-[#0B0B0B] text-white">Agency</option>
-                    <option value="talent" className="bg-[#0B0B0B] text-white">Talent</option>
-                  </select>
-                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-[#8E8E93]">
-                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
-                    </svg>
-                  </div>
-                </div>
+                    <input
+                      type="radio"
+                      name="roleType"
+                      value={role.id}
+                      checked={roleType === role.id}
+                      onChange={() => setRoleType(role.id as "brand" | "agency" | "individual")}
+                      className="hidden"
+                    />
+                    {role.label}
+                  </label>
+                ))}
               </div>
+            </div>
 
-              <div className="flex flex-col gap-4">
-                <FormField
-                  id="fullName"
-                  label="Enter your Name"
-                  value={fullName}
-                  autoComplete="name"
-                  onChange={(value) => {
-                    setFullName(value);
-                    if (errors.fullName) setErrors({});
-                  }}
-                  placeholder="Martin Safi"
-                  error={errors.fullName}
-                />
-                <FormField
-                  id="email"
-                  label="Email Address"
-                  value={email}
-                  autoComplete="email"
-                  onChange={(value) => {
-                    setEmail(value);
-                    if (errors.email) setErrors({});
-                  }}
-                  placeholder="you@company.com"
-                  error={errors.email}
-                />
-                {roleType !== "talent" && (
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 pt-2">
+              <FormField
+                id="fullName"
+                label="Full Name"
+                value={fullName}
+                onChange={(value) => {
+                  setFullName(value);
+                  if (errors.fullName) setErrors({});
+                }}
+                placeholder="Martin Safi"
+                error={errors.fullName}
+              />
+              <FormField
+                id="email"
+                label="Email Address"
+                value={email}
+                onChange={(value) => {
+                  setEmail(value);
+                  if (errors.email) setErrors({});
+                }}
+                placeholder="you@company.com"
+                error={errors.email}
+              />
+              {roleType !== "individual" && (
+                <div className="sm:col-span-2">
                   <FormField
                     id="workspaceName"
                     label="Company / Workspace Name"
                     value={workspaceName}
-                    autoComplete="organization"
                     onChange={(value) => {
                       setWorkspaceName(value);
                       if (errors.workspaceName) setErrors({});
                     }}
-                    placeholder="Adidas"
+                    placeholder="e.g. Adidas"
                     error={errors.workspaceName}
                   />
-                )}
+                </div>
+              )}
+              <div className="sm:col-span-2">
                 <FormField
                   id="password"
                   type="password"
@@ -340,23 +328,34 @@ export default function RegisterPage() {
               </div>
             </div>
 
-            <div className="flex items-start gap-2.5 pt-1">
-              <input
-                type="checkbox"
-                id="agree"
-                checked={agree}
-                onChange={() => setAgree(!agree)}
-                className="mt-0.5 h-4 w-4 cursor-pointer rounded border-[#3A3A3A] bg-[#0B0B0B] accent-white"
-              />
+            {/* Terms of Service Checkbox with White Border for High Visibility */}
+            <div className="flex items-start gap-3 pt-2">
+              <div className="relative flex items-center mt-0.5">
+                <input
+                  type="checkbox"
+                  id="agree"
+                  checked={agree}
+                  onChange={() => setAgree(!agree)}
+                  className="w-4 h-4 rounded border border-white/30 bg-[#0B0B0B] checked:bg-white checked:border-white appearance-none cursor-pointer transition-colors peer hover:border-white/60 focus:outline-none"
+                />
+                <svg className="absolute w-3 h-3 text-black pointer-events-none left-0.5 top-0.5 opacity-0 peer-checked:opacity-100" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
               <label
                 htmlFor="agree"
-                className="cursor-pointer select-none text-sm leading-tight text-[#8E8E93] hover:text-[#E5E5EA]"
+                className="cursor-pointer select-none text-xs leading-snug text-[#8E8E93] hover:text-[#E5E5EA] transition-colors font-medium"
               >
-                I agree to the <span className="font-medium text-white">Terms of Service</span> and{" "}
-                <span className="font-medium text-white">Privacy Policy</span>
+                I agree to the <span className="font-bold text-white">Terms of Service</span> and{" "}
+                <span className="font-bold text-white">Privacy Policy</span>
               </label>
             </div>
-            {errors.agree ? <span className="block text-xs text-white">{errors.agree}</span> : null}
+            {errors.agree && (
+              <span className="block text-xs text-[#ff453a] flex items-center gap-1 mt-1">
+                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                {errors.agree}
+              </span>
+            )}
 
             {errors.submit ? (
               <div className="rounded-lg border border-red-950 bg-red-950/30 p-3 text-xs text-red-200">
@@ -367,25 +366,35 @@ export default function RegisterPage() {
             <button
               type="submit"
               disabled={isLoading}
-              className="flex h-[46px] w-full items-center justify-center gap-2 rounded-lg bg-white text-sm font-semibold text-black transition-colors hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-70"
+              className="w-full flex items-center justify-center gap-2 h-12 bg-white hover:bg-neutral-200 active:scale-[0.98] text-black font-extrabold text-xs uppercase tracking-wider rounded-xl transition-all duration-200 cursor-pointer mt-6 disabled:opacity-50 disabled:active:scale-100 shadow-[0_0_20px_rgba(255,255,255,0.05)]"
             >
-              {isLoading ? "Creating Account..." : "Create Account"}
+              {isLoading ? (
+                <>
+                  <Loader2 className="h-4.5 w-4.5 animate-spin text-black" />
+                  <span>Creating Account...</span>
+                </>
+              ) : (
+                <>
+                  <span>Create Account</span>
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
             </button>
 
-            <div className="flex items-center justify-center gap-2 rounded-[10px] border border-[#3A3A3A] bg-[#0B0B0B] px-4 py-3 text-[13px] text-[#8E8E93]">
-              <Check className="h-4 w-4 text-white" />
+            <div className="flex items-center justify-center gap-2 rounded-xl border border-white/5 bg-white/[0.02] px-4 py-3 text-xs font-semibold text-[#A1A1AA]">
+              <Check className="h-4 w-4 text-emerald-500" />
               Sign in after signup to open your dashboard
             </div>
           </form>
-
-          <div className="mt-6 text-center text-sm text-[#8E8E93]">
-            Already have an account?{" "}
-            <Link href="/auth/login" className="ml-1 font-medium text-white hover:underline">
-              Sign in
-            </Link>
-          </div>
         </div>
-      </main>
+
+        <div className="mt-8 text-center text-xs text-[#8E8E93]">
+          Already have an account?{" "}
+          <Link href="/auth/login" className="ml-1 font-bold text-white hover:text-neutral-300 transition-colors">
+            Sign in
+          </Link>
+        </div>
+      </div>
     </div>
   );
 }

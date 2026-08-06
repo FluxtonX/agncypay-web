@@ -40,7 +40,7 @@ export function Input({
             "w-full bg-white/[0.02] border border-white/10 rounded-lg px-3.5 py-2.5 text-sm text-[#F8FAFC] placeholder-[#94A3B8]/40 focus:outline-none focus:border-white/40 focus:ring-1 focus:ring-white/20 focus:bg-white/[0.04] transition-all disabled:opacity-50 disabled:pointer-events-none",
             leftIcon ? "pl-10" : "",
             rightIcon ? "pr-10" : "",
-            error ? "border-white/35 focus:border-white/60 focus:ring-white/20" : "",
+            error ? "border-[#ff453a]/50 focus:border-[#ff453a] focus:ring-[#ff453a]/25" : "",
             className
           )}
           {...props}
@@ -52,7 +52,7 @@ export function Input({
         )}
       </div>
       {error ? (
-        <span className="text-xs text-white mt-0.5">{error}</span>
+        <span className="text-xs text-[#ff453a] mt-0.5">{error}</span>
       ) : helperText ? (
         <span className="text-xs text-[#94A3B8]/60 mt-0.5">{helperText}</span>
       ) : null}

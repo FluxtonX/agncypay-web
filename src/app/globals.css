@@ -2,7 +2,7 @@
 
 :root {
   --background: #0A0A0A;
-  --foreground: #f8fafc;
+  --foreground: #F8FAFC;
   
   --color-brand-deep: #0A0A0A;
   --color-brand-mid: #0D0D0D;
@@ -11,12 +11,35 @@
   --color-primary: #ffffff;
   --color-primary-hover: #e5e5e5;
   --color-secondary: #a3a3a3;
-  --color-success: #ffffff;
-  --color-warning: #bdbdbd;
-  --color-error: #ffffff;
+  --color-success: #10B981;
+  --color-warning: #F59E0B;
+  --color-error: #EF4444;
   
-  --text-primary: #f8fafc;
-  --text-secondary: #6B7280;
+  --text-primary: #F8FAFC;
+  --text-secondary: #8E9196;
+  --border-color: rgba(255, 255, 255, 0.1);
+  --card-bg: rgba(255, 255, 255, 0.02);
+}
+
+:root.light {
+  --background: #FFFFFF;
+  --foreground: #0A0A0A;
+  
+  --color-brand-deep: #FFFFFF;
+  --color-brand-mid: #F1F5F9;
+  --color-brand-light: #E2E8F0;
+  
+  --color-primary: #0A0A0A;
+  --color-primary-hover: #1E293B;
+  --color-secondary: #64748B;
+  --color-success: #10B981;
+  --color-warning: #D97706;
+  --color-error: #DC2626;
+  
+  --text-primary: #0A0A0A;
+  --text-secondary: #475569;
+  --border-color: rgba(0, 0, 0, 0.1);
+  --card-bg: rgba(0, 0, 0, 0.02);
 }
 
 @theme {
@@ -29,9 +52,25 @@
   
   --color-accent-primary: var(--color-primary);
   --color-accent-secondary: var(--color-secondary);
+  --color-border-custom: var(--border-color);
+  --color-card-custom: var(--card-bg);
   
-  --font-sans: var(--font-geist-sans), Inter, system-ui, -apple-system, sans-serif;
-  --font-mono: var(--font-geist-mono), monospace;
+  --font-sans: var(--font-inter), system-ui, -apple-system, sans-serif;
+  --font-heading: var(--font-outfit), Inter, system-ui, -apple-system, sans-serif;
+  
+  /* Standardized font scale optimized for high legibility */
+  --font-size-xs: 13px;
+  --font-size-sm: 14.5px;
+  --font-size-base: 16px;
+  --font-size-xl: 21px;
+  --font-size-2xl: 26px;
+  --font-size-3xl: 34px;
+  
+  /* Standardized corner radii */
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-2xl: 16px;
+  --radius-3xl: 24px;
 }
 
 body {
@@ -39,6 +78,10 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans);
   overflow-x: hidden;
+}
+
+h1, h2, h3, h4, h5, h6, .font-semibold, .font-bold, .font-extrabold, .font-black {
+  font-family: var(--font-heading);
 }
 
 /* Custom Scrollbar */
@@ -189,3 +232,339 @@ body {
   transform: translateY(0);
   opacity: 0.88;
 }
+
+/* Light mode global overrides for visual elements and contrast indicators */
+:root.light .glass-panel {
+  background: rgba(0, 0, 0, 0.02) !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+:root.light .glass-panel-hover:hover {
+  background: rgba(0, 0, 0, 0.04) !important;
+  border-color: rgba(0, 0, 0, 0.15) !important;
+}
+
+:root.light input,
+:root.light select,
+:root.light textarea {
+  background-color: #FFFFFF !important;
+  color: #0A0A0A !important;
+  border-color: rgba(0, 0, 0, 0.15) !important;
+}
+
+:root.light ::placeholder,
+:root.light input::placeholder,
+:root.light textarea::placeholder {
+  color: #64748B !important;
+  opacity: 1 !important;
+}
+
+:root.light input:focus,
+:root.light select:focus,
+:root.light textarea:focus {
+  border-color: #000000 !important;
+}
+
+:root.light button.bg-white {
+  background-color: #0A0A0A !important;
+  color: #FFFFFF !important;
+}
+
+:root.light button.bg-white:hover {
+  background-color: #1E293B !important;
+}
+
+:root.light button.bg-slate-50,
+:root.light button.bg-\[\#F8FAFC\],
+:root.light button.bg-slate-100,
+:root.light button.bg-slate-200 {
+  background-color: #F8FAFC !important;
+  color: #0F172A !important;
+  border-color: rgba(0, 0, 0, 0.15) !important;
+}
+
+:root.light button.bg-slate-50 span,
+:root.light button.bg-slate-50 svg,
+:root.light button.bg-\[\#F8FAFC\] span,
+:root.light button.bg-\[\#F8FAFC\] svg,
+:root.light button.bg-slate-100 span,
+:root.light button.bg-slate-100 svg,
+:root.light button.bg-slate-200 span,
+:root.light button.bg-slate-200 svg {
+  color: #0F172A !important;
+}
+
+:root.light button.bg-slate-50:hover,
+:root.light button.bg-\[\#F8FAFC\]:hover,
+:root.light button.bg-slate-100:hover,
+:root.light button.bg-slate-200:hover {
+  background-color: #E2E8F0 !important;
+  border-color: rgba(0, 0, 0, 0.3) !important;
+}
+
+:root.light button.bg-white.text-black,
+:root.light button.bg-black.text-black,
+:root.light button.bg-\[\#0F172A\].text-black {
+  color: #FFFFFF !important;
+}
+
+:root.light .text-white {
+  color: #0A0A0A !important;
+}
+
+/* Explicit white text override for dark cards/buttons selected in light mode */
+:root.light .force-white-text,
+:root.light .force-white-text *,
+:root.light .bg-\[\#0F172A\],
+:root.light .bg-\[\#0F172A\] *,
+:root.light button.bg-\[\#0F172A\],
+:root.light button.bg-\[\#0F172A\] *,
+:root.light span.bg-\[\#0F172A\] svg,
+:root.light button.bg-black svg {
+  color: #FFFFFF !important;
+}
+
+:root.light .bg-\[\#0F172A\] .text-slate-300,
+:root.light button.bg-\[\#0F172A\] .text-slate-300 {
+  color: #CBD5E1 !important;
+}
+
+:root.light .bg-black {
+  background-color: #FFFFFF !important;
+}
+
+/* Explicit overlay buttons for image cards that stay consistent across both Dark and Light modes */
+:root .force-white-btn,
+:root.light button.force-white-btn,
+:root.light .force-white-btn {
+  background-color: #FFFFFF !important;
+  color: #000000 !important;
+}
+:root .force-white-btn *,
+:root.light button.force-white-btn *,
+:root.light .force-white-btn * {
+  color: #000000 !important;
+}
+
+:root .force-dark-btn,
+:root.light button.force-dark-btn,
+:root.light .force-dark-btn {
+  background-color: rgba(0, 0, 0, 0.75) !important;
+  color: #FFFFFF !important;
+}
+:root .force-dark-btn *,
+:root.light button.force-dark-btn *,
+:root.light .force-dark-btn * {
+  color: #FFFFFF !important;
+}
+
+:root .force-transparent-btn,
+:root.light button.force-transparent-btn,
+:root.light .force-transparent-btn {
+  background-color: transparent !important;
+  color: #FFFFFF !important;
+}
+:root .force-transparent-btn *,
+:root.light button.force-transparent-btn *,
+:root.light .force-transparent-btn * {
+  color: #FFFFFF !important;
+}
+
+:root.light .bg-\[\#050505\] {
+  background-color: #FFFFFF !important;
+}
+
+:root.light .bg-\[\#060606\] {
+  background-color: #FFFFFF !important;
+}
+
+:root.light .bg-\[\#080808\] {
+  background-color: #FFFFFF !important;
+}
+
+:root.light .bg-\[\#090909\] {
+  background-color: #FFFFFF !important;
+}
+
+:root.light .bg-\[\#0a0a0a\] {
+  background-color: #FFFFFF !important;
+}
+
+:root.light .bg-\[\#0b0b0b\] {
+  background-color: #FFFFFF !important;
+}
+
+:root.light .bg-\[\#0c0c0c\] {
+  background-color: #FFFFFF !important;
+}
+
+:root.light .bg-\[\#000000\] {
+  background-color: #F8FAFC !important;
+}
+
+:root.light .bg-\[\#0A0A0A\] {
+  background-color: #FFFFFF !important;
+}
+
+:root.light .bg-\[\#0D0D0D\] {
+  background-color: #FFFFFF !important;
+}
+
+:root.light .bg-\[\#111\] {
+  background-color: #FFFFFF !important;
+}
+
+:root.light .border-white\/10,
+:root.light .border-white\/15,
+:root.light .border-white\/20,
+:root.light .border-white\/30,
+:root.light .border-\[\#3a3a3a\],
+:root.light .border-\[\#4a4a4a\],
+:root.light .border-\[\#303030\],
+:root.light .border-\[\#333\],
+:root.light .border-\[\#2f2f2f\] {
+  border-color: rgba(0, 0, 0, 0.12) !important;
+}
+
+:root.light .text-neutral-400 {
+  color: #475569 !important;
+}
+
+:root.light .text-neutral-500 {
+  color: #64748B !important;
+}
+
+:root.light .bg-white\/\[0\.03\] {
+  background-color: rgba(0, 0, 0, 0.03) !important;
+}
+
+:root.light .bg-white\/\[0\.04\] {
+  background-color: rgba(0, 0, 0, 0.04) !important;
+}
+
+:root.light .bg-white\/\[0\.02\] {
+  background-color: rgba(0, 0, 0, 0.02) !important;
+}
+
+:root.light .bg-white\/5 {
+  background-color: rgba(0, 0, 0, 0.03) !important;
+}
+
+:root.light .bg-white\/10 {
+  background-color: rgba(0, 0, 0, 0.06) !important;
+}
+
+:root.light .bg-white\/15 {
+  background-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+/* Invert white agncypay logos to dark black in light mode */
+:root.light img[src*="agncypaybrand.png"],
+:root.light img[src*="agncypayLogo.png"] {
+  filter: invert(1) brightness(0.2);
+}
+
+/* Ensure payment brand SVG logos render with high contrast in Light Mode */
+:root.light img[src*="plaid-logo.svg"] {
+  filter: none !important;
+  opacity: 1 !important;
+}
+
+:root.light img[src*="visa-logo.svg"] {
+  filter: none !important;
+  opacity: 1 !important;
+}
+
+/* Color adjustments for specific grey texts to improve legibility */
+:root.light .text-\[\#8f8f8f\] {
+  color: #475569 !important;
+}
+
+:root.light .text-\[\#c1c1c7\] {
+  color: #1E293B !important;
+}
+
+:root.light .text-\[\#A3A3A3\] {
+  color: #475569 !important;
+}
+
+:root.light .text-\[\#9b9b9b\] {
+  color: #475569 !important;
+}
+
+:root.light .text-neutral-300 {
+  color: #334155 !important;
+}
+
+:root.light .text-neutral-400 {
+  color: #334155 !important;
+}
+
+:root.light .rewards-box {
+  background-color: rgba(16, 185, 129, 0.1) !important;
+  border-color: rgba(16, 185, 129, 0.3) !important;
+}
+
+:root.light .rewards-text {
+  color: #0F172A !important;
+}
+
+/* Ensure dark buttons in Light Mode retain white text and icons */
+:root.light button.bg-white span,
+:root.light button.bg-white svg {
+  color: #FFFFFF !important;
+}
+
+:root.light button.bg-black {
+  background-color: #0F172A !important;
+  color: #FFFFFF !important;
+}
+
+:root.light button.bg-black span,
+:root.light button.bg-black svg {
+  color: #FFFFFF !important;
+}
+
+/* Light mode specific Creative Node Network overrides */
+:root.light svg path {
+  stroke: rgba(15, 23, 42, 0.4) !important;
+}
+
+:root.light .absolute.inset-0.bg-\[radial-gradient\(rgba\(255\,255\,255\,0\.05\)_1px\,transparent_1px\)\] {
+  background-image: radial-gradient(rgba(15, 23, 42, 0.08) 1px, transparent 1px) !important;
+}
+
+:root.light .h-6.w-6.rounded-full.bg-neutral-800.border-2.border-white {
+  background-color: #0F172A !important;
+  color: #FFFFFF !important;
+  border-color: #FFFFFF !important;
+}
+
+:root.light .relative.z-10.bg-\[\#0A0A0A\] {
+  background-color: #FFFFFF !important;
+  border-color: rgba(0, 0, 0, 0.1) !important;
+}
+
+:root.light .relative.z-10.bg-\[\#0A0A0A\] span {
+  color: #0F172A !important;
+}
+
+:root.light .relative.z-10.bg-\[\#0A0A0A\] svg {
+  color: #0F172A !important;
+}
+
+:root.light .mt-4.h-48.rounded-xl.border.border-white\/20.bg-black {
+  background-color: #F8FAFC !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+:root.light .h-10.w-10.rounded-xl.bg-\[\#111\] {
+  background-color: rgba(0, 0, 0, 0.04) !important;
+  color: #0F172A !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+:root.light .h-10.w-10.rounded-xl.bg-\[\#111\] text-neutral-400 {
+  color: #0F172A !important;
+}
+
