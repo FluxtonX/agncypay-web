@@ -1,0 +1,73 @@
+// AGNCY — recommended Firestore rules for production.
+//
+// DO NOT DEPLOY THESE YET. In the Phase 1 beta every write in src/lib/actions.ts runs in the
+// browser, so the `agncypay-demo` project currently runs with open rules. These rules assume the
+// production step: those functions move to server endpoints using the Admin SDK (which bypasses
+// rules), and browsers only READ their own data. Deploying them before that move will break
+// sending requests, payments, payouts and sync.
+//
+// Guest pay links and receipts are read by token / unguessable id. Under these rules they must be
+// served by a server route as well (clients cannot list invoices by token).
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function me() { return get(/databases/$(database)/documents/users/$(request.auth.uid)).data; }
+    function myEmail() { return request.auth.token.email.lower(); }
+    function inOrg(orgId) {
+      return signedIn() && request.auth.uid in get(/databases/$(database)/documents/orgs/$(orgId)).data.memberUids;
+    }
+
+    // Profiles: owner reads and edits a safe subset of their own document.
+    match /users/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow update: if signedIn() && request.auth.uid == uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['fullName', 'workspaceName', 'phone', 'prefs']);
+    }
+
+    match /orgs/{orgId} {
+      allow read: if inOrg(orgId);
+    }
+
+    // Agency-owned records: team members read.
+    match /crm_invoices/{id} {
+      allow read: if inOrg(resource.data.orgId)
+        || (signedIn() && resource.data.brandEmail == myEmail());
+    }
+    match /allocations/{id} {
+      allow read: if inOrg(resource.data.orgId)
+        || (signedIn() && resource.data.recipientEmail == myEmail())
+        || (signedIn() && me().accountType == 'agency' && resource.data.recipientEmail in get(/databases/$(database)/documents/orgs/$(me().orgId)).data.emails);
+    }
+    match /payouts/{id} {
+      allow read: if inOrg(resource.data.orgId)
+        || (signedIn() && resource.data.recipientEmail == myEmail());
+    }
+    match /activity/{id} { allow read: if inOrg(resource.data.orgId); }
+    match /contacts/{id} { allow read: if inOrg(resource.data.orgId); }
+    match /invites/{id} { allow read: if inOrg(resource.data.orgId); }
+
+    match /bank_accounts/{id} {
+      allow read: if (resource.data.ownerType == 'user' && signedIn() && resource.data.ownerId == request.auth.uid)
+        || (resource.data.ownerType == 'org' && inOrg(resource.data.ownerId));
+    }
+
+    match /payments/{id} {
+      allow read: if signedIn() && resource.data.payerEmail == myEmail();
+    }
+
+    match /notifications/{id} {
+      allow read: if signedIn() && (resource.data.to == myEmail() || inOrg(resource.data.to));
+      allow update: if signedIn() && (resource.data.to == myEmail() || inOrg(resource.data.to))
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+    }
+
+    match /wallet_tx/{id} { allow read: if signedIn() && resource.data.uid == request.auth.uid; }
+    match /cards/{uid} { allow read: if signedIn() && request.auth.uid == uid; }
+
+    // Outbound email queue: server only.
+    match /mail/{id} { allow read, write: if false; }
+  }
+}

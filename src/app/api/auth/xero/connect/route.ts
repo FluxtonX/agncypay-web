@@ -47,7 +47,7 @@ function getReturnToPath(request: NextRequest): string {
     if (referer.includes("/dashboard/invoices")) return "/dashboard/invoices";
   }
 
-  return "/branddashboard";
+  return "/agency/settings";
 }
 
 export async function GET(request: NextRequest) {

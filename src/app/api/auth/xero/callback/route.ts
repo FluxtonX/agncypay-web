@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
   const redirectUri = `${appUrl}/api/auth/xero/callback`;
 
   const { searchParams } = new URL(request.url);
-  const returnTo = request.cookies.get("xero_return_to")?.value || "/dashboard/invoices";
+  const returnTo = request.cookies.get("xero_return_to")?.value || "/agency/settings";
 
   const code = searchParams.get("code");
   const state = searchParams.get("state");

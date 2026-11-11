@@ -69,7 +69,16 @@ export async function POST(req: Request) {
 
     const instName = institution?.name || "Connected Bank Feed";
 
-    const formattedAccounts = (balanceData.accounts || []).map((acc: any) => ({
+    interface PlaidAccount {
+      account_id: string;
+      name?: string;
+      official_name?: string;
+      mask?: string;
+      type: string;
+      subtype?: string;
+      balances?: { available?: number | null; current?: number | null; iso_currency_code?: string | null };
+    }
+    const formattedAccounts = ((balanceData.accounts || []) as PlaidAccount[]).map((acc) => ({
       id: acc.account_id,
       itemId: itemId,
       institutionName: instName,
@@ -88,10 +97,10 @@ export async function POST(req: Request) {
       success: true,
       accounts: formattedAccounts,
     });
-  } catch (err: any) {
+  } catch (err) {
     console.error("Error in /api/plaid/exchange-token:", err);
     return NextResponse.json(
-      { error: err?.message || "Internal server error during token exchange" },
+      { error: (err instanceof Error ? err.message : "") || "Internal server error during token exchange" },
       { status: 500 }
     );
   }

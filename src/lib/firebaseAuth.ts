@@ -6,19 +6,10 @@ import {
 } from "firebase/auth";
 import { doc, setDoc, getDoc } from "firebase/firestore";
 import { auth, db } from "./firebase";
-import { AccountType } from "../types/workspace";
+import type { AccountType, Profile } from "./types";
 
-export interface FirestoreUser {
-  uid: string;
-  email: string;
-  fullName: string;
-  accountType: AccountType;
-  workspaceName: string;
-  agencyId: string;
-  createdAt: string;
-  parentAgencyEmail?: string;
-  parentAgencyUid?: string;
-}
+/** The `users/{uid}` document. Kept under its original name for existing callers. */
+export type FirestoreUser = Profile;
 
 const USERS_COLLECTION = "users";
 
@@ -33,7 +24,8 @@ export async function registerWithFirebase(
   password: string,
   fullName: string,
   accountType: AccountType,
-  workspaceName: string
+  workspaceName: string,
+  extra: Partial<Profile> = {}
 ): Promise<FirestoreUser> {
   try {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
@@ -51,7 +43,8 @@ export async function registerWithFirebase(
       accountType,
       workspaceName: workspaceName.trim(),
       agencyId,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      ...extra
     };
 
     // Save profile to Firestore

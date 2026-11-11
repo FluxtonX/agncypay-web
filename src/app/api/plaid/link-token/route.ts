@@ -42,10 +42,10 @@ export async function POST() {
     }
 
     return NextResponse.json({ link_token: data.link_token });
-  } catch (err: any) {
+  } catch (err) {
     console.error("Error in /api/plaid/link-token:", err);
     return NextResponse.json(
-      { error: err?.message || "Internal server error creating Plaid link token" },
+      { error: (err instanceof Error ? err.message : "") || "Internal server error creating Plaid link token" },
       { status: 500 }
     );
   }
