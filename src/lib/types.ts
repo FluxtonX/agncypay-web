@@ -140,6 +140,11 @@ export interface Invoice {
   paymentId?: string;
   /** `agncy` = paid through a payment link; `crm` = recorded as paid in the CRM. */
   paidVia?: "agncy" | "crm";
+  /** When an AGNCY payment was written back to the CRM (QuickBooks), and the CRM's payment id. */
+  crmRecordedAt?: number | null;
+  crmPaymentId?: string | null;
+  /** Last write-back failure, retried on every sync until it succeeds. */
+  crmRecordError?: string | null;
   /** The connected bank account this invoice settles to (defaults to the org's receiving account). */
   receivingAccountId?: string;
   createdAt: number;

@@ -98,7 +98,22 @@ function queueMail(w: Writer, to: string, subject: string, paragraphs: string[],
       ? `<p><a href="${escapeHtml(cta.url)}" style="display:inline-block;background:#101010;color:#fff;padding:12px 22px;border-radius:999px;text-decoration:none;font-weight:600">${escapeHtml(cta.label)}</a></p>`
       : "") +
     `<p style="color:#6b6a66;font-size:12px">AGNCY — payments for the creative economy</p></div>`;
-  w.set(ref(C.mail, newId()), { to: [to], message: { subject, text, html }, createdAt: Date.now() });
+  w.set(ref(C.mail, newId()), { to: [to], message: { subject, text, html }, status: "pending", createdAt: Date.now() });
+  scheduleMailFlush();
+}
+
+/**
+ * Nudges the /api/send-mail route to deliver queued mail. Debounced so an action that queues several
+ * emails triggers one flush, and delayed so the Firestore batch that holds the mail docs commits
+ * first. Fire-and-forget: if it doesn't run (e.g. the tab closes), the next queued email flushes it.
+ */
+let mailFlushTimer: ReturnType<typeof setTimeout> | null = null;
+function scheduleMailFlush() {
+  if (typeof window === "undefined") return;
+  if (mailFlushTimer) clearTimeout(mailFlushTimer);
+  mailFlushTimer = setTimeout(() => {
+    fetch("/api/send-mail", { method: "POST" }).catch(() => {});
+  }, 2500);
 }
 
 function notify(w: Writer, to: string, title: string, body: string, href: string) {
@@ -294,6 +309,8 @@ export async function sendPaymentRequest(org: Org, inv: Invoice, actor: Actor, r
   }
   if (inv.status === "paid" || inv.status === "void") throw new Error("This invoice is closed.");
   const resend = inv.status !== "not_sent";
+  // Unregistered brands get an invitation framing; registered ones are pointed at their portal.
+  const registered = await emailIsRegistered(inv.brandEmail);
   const token = inv.token || newToken();
   const now = Date.now();
   const link = `${origin()}/pay/${token}`;
@@ -317,9 +334,11 @@ export async function sendPaymentRequest(org: Org, inv: Invoice, actor: Actor, r
     [
       `Hi ${inv.brandName},`,
       `${org.name} has ${resend ? "reissued" : "sent you"} a payment request for ${inv.number} (${inv.description}): ${money(inv.amount, inv.currency)}.`,
-      "You can review and pay it securely without creating an account.",
+      registered
+        ? "Open the request below to review and pay it. You can also sign in to AGNCY to pay it alongside your other invoices."
+        : "Open the request to pay securely as a guest — or create a free AGNCY account on the way, and keep every invoice and receipt from all your agencies in one place.",
     ],
-    { label: "Review and pay", url: link }
+    { label: registered ? "Review and pay" : "Review, pay or join", url: link }
   );
   notify(w, inv.brandEmail, `Payment request from ${org.name}`, `${inv.number} · ${money(inv.amount, inv.currency)}`, "/brand");
   logActivity(w, {

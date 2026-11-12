@@ -29,8 +29,63 @@ async function fetchPayload(org: Org): Promise<CrmSyncPayload> {
   return body as CrmSyncPayload;
 }
 
+/**
+ * Marks invoices that brands paid through AGNCY as paid in QuickBooks. Runs inside the agency's own
+ * sync because the QuickBooks tokens live in the agency's browser. Failures are kept on the invoice
+ * and retried on the next sync; they never block the sync itself.
+ */
+export async function pushPaymentsToCrm(org: Org): Promise<number> {
+  if (org.crm.provider !== "quickbooks") return 0;
+  const snap = await getDocs(query(collection(db, C.invoices), where("orgId", "==", org.id)));
+  const pending = snap.docs
+    .map((d) => ({ ...(d.data() as Invoice), id: d.id }))
+    .filter((i) => i.provider === "quickbooks" && i.status === "paid" && i.paidVia === "agncy" && !i.crmRecordedAt)
+    .slice(0, 25);
+  if (pending.length === 0) return 0;
+
+  const res = await fetch("/api/crm/record-payment", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    cache: "no-store",
+    body: JSON.stringify({
+      provider: "quickbooks",
+      items: pending.map((i) => ({ crmId: i.crmId, amount: i.amount, paidAt: i.paidAt ?? Date.now(), reference: i.paymentId ?? i.id })),
+    }),
+  });
+  const body = (await res.json().catch(() => null)) as { results?: { crmId: string; state: string; qbPaymentId?: string; error?: string }[]; error?: string } | null;
+  if (!res.ok || !body?.results) throw new Error(body?.error || `Could not update QuickBooks (${res.status}).`);
+
+  const now = Date.now();
+  const batch = writeBatch(db);
+  let recorded = 0;
+  for (const r of body.results) {
+    const inv = pending.find((i) => i.crmId === r.crmId);
+    if (!inv) continue;
+    if (r.state === "recorded" || r.state === "already_paid") {
+      recorded += 1;
+      batch.update(doc(db, C.invoices, inv.id), { crmRecordedAt: now, crmPaymentId: r.qbPaymentId || null, crmRecordError: null });
+      batch.set(doc(db, C.activity, newId()), {
+        orgId: org.id,
+        at: now,
+        type: "crm",
+        summary: r.state === "recorded" ? `Marked ${inv.number} paid in QuickBooks` : `${inv.number} was already paid in QuickBooks`,
+        actor: "AGNCY",
+        amount: inv.amount,
+        invoiceId: inv.id,
+        payoutId: null,
+      });
+    } else if (inv.crmRecordError !== (r.error ?? "Could not record the payment.")) {
+      batch.update(doc(db, C.invoices, inv.id), { crmRecordError: r.error ?? "Could not record the payment." });
+    }
+  }
+  await batch.commit();
+  return recorded;
+}
+
 export async function runSync(org: Org): Promise<SyncResult> {
   if (!org.crm.provider) return { created: 0, updated: 0 };
+  // Write AGNCY payments back first, so the read that follows already sees them as paid.
+  await pushPaymentsToCrm(org).catch((err) => console.warn("[crm] payment write-back:", err instanceof Error ? err.message : err));
   let payload: CrmSyncPayload;
   try {
     payload = await fetchPayload(org);

@@ -143,6 +143,19 @@ export default function InvoiceDetail() {
             {inv.reminders?.length ? <Row label="Reminders sent">{inv.reminders.length}</Row> : null}
             {settleTo && <Row label="Settles to">{bankLabel(settleTo)}</Row>}
             {inv.status === "paid" && <Row label="Paid">{inv.paidVia === "crm" ? `Recorded in ${providerName(inv.provider)}` : dateLong(inv.paidAt)}</Row>}
+            {inv.status === "paid" && inv.paidVia === "agncy" && inv.provider === "quickbooks" && (
+              <Row label="QuickBooks">
+                {inv.crmRecordedAt ? (
+                  <span className="text-emerald-700">Marked paid {dateLong(inv.crmRecordedAt)}</span>
+                ) : inv.crmRecordError ? (
+                  <span className="text-rose-600" title={inv.crmRecordError}>
+                    Not updated yet — retrying
+                  </span>
+                ) : (
+                  <span className="text-muted">Updating on next sync…</span>
+                )}
+              </Row>
+            )}
             {inv.paymentId && (
               <Link href={`/receipt/${inv.paymentId}`} className="mt-2 inline-block text-sm font-medium text-ink underline underline-offset-4">
                 View receipt

@@ -88,7 +88,31 @@ function authedClient(tokens: Tokens, refresh: (refreshToken: string) => Promise
     return (await res.json()) as Json;
   };
 
-  return { get, refreshed: () => refreshed };
+  const post = async (url: string, body: unknown): Promise<Json> => {
+    if (!access) await renew();
+    const call = () =>
+      fetch(url, {
+        method: "POST",
+        headers: { Accept: "application/json", "Content-Type": "application/json", Authorization: `Bearer ${access}`, ...extraHeaders },
+        body: JSON.stringify(body),
+        cache: "no-store",
+      });
+    let res = await call();
+    if (res.status === 401) {
+      await renew();
+      res = await call();
+    }
+    if (res.status === 401 || res.status === 403) throw new CrmError("The CRM connection has expired. Reconnect it in Settings.", 401);
+    const data = (await res.json().catch(() => ({}))) as Json;
+    if (!res.ok) {
+      // QuickBooks explains rejections in Fault.Error[].Detail.
+      const detail = (data.Fault?.Error as Json[] | undefined)?.map((e) => text(e.Detail) || text(e.Message)).filter(Boolean).join("; ");
+      throw new CrmError(detail || `The CRM returned an error (${res.status}).`, 502);
+    }
+    return data;
+  };
+
+  return { get, post, refreshed: () => refreshed };
 }
 
 /* -------------------------------------------------- allocation convention */
@@ -140,7 +164,7 @@ function balanceLines(lines: InvoiceLine[], amount: number, label: string): Invo
 
 /* ------------------------------------------------------------- QuickBooks */
 
-export async function syncQuickBooks(tokens: Tokens, realmId: string): Promise<ConnectorResult> {
+function quickBooksClient(tokens: Tokens, realmId: string) {
   const clientId = process.env.QUICKBOOKS_CLIENT_ID;
   const clientSecret = process.env.QUICKBOOKS_CLIENT_SECRET;
   if (!clientId || !clientSecret) throw new CrmError("QuickBooks is not configured on this server.", 500);
@@ -149,6 +173,71 @@ export async function syncQuickBooks(tokens: Tokens, realmId: string): Promise<C
   const client = authedClient(tokens, (rt) =>
     refreshTokens("https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer", clientId, clientSecret, rt)
   );
+  return { base, client };
+}
+
+/** An invoice paid through AGNCY that should be marked paid in QuickBooks. */
+export interface PaymentToRecord {
+  crmId: string;
+  /** Cents. */
+  amount: number;
+  paidAt: number;
+  /** AGNCY payment id, kept on the QuickBooks payment for reconciliation. */
+  reference: string;
+}
+
+export interface RecordedPayment {
+  crmId: string;
+  /** recorded = a QuickBooks payment was created; already_paid = nothing left to pay there. */
+  state: "recorded" | "already_paid" | "error";
+  qbPaymentId?: string;
+  error?: string;
+}
+
+/**
+ * Marks invoices paid in QuickBooks by creating a Payment linked to each one. Deposits to
+ * QuickBooks' default account (Undeposited Funds). Safe to repeat: the invoice's open balance is
+ * re-read first, and an invoice with nothing left to pay is reported as already paid.
+ */
+export async function recordQuickBooksPayments(
+  tokens: Tokens,
+  realmId: string,
+  items: PaymentToRecord[]
+): Promise<{ results: RecordedPayment[]; refreshed: Refreshed | null }> {
+  const { base, client } = quickBooksClient(tokens, realmId);
+  const results: RecordedPayment[] = [];
+  // Sequential on purpose: the first call may refresh the token for the rest.
+  for (const item of items) {
+    try {
+      const data = await client.get(`${base}/invoice/${encodeURIComponent(item.crmId)}?minorversion=65`);
+      const inv = data.Invoice as Json | undefined;
+      if (!inv) throw new CrmError("Invoice not found in QuickBooks.", 404);
+      const balance = cents(inv.Balance);
+      if (balance <= 0) {
+        results.push({ crmId: item.crmId, state: "already_paid" });
+        continue;
+      }
+      const amount = Math.min(balance, item.amount);
+      const payment = await client.post(`${base}/payment?minorversion=65`, {
+        CustomerRef: { value: String(inv.CustomerRef?.value) },
+        ...(inv.CurrencyRef?.value ? { CurrencyRef: { value: String(inv.CurrencyRef.value) } } : {}),
+        TotalAmt: amount / 100,
+        TxnDate: new Date(item.paidAt).toISOString().slice(0, 10),
+        PaymentRefNum: "AGNCY",
+        PrivateNote: `Paid through AGNCY (payment ${item.reference})`,
+        Line: [{ Amount: amount / 100, LinkedTxn: [{ TxnId: String(inv.Id), TxnType: "Invoice" }] }],
+      });
+      results.push({ crmId: item.crmId, state: "recorded", qbPaymentId: String(payment.Payment?.Id ?? "") });
+    } catch (err) {
+      if (err instanceof CrmError && err.status === 401) throw err;
+      results.push({ crmId: item.crmId, state: "error", error: err instanceof Error ? err.message : "Could not record the payment." });
+    }
+  }
+  return { results, refreshed: client.refreshed() };
+}
+
+export async function syncQuickBooks(tokens: Tokens, realmId: string): Promise<ConnectorResult> {
+  const { base, client } = quickBooksClient(tokens, realmId);
   const run = async (sql: string, entity: string): Promise<Json[]> => {
     const data = await client.get(`${base}/query?query=${encodeURIComponent(sql)}&minorversion=65`);
     return (data.QueryResponse?.[entity] as Json[]) ?? [];
