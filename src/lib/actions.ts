@@ -28,6 +28,7 @@ import {
 } from "firebase/firestore";
 import { db } from "./firebase";
 import { C } from "./db";
+import { publicUrl } from "./links";
 import { toProfile } from "./profile";
 import { balanceOf, canPayOut, canRequestPayment, makeHandle, normEmail, normHandle, viewInvoice, type PayoutDraft } from "./domain";
 import { dateLong, money } from "./format";
@@ -77,16 +78,29 @@ export const newId = (): string => doc(collection(db, "_")).id;
 export const newToken = (): string => crypto.randomUUID().replace(/-/g, "");
 
 const ref = (name: string, id: string) => doc(db, name, id);
-const origin = () => (typeof window === "undefined" ? "" : window.location.origin);
+/** Base address for links in emails; see publicUrl in ./links. */
+const origin = () => publicUrl();
 
 const escapeHtml = (s: string) =>
   s.replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[ch]!);
 
 /**
- * Queues an email in the Firebase "Trigger Email" extension format. Nothing is delivered until
- * that extension (or another sender reading the `mail` collection) is installed.
+ * Who an email appears to come from. The address is always AGNCY's own sending address (an agency's
+ * domain can't be sent from without failing spam checks); `name` shows the agency, and `replyTo`
+ * sends replies straight to the agency.
  */
-function queueMail(w: Writer, to: string, subject: string, paragraphs: string[], cta?: { label: string; url: string }) {
+interface MailFrom {
+  name: string;
+  replyTo?: string;
+}
+
+/** Emails an agency sends to its brands and talent: "Studio North via AGNCY", replies to the owner. */
+const fromAgency = (org: Pick<Org, "name" | "ownerEmail">): MailFrom => ({ name: `${org.name} via AGNCY`, replyTo: org.ownerEmail || undefined });
+
+/**
+ * Queues an email in the `mail` collection; /api/send-mail delivers it through Brevo.
+ */
+function queueMail(w: Writer, to: string, subject: string, paragraphs: string[], cta?: { label: string; url: string }, from?: MailFrom) {
   if (!to) return;
   const text = [...paragraphs, cta ? `${cta.label}: ${cta.url}` : "", "AGNCY — payments for the creative economy"]
     .filter(Boolean)
@@ -98,7 +112,15 @@ function queueMail(w: Writer, to: string, subject: string, paragraphs: string[],
       ? `<p><a href="${escapeHtml(cta.url)}" style="display:inline-block;background:#101010;color:#fff;padding:12px 22px;border-radius:999px;text-decoration:none;font-weight:600">${escapeHtml(cta.label)}</a></p>`
       : "") +
     `<p style="color:#6b6a66;font-size:12px">AGNCY — payments for the creative economy</p></div>`;
-  w.set(ref(C.mail, newId()), { to: [to], message: { subject, text, html }, status: "pending", createdAt: Date.now() });
+  w.set(ref(C.mail, newId()), {
+    to: [to],
+    message: { subject, text, html },
+    // Firestore rejects undefined, so the optional sender fields are only written when present.
+    ...(from ? { fromName: from.name } : {}),
+    ...(from?.replyTo ? { replyTo: from.replyTo } : {}),
+    status: "pending",
+    createdAt: Date.now(),
+  });
   scheduleMailFlush();
 }
 
@@ -342,7 +364,8 @@ export async function sendPaymentRequest(org: Org, inv: Invoice, actor: Actor, r
         ? "Open the request below to review and pay it. You can also sign in to AGNCY to pay it alongside your other invoices."
         : "Open the request to pay securely as a guest — or create a free AGNCY account on the way, and keep every invoice and receipt from all your agencies in one place.",
     ],
-    { label: registered ? "Review and pay" : "Review, pay or join", url: link }
+    { label: registered ? "Review and pay" : "Review, pay or join", url: link },
+    fromAgency(org)
   );
   notify(w, inv.brandEmail, `Payment request from ${org.name}`, `${inv.number} · ${money(inv.amount, inv.currency)}`, "/brand");
   logActivity(w, {
@@ -376,7 +399,8 @@ export async function sendReminder(org: Org, inv: Invoice, actor: Actor, note: s
       })(),
       ...(note.trim() ? [note.trim()] : []),
     ],
-    { label: "Review and pay", url: `${origin()}/pay/${inv.token}` }
+    { label: "Review and pay", url: `${origin()}/pay/${inv.token}` },
+    fromAgency(org)
   );
   notify(w, inv.brandEmail, `Reminder from ${org.name}`, `${inv.number} · ${money(inv.amount, inv.currency)}`, "/brand");
   logActivity(w, {
@@ -718,7 +742,8 @@ export async function createPayouts(org: Org, drafts: PayoutDraft[], funding: Ba
                 `Hi ${draft.recipientName},`,
                 `${org.name} has sent you ${amount} through AGNCY. Join to collect it — the payment is already authorised and lands as soon as your account is ready.`,
               ],
-              { label: `Collect ${amount}`, url: `${origin()}/invite/${inviteId}` }
+              { label: `Collect ${amount}`, url: `${origin()}/invite/${inviteId}` },
+              fromAgency(org)
             );
           } else {
             notify(

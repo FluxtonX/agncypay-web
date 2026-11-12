@@ -9,6 +9,7 @@ import { sendPaymentRequest } from "@/lib/actions";
 import { viewInvoice } from "@/lib/domain";
 import { useNow } from "@/lib/db";
 import { bankLabel, dateLong, money } from "@/lib/format";
+import { publicUrl } from "@/lib/links";
 import type { Invoice } from "@/lib/types";
 
 /** Select → review → confirm. Content comes from the CRM and is never edited here. */
@@ -62,7 +63,7 @@ function Body({ invoice, onClose }: { invoice: Invoice; onClose: () => void }) {
 
   if (done) {
     // The token is issued on first send; read it from the live invoice once it arrives.
-    const live = invoice.token ? `${window.location.origin}/pay/${invoice.token}` : null;
+    const live = invoice.token ? publicUrl(`/pay/${invoice.token}`) : null;
     return (
       <div className="flex flex-col items-center py-10 text-center">
         <span className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">

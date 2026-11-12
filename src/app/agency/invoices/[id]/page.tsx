@@ -15,6 +15,7 @@ import { providerName, saveSandboxEdit } from "@/lib/actions";
 import { C, col, useLive, useNow, where } from "@/lib/db";
 import { canPayOut, viewInvoice } from "@/lib/domain";
 import { bankLabel, dateLong, dateTime, money, parseMoney } from "@/lib/format";
+import { publicUrl } from "@/lib/links";
 import type { ActivityEvent, Allocation, Invoice, Org } from "@/lib/types";
 
 export default function InvoiceDetail() {
@@ -40,7 +41,7 @@ export default function InvoiceDetail() {
   const view = viewInvoice(inv, now);
   const payable = allocs.filter((a) => canPayOut(a));
   const settleTo = accounts.find((a) => a.id === inv.receivingAccountId);
-  const payLink = inv.token && typeof window !== "undefined" ? `${window.location.origin}/pay/${inv.token}` : null;
+  const payLink = inv.token ? publicUrl(`/pay/${inv.token}`) : null;
   const timeline = [...events.data].sort((a, b) => b.at - a.at);
 
   return (

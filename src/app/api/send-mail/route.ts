@@ -14,7 +14,7 @@ interface MailMessage {
 }
 
 /** Sends one email through Brevo's transactional API. Returns the provider message id. */
-async function sendViaBrevo(to: string, message: MailMessage): Promise<string> {
+async function sendViaBrevo(to: string, message: MailMessage, fromName?: string, replyTo?: string): Promise<string> {
   const key = process.env.BREVO_API_KEY;
   const fromEmail = process.env.MAIL_FROM_EMAIL;
   if (!key) throw new Error("BREVO_API_KEY is not set");
@@ -24,8 +24,10 @@ async function sendViaBrevo(to: string, message: MailMessage): Promise<string> {
     method: "POST",
     headers: { "api-key": key, "content-type": "application/json", accept: "application/json" },
     body: JSON.stringify({
-      sender: { email: fromEmail, name: process.env.MAIL_FROM_NAME || "AGNCY" },
+      // The address is always ours; the display name can be the agency ("Studio North via AGNCY").
+      sender: { email: fromEmail, name: (fromName || process.env.MAIL_FROM_NAME || "AGNCY").slice(0, 70) },
       to: [{ email: to }],
+      ...(replyTo ? { replyTo: { email: replyTo } } : {}),
       subject: message.subject || "(no subject)",
       htmlContent: message.html || message.text || "",
       textContent: message.text || "",
@@ -53,7 +55,15 @@ const MAX_ATTEMPTS = 3;
 /** A send that has been "processing" this long crashed part-way; it is picked up again. */
 const STUCK_AFTER_MS = 10 * 60 * 1000;
 
-type MailDoc = { to?: string | string[]; message?: MailMessage; status?: string; attempts?: number; delivery?: { startTime?: number } };
+type MailDoc = {
+  to?: string | string[];
+  message?: MailMessage;
+  fromName?: string;
+  replyTo?: string;
+  status?: string;
+  attempts?: number;
+  delivery?: { startTime?: number };
+};
 
 export async function POST() {
   let docs;
@@ -85,7 +95,7 @@ export async function POST() {
     // Claim before sending so a concurrent flush skips it.
     await updateDoc(ref, { status: "processing", attempts, delivery: { state: "PROCESSING", startTime: Date.now() } });
     try {
-      const messageId = await sendViaBrevo(to, data.message || {});
+      const messageId = await sendViaBrevo(to, data.message || {}, data.fromName, data.replyTo);
       await updateDoc(ref, { status: "sent", delivery: { state: "SUCCESS", messageId, endTime: Date.now() } });
       results.push({ id: d.id, state: "SUCCESS" });
     } catch (err) {
