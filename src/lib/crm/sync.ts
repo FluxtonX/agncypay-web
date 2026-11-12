@@ -34,11 +34,10 @@ async function fetchPayload(org: Org): Promise<CrmSyncPayload> {
  * sync because the QuickBooks tokens live in the agency's browser. Failures are kept on the invoice
  * and retried on the next sync; they never block the sync itself.
  */
-export async function pushPaymentsToCrm(org: Org): Promise<number> {
+export async function pushPaymentsToCrm(org: Org, invoices: Invoice[]): Promise<number> {
   if (org.crm.provider !== "quickbooks") return 0;
-  const snap = await getDocs(query(collection(db, C.invoices), where("orgId", "==", org.id)));
-  const pending = snap.docs
-    .map((d) => ({ ...(d.data() as Invoice), id: d.id }))
+  // Uses the invoices the dashboard already holds live, so this costs no extra reads.
+  const pending = invoices
     .filter((i) => i.provider === "quickbooks" && i.status === "paid" && i.paidVia === "agncy" && !i.crmRecordedAt)
     .slice(0, 25);
   if (pending.length === 0) return 0;
@@ -82,10 +81,10 @@ export async function pushPaymentsToCrm(org: Org): Promise<number> {
   return recorded;
 }
 
-export async function runSync(org: Org): Promise<SyncResult> {
+export async function runSync(org: Org, invoices: Invoice[] = []): Promise<SyncResult> {
   if (!org.crm.provider) return { created: 0, updated: 0 };
   // Write AGNCY payments back first, so the read that follows already sees them as paid.
-  await pushPaymentsToCrm(org).catch((err) => console.warn("[crm] payment write-back:", err instanceof Error ? err.message : err));
+  await pushPaymentsToCrm(org, invoices).catch((err) => console.warn("[crm] payment write-back:", err instanceof Error ? err.message : err));
   let payload: CrmSyncPayload;
   try {
     payload = await fetchPayload(org);

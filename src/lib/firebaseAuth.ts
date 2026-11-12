@@ -28,9 +28,13 @@ export async function registerWithFirebase(
   extra: Partial<Profile> = {}
 ): Promise<FirestoreUser> {
   try {
-    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    const uid = userCredential.user.uid;
     const normalizedEmail = email.trim().toLowerCase();
+    // Signed in already but without a profile (an unfinished sign-up): finish it on this login.
+    const current = auth.currentUser;
+    const uid =
+      current && current.email?.toLowerCase() === normalizedEmail
+        ? current.uid
+        : (await createUserWithEmailAndPassword(auth, email, password)).user.uid;
 
     // Generate agencyId/identifier depending on user type
     const prefix = accountType === "brand" ? "BRND" : accountType === "agency" ? "AGY" : "TAL";
@@ -71,24 +75,9 @@ export async function loginWithFirebase(
     const docRef = doc(db, USERS_COLLECTION, uid);
     const docSnap = await getDoc(docRef);
 
-    if (docSnap.exists()) {
-      return docSnap.data() as FirestoreUser;
-    }
-    
-    // In case the Firestore doc is missing, create a basic fallback profile
-    const normalizedEmail = email.trim().toLowerCase();
-    const fallbackProfile: FirestoreUser = {
-      uid,
-      email: normalizedEmail,
-      fullName: normalizedEmail.split("@")[0].toUpperCase(),
-      accountType: "brand",
-      workspaceName: "AgncyPay Workspace",
-      agencyId: generateOrgId("BRND"),
-      createdAt: new Date().toISOString()
-    };
-    
-    await setDoc(docRef, fallbackProfile);
-    return fallbackProfile;
+    // A missing profile is not guessed at (a wrong account type would send the person to the wrong
+    // portal). The login page sends them to the register page to finish their profile instead.
+    return docSnap.exists() ? (docSnap.data() as FirestoreUser) : null;
   } catch (error) {
     console.error("Error logging in user with Firebase:", error);
     throw error;

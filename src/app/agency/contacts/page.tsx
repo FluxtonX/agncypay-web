@@ -7,7 +7,7 @@ import { InvoicePill, StagePill } from "@/components/status";
 import { useAgency } from "@/lib/agency";
 import { providerName } from "@/lib/actions";
 import { toProfile } from "@/lib/profile";
-import { C, col, useLive, useNow, where } from "@/lib/db";
+import { C, col, useLive, useNow, useOnce, where } from "@/lib/db";
 import { mutualAgencies } from "@/lib/domain";
 import { dateShort, money, plural } from "@/lib/format";
 import type { Allocation, Contact, Profile } from "@/lib/types";
@@ -36,8 +36,9 @@ interface Entry {
 export default function ContactsPage() {
   const { org, invoices, allocations } = useAgency();
   const contacts = useLive<Contact>(`contacts:${org.id}`, () => col(C.contacts, where("orgId", "==", org.id)));
-  // The AGNCY directory: every account on the platform.
-  const directory = useLive<Record<string, unknown> & { id: string }>("users:all", () => col(C.users));
+  // The AGNCY directory: every account on the platform. Read once per visit — a live listener on
+  // every user would re-download the directory on each sign-up anywhere.
+  const directory = useOnce<Record<string, unknown> & { id: string }>("users:all", () => col(C.users));
   const [chosenView, setView] = useState<View | null>(null);
   const [kind, setKind] = useState<Kind>("all");
   const [q, setQ] = useState("");

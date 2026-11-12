@@ -21,7 +21,9 @@ function RegisterForm() {
   const router = useRouter();
   const params = useSearchParams();
   const next = safeNext(params.get("next"));
-  const { profile, loading } = useSession();
+  const { user, profile, loading } = useSession();
+  // Signed in but the profile was never written: finish it without asking for a password again.
+  const finishing = !loading && !!user && !profile;
   const preset = params.get("type");
   const [type, setType] = useState<AccountType>(preset === "brand" || preset === "individual" ? preset : "agency");
   const [fullName, setFullName] = useState("");
@@ -40,7 +42,7 @@ function RegisterForm() {
 
   const needsBusiness = type !== "individual";
   const showTypes = !preset || !locked;
-  const valid = fullName.trim().length > 1 && isEmail(email) && password.length >= 8 && (!needsBusiness || business.trim().length > 1);
+  const valid = fullName.trim().length > 1 && isEmail(email) && (finishing || password.length >= 8) && (!needsBusiness || business.trim().length > 1);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,7 +59,7 @@ function RegisterForm() {
 
   return (
     <AuthFrame
-      title={joining ? `Join ${joining}` : "Create your account"}
+      title={finishing ? "Finish setting up your account" : joining ? `Join ${joining}` : "Create your account"}
       subtitle={joining ? "Create your login to join the team on AGNCY." : "One email, one login. It takes about a minute."}
       footer={
         <>
@@ -109,11 +111,13 @@ function RegisterForm() {
         <Field label="Email" hint={type === "individual" ? "Use the address your agency pays you at so your earnings find you." : undefined}>
           <Input type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@company.com" disabled={locked} />
         </Field>
-        <Field label="Password" hint="At least 8 characters.">
-          <Input type="password" autoComplete="new-password" required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Create a password" />
-        </Field>
+        {!finishing && (
+          <Field label="Password" hint="At least 8 characters.">
+            <Input type="password" autoComplete="new-password" required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Create a password" />
+          </Field>
+        )}
         <Button type="submit" size="lg" className="w-full" loading={busy} disabled={!valid}>
-          Create account
+          {finishing ? "Finish setup" : "Create account"}
         </Button>
       </form>
     </AuthFrame>

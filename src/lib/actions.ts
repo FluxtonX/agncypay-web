@@ -111,9 +111,13 @@ let mailFlushTimer: ReturnType<typeof setTimeout> | null = null;
 function scheduleMailFlush() {
   if (typeof window === "undefined") return;
   if (mailFlushTimer) clearTimeout(mailFlushTimer);
-  mailFlushTimer = setTimeout(() => {
-    fetch("/api/send-mail", { method: "POST" }).catch(() => {});
-  }, 2500);
+  mailFlushTimer = setTimeout(flushMailQueue, 2500);
+}
+
+/** Asks the server to deliver every queued email now. Safe to call often; it never throws. */
+export function flushMailQueue() {
+  if (typeof window === "undefined") return;
+  fetch("/api/send-mail", { method: "POST" }).catch(() => {});
 }
 
 function notify(w: Writer, to: string, title: string, body: string, href: string) {

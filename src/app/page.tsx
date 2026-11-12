@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { AnimatePresence, motion, useInView } from "framer-motion";
 import {
@@ -44,11 +45,11 @@ const NAV_LINKS = [
 ];
 
 const INTEGRATIONS = [
-  { label: "QuickBooks", src: "/quickbook.png" },
-  { label: "Xero", src: "/xero.png" },
-  { label: "Sage", src: "/sage.png" },
-  { label: "NetSuite", src: "/netsuite.png" },
-  { label: "Plaid", src: "/plaid-logo.svg", wide: true },
+  { label: "QuickBooks", src: "/quickbook.png", w: 500, h: 500 },
+  { label: "Xero", src: "/xero.png", w: 500, h: 512 },
+  { label: "Sage", src: "/sage.png", w: 558, h: 500 },
+  { label: "NetSuite", src: "/netsuite.png", w: 600, h: 500 },
+  { label: "Plaid", src: "/plaid-logo.svg", w: 126, h: 48, wide: true },
 ];
 
 const COMPARISON = [
@@ -263,7 +264,7 @@ function SiteHeader() {
     >
       <div className="mx-auto flex h-[68px] max-w-[1240px] items-center justify-between px-5 sm:px-8">
         <Link href="/" className="flex items-center" aria-label="AgncyPay home">
-          <img src="/logo-tiles/agncy-logo.png" alt="Agncy" className="h-7 w-auto object-contain object-left" />
+          <Image src="/logo-tiles/agncy-logo.png" alt="Agncy" width={303} height={51} priority className="h-7 w-auto object-contain object-left" />
         </Link>
 
         <nav className="hidden items-center gap-1 lg:flex">
@@ -593,7 +594,7 @@ export default function LandingPage() {
             <ul className="flex flex-1 flex-wrap items-center justify-center gap-x-10 gap-y-6 lg:justify-between">
               {INTEGRATIONS.map((i) => (
                 <li key={i.label} className="flex items-center gap-2.5 opacity-70 grayscale transition hover:opacity-100 hover:grayscale-0">
-                  <img src={i.src} alt={i.label} className={i.wide ? "h-7 w-auto" : "h-8 w-8 object-contain"} />
+                  <Image src={i.src} alt={i.label} width={i.w} height={i.h} className={i.wide ? "h-7 w-auto" : "h-8 w-8 object-contain"} />
                   {!i.wide && <span className="text-[15px] font-semibold text-slate-700">{i.label}</span>}
                 </li>
               ))}
@@ -954,7 +955,7 @@ export default function LandingPage() {
           <div className="grid grid-cols-2 gap-10 border-b border-slate-200/80 pb-14 md:grid-cols-[1.6fr_1fr_1fr_1fr]">
             <div className="col-span-2 md:col-span-1">
               <Link href="/" className="inline-flex items-center" aria-label="AgncyPay home">
-                <img src="/logo-tiles/agncy-logo.png" alt="Agncy" className="h-7 w-auto object-contain object-left" />
+                <Image src="/logo-tiles/agncy-logo.png" alt="Agncy" width={303} height={51} className="h-7 w-auto object-contain object-left" />
               </Link>
               <p className="mt-5 max-w-[300px] text-[14px] leading-relaxed text-slate-500">
                 The payment layer for the creative economy — connecting brands, agencies, and talent on a single rail.

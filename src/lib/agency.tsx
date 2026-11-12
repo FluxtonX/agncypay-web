@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { C, col, useLive, useLiveDoc, where } from "./db";
-import { claimPayoutsForOrg, ensureOrg, type Actor } from "./actions";
+import { claimPayoutsForOrg, ensureOrg, flushMailQueue, type Actor } from "./actions";
 import { runSync } from "./crm/sync";
 import { hashOf } from "./domain";
 import type { Allocation, BankAccount, Invoice, Org, Payout, Profile } from "./types";
@@ -35,11 +35,13 @@ const SYNC_EVERY = 2 * 60_000;
 const FOCUS_THROTTLE = 45_000;
 
 /** Keeps the CRM mirror fresh with no manual action: on open, every two minutes and when the tab regains focus. */
-function useAutoSync(org: Org | null) {
+function useAutoSync(org: Org | null, invoices: Invoice[]) {
   const orgRef = useRef<Org | null>(org);
+  const invoicesRef = useRef<Invoice[]>(invoices);
   useEffect(() => {
     orgRef.current = org;
-  }, [org]);
+    invoicesRef.current = invoices;
+  }, [org, invoices]);
 
   const key = org?.crm.provider ? `${org.id}|${org.crm.provider}|${hashOf(org.sandbox ?? null)}` : null;
 
@@ -54,11 +56,13 @@ function useAutoSync(org: Org | null) {
       inFlight = true;
       last = Date.now();
       try {
-        await runSync(current);
+        await runSync(current, invoicesRef.current);
       } catch (err) {
         console.warn("[crm sync]", err);
       } finally {
         inFlight = false;
+        // Same heartbeat sweeps the email queue: delivers anything left pending and retries failures.
+        flushMailQueue();
       }
     };
     void tick(true);
@@ -101,7 +105,7 @@ export function useAgencyGate(profile: Profile): AgencyGate {
   const owedKey = live && emails.length ? `owed:${emails.join(",")}` : null;
   const owed = useLive<Allocation>(owedKey, () => col(C.allocations, where("recipientEmail", "in", emails)));
 
-  useAutoSync(member ? org : null);
+  useAutoSync(member ? org : null, invoices.data);
 
   // Collect payouts other agencies authorised for us once we can receive them.
   const hasBank = accounts.data.length > 0;

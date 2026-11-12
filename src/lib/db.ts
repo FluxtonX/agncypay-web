@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import {
   collection,
   doc,
+  getDocs,
   onSnapshot,
   query,
   where,
@@ -64,6 +65,33 @@ export function useLive<T>(key: string | null, build: () => Query<DocumentData>)
       }
     );
     // `key` fully describes the query.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
+
+  if (key === null) return { data: [], loading: false, error: null };
+  if (state.key !== key) return { data: [], loading: true, error: null };
+  return { data: state.data, loading: false, error: state.error };
+}
+
+/**
+ * One-time Firestore query, for large lists that don't need to update live (e.g. the AGNCY
+ * directory). Same shape as useLive; `key` identifies the query, null stays idle.
+ */
+export function useOnce<T>(key: string | null, build: () => Query<DocumentData>): Live<T> {
+  const [state, setState] = useState<{ key: string | null; data: T[]; error: string | null }>({ key: null, data: [], error: null });
+
+  useEffect(() => {
+    if (key === null) return;
+    let alive = true;
+    getDocs(build())
+      .then((snap) => alive && setState({ key, data: snap.docs.map((d) => ({ ...d.data(), id: d.id }) as T), error: null }))
+      .catch((err: Error) => {
+        console.error(`[once:${key}]`, err);
+        if (alive) setState({ key, data: [], error: err.message });
+      });
+    return () => {
+      alive = false;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
 

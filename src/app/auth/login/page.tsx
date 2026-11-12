@@ -12,16 +12,22 @@ function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
   const next = safeNext(params.get("next"));
-  const { profile, loading } = useSession();
+  const { user, profile, loading } = useSession();
   const [email, setEmail] = useState(params.get("email") ?? "");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Already signed in (or just signed in): go where they were headed.
+  // Already signed in (or just signed in): go where they were headed. An account whose profile was
+  // never finished goes to the register page to complete it.
   useEffect(() => {
-    if (!loading && profile) router.replace(next ?? homeFor(profile.accountType));
-  }, [loading, profile, next, router]);
+    if (loading) return;
+    if (profile) router.replace(next ?? homeFor(profile.accountType));
+    else if (user?.email) {
+      const q = new URLSearchParams({ email: user.email, lock: "1", ...(next ? { next } : {}) });
+      router.replace(`/auth/register?${q}`);
+    }
+  }, [loading, user, profile, next, router]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();

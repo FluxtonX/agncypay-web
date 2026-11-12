@@ -49,17 +49,31 @@ async function sendViaBrevo(to: string, message: MailMessage): Promise<string> {
  * Idempotent: a document is claimed (status → "processing") before sending, so overlapping flushes
  * don't double-send. Pending documents left by one call are picked up by the next.
  */
+const MAX_ATTEMPTS = 3;
+/** A send that has been "processing" this long crashed part-way; it is picked up again. */
+const STUCK_AFTER_MS = 10 * 60 * 1000;
+
+type MailDoc = { to?: string | string[]; message?: MailMessage; status?: string; attempts?: number; delivery?: { startTime?: number } };
+
 export async function POST() {
-  let snap;
+  let docs;
   try {
-    snap = await getDocs(query(collection(db, "mail"), where("status", "==", "pending"), limit(25)));
+    const [pending, processing] = await Promise.all([
+      getDocs(query(collection(db, "mail"), where("status", "==", "pending"), limit(25))),
+      getDocs(query(collection(db, "mail"), where("status", "==", "processing"), limit(25))),
+    ]);
+    const now = Date.now();
+    docs = [
+      ...pending.docs,
+      ...processing.docs.filter((d) => now - ((d.data() as MailDoc).delivery?.startTime ?? 0) > STUCK_AFTER_MS),
+    ];
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : "query failed" }, { status: 500 });
   }
 
   const results: { id: string; state: string; error?: string }[] = [];
-  for (const d of snap.docs) {
-    const data = d.data() as { to?: string | string[]; message?: MailMessage; status?: string };
+  for (const d of docs) {
+    const data = d.data() as MailDoc;
     const ref = doc(db, "mail", d.id);
     const to = Array.isArray(data.to) ? data.to[0] : data.to;
     if (!to) {
@@ -67,16 +81,19 @@ export async function POST() {
       results.push({ id: d.id, state: "ERROR", error: "No recipient" });
       continue;
     }
+    const attempts = (data.attempts ?? 0) + 1;
     // Claim before sending so a concurrent flush skips it.
-    await updateDoc(ref, { status: "processing", delivery: { state: "PROCESSING", startTime: Date.now() } });
+    await updateDoc(ref, { status: "processing", attempts, delivery: { state: "PROCESSING", startTime: Date.now() } });
     try {
       const messageId = await sendViaBrevo(to, data.message || {});
       await updateDoc(ref, { status: "sent", delivery: { state: "SUCCESS", messageId, endTime: Date.now() } });
       results.push({ id: d.id, state: "SUCCESS" });
     } catch (err) {
       const message = err instanceof Error ? err.message : "send failed";
-      await updateDoc(ref, { status: "error", delivery: { state: "ERROR", error: message, endTime: Date.now() } });
-      results.push({ id: d.id, state: "ERROR", error: message });
+      // Transient failures go back in the queue; after MAX_ATTEMPTS the email is marked failed.
+      const retry = attempts < MAX_ATTEMPTS;
+      await updateDoc(ref, { status: retry ? "pending" : "error", delivery: { state: retry ? "RETRY" : "ERROR", error: message, endTime: Date.now() } });
+      results.push({ id: d.id, state: retry ? "RETRY" : "ERROR", error: message });
     }
   }
 

@@ -1,9 +1,9 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { onAuthStateChanged, type User } from "firebase/auth";
-import { doc, getDoc, onSnapshot } from "firebase/firestore";
+import { doc, onSnapshot } from "firebase/firestore";
 import { auth, db } from "./firebase";
 import { toProfile } from "./profile";
 import type { AccountType, Profile } from "./types";
@@ -24,62 +24,39 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     profile: Profile | null;
   }>({ ready: false, user: null, profile: null });
 
-  // Safety timeout ref — if loading never clears (e.g. Firestore offline), force ready after 6 s.
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
   useEffect(() => {
     let stopProfile: (() => void) | null = null;
-    let alive = true;
+    // Each auth change bumps the generation, so a late snapshot for a previous user is ignored.
+    let generation = 0;
 
-    // 6-second hard deadline: if Firestore never responds, treat as "not signed in"
-    timeoutRef.current = setTimeout(() => {
-      if (alive) setState((s) => s.ready ? s : { ready: true, user: null, profile: null });
-    }, 6000);
-
-    const stopAuth = onAuthStateChanged(auth, async (user) => {
+    const stopAuth = onAuthStateChanged(auth, (user) => {
       stopProfile?.();
       stopProfile = null;
-
+      const mine = ++generation;
       if (!user) {
-        if (alive) setState({ ready: true, user: null, profile: null });
+        setState({ ready: true, user: null, profile: null });
         return;
       }
-
-      // Fast path: fetch the profile document once so the UI unblocks immediately.
-      try {
-        const snap = await getDoc(doc(db, "users", user.uid));
-        if (alive) {
-          setState({
-            ready: true,
-            user,
-            profile: snap.exists() ? toProfile(user.uid, snap.data()) : null,
-          });
-        }
-      } catch {
-        if (alive) setState({ ready: true, user, profile: null });
-      }
-
-      // Then keep it live so changes (e.g. a new field written after register) propagate.
+      // One live read: the first snapshot unblocks the UI, later ones keep the profile current
+      // (e.g. right after sign-up, when the profile document lands a moment after the auth user).
       stopProfile = onSnapshot(
         doc(db, "users", user.uid),
         (snap) => {
-          if (alive)
-            setState((s) => ({
-              ...s,
-              ready: true,
-              user,
-              profile: snap.exists() ? toProfile(user.uid, snap.data()) : s.profile,
-            }));
+          if (mine !== generation) return;
+          setState({ ready: true, user, profile: snap.exists() ? toProfile(user.uid, snap.data()) : null });
         },
-        (err) => console.warn("[session] profile listener error:", err.message)
+        (err) => {
+          if (mine !== generation) return;
+          console.warn("[session] profile read failed:", err.message);
+          setState({ ready: true, user, profile: null });
+        }
       );
     });
 
     return () => {
-      alive = false;
+      generation += 1;
       stopProfile?.();
       stopAuth();
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
   }, []);
 
@@ -117,8 +94,9 @@ export function useRequire(type: AccountType): Profile | null {
     if (!user) {
       router.replace(`/auth/login?next=${encodeURIComponent(pathname)}`);
     } else if (!profile) {
-      // Authenticated but no Firestore document — send them to register to complete their profile.
-      router.replace(`/auth/register?next=${encodeURIComponent(pathname)}`);
+      // Authenticated but no profile document: finish it on the register page.
+      const q = new URLSearchParams({ email: user.email ?? "", lock: "1", next: pathname });
+      router.replace(`/auth/register?${q}`);
     } else if (profile.accountType !== type) {
       router.replace(homeFor(profile.accountType));
     }
