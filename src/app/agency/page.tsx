@@ -5,6 +5,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { AlertTriangle, ArrowRight, BellRing, Check, CircleDollarSign, FileText, HandCoins, Hourglass, Inbox, PenLine, Send, Sparkles } from "lucide-react";
 import { Banner, Card, CardHeader, EmptyState, LinkButton, Stat, cx } from "@/components/ui";
+import { ConnectCrmHere } from "@/components/agency/ConnectCrmHere";
 import { useNotices } from "@/components/Notifications";
 import { PayoutDrawer } from "@/components/agency/PayoutDrawer";
 import { SendRequestDrawer } from "@/components/agency/SendRequestDrawer";
@@ -25,7 +26,7 @@ function greeting(now: number) {
 
 export default function AgencyOverview() {
   const data = useAgency();
-  const { profile, org, invoices, allocations, payouts, accounts, isOwner, loading } = data;
+  const { profile, org, invoices, allocations, payouts, accounts, isOwner, loading, crmNotConnectedHere } = data;
   const now = useNow();
   const a = useMemo(() => attentionOf({ ...data, now }), [data, now]);
   const { notices } = useNotices(useMemo(() => [org.id, ...org.emails], [org.id, org.emails]));
@@ -168,7 +169,8 @@ export default function AgencyOverview() {
         <SyncChip />
       </div>
 
-      {org.crm.lastSyncError && (
+      <ConnectCrmHere returnTo="/agency" className="mb-6" />
+      {org.crm.lastSyncError && !crmNotConnectedHere && (
         <Banner tone="warn" title={`${providerName(org.crm.provider)} sync is failing`} className="mb-6" action={<LinkButton href="/agency/settings?tab=crm" variant="secondary" size="sm">Check connection</LinkButton>}>
           {org.crm.lastSyncError}
         </Banner>

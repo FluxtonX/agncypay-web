@@ -3,7 +3,7 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { C, col, useLive, useLiveDoc, where } from "./db";
 import { claimPayoutsForOrg, ensureOrg, flushMailQueue, type Actor } from "./actions";
-import { runSync } from "./crm/sync";
+import { CrmNotConnectedHere, runSync } from "./crm/sync";
 import { hashOf } from "./domain";
 import type { Allocation, BankAccount, Invoice, Org, Payout, Profile } from "./types";
 
@@ -20,6 +20,8 @@ export interface AgencyData {
   owed: Allocation[];
   receiving: BankAccount | null;
   funding: BankAccount | null;
+  /** The CRM is connected for the agency, but not in this browser (its login lives per browser). */
+  crmNotConnectedHere: boolean;
   loading: boolean;
 }
 
@@ -35,7 +37,8 @@ const SYNC_EVERY = 2 * 60_000;
 const FOCUS_THROTTLE = 45_000;
 
 /** Keeps the CRM mirror fresh with no manual action: on open, every two minutes and when the tab regains focus. */
-function useAutoSync(org: Org | null, invoices: Invoice[]) {
+function useAutoSync(org: Org | null, invoices: Invoice[]): boolean {
+  const [notHere, setNotHere] = useState<{ key: string | null; value: boolean }>({ key: null, value: false });
   const orgRef = useRef<Org | null>(org);
   const invoicesRef = useRef<Invoice[]>(invoices);
   useEffect(() => {
@@ -57,8 +60,10 @@ function useAutoSync(org: Org | null, invoices: Invoice[]) {
       last = Date.now();
       try {
         await runSync(current, invoicesRef.current);
+        setNotHere({ key, value: false });
       } catch (err) {
-        console.warn("[crm sync]", err);
+        if (err instanceof CrmNotConnectedHere) setNotHere({ key, value: true });
+        else console.warn("[crm sync]", err);
       } finally {
         inFlight = false;
         // Same heartbeat sweeps the email queue: delivers anything left pending and retries failures.
@@ -74,6 +79,9 @@ function useAutoSync(org: Org | null, invoices: Invoice[]) {
       window.removeEventListener("focus", onFocus);
     };
   }, [key]);
+
+  // Only trust the answer for the current connection (a reconnect or switch starts fresh).
+  return notHere.key === key && notHere.value;
 }
 
 export type AgencyGate =
@@ -105,7 +113,7 @@ export function useAgencyGate(profile: Profile): AgencyGate {
   const owedKey = live && emails.length ? `owed:${emails.join(",")}` : null;
   const owed = useLive<Allocation>(owedKey, () => col(C.allocations, where("recipientEmail", "in", emails)));
 
-  useAutoSync(member ? org : null, invoices.data);
+  const crmNotConnectedHere = useAutoSync(member ? org : null, invoices.data);
 
   // Collect payouts other agencies authorised for us once we can receive them.
   const hasBank = accounts.data.length > 0;
@@ -134,9 +142,10 @@ export function useAgencyGate(profile: Profile): AgencyGate {
       owed: owed.data.filter((a) => a.orgId !== org.id),
       receiving: sortedAccounts.find((a) => a.receiving) ?? sortedAccounts[0] ?? null,
       funding: sortedAccounts.find((a) => a.funding) ?? sortedAccounts[0] ?? null,
+      crmNotConnectedHere,
       loading: invoices.loading || allocations.loading || payouts.loading || accounts.loading,
     };
-  }, [org, member, profile, invoices, allocations, payouts, accounts, owed]);
+  }, [org, member, profile, invoices, allocations, payouts, accounts, owed, crmNotConnectedHere]);
 
   if (error && !org) return { state: "error", message: error };
   if (orgDoc.loading || (!org && !error)) return { state: "loading" };

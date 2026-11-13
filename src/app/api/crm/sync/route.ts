@@ -10,6 +10,10 @@ import { CrmError, syncQuickBooks, syncXero, type ConnectorResult } from "@/lib/
 export async function GET(request: NextRequest) {
   const provider = request.nextUrl.searchParams.get("provider");
   const cookie = (name: string) => request.cookies.get(name)?.value;
+  // The CRM login lives in the browser that authorised it. A browser without it is "not connected
+  // here", which the app shows as a prompt for this device rather than an org-wide sync failure.
+  const notHere = (name: string) =>
+    NextResponse.json({ error: `${name} isn't connected in this browser yet.`, code: "not_connected_here" }, { status: 401 });
 
   try {
     let result: ConnectorResult;
@@ -18,13 +22,13 @@ export async function GET(request: NextRequest) {
 
     if (provider === "quickbooks") {
       const realmId = cookie("qb_realm_id");
-      if (!realmId) throw new CrmError("QuickBooks is not connected in this browser. Reconnect it in Settings.", 401);
+      if (!realmId) return notHere("QuickBooks");
       prefix = "qb";
       refreshMaxAge = 60 * 60 * 24 * 100;
       result = await syncQuickBooks({ accessToken: cookie("qb_access_token"), refreshToken: cookie("qb_refresh_token") }, realmId);
     } else if (provider === "xero") {
       const tenantId = cookie("xero_tenant_id");
-      if (!tenantId) throw new CrmError("Xero is not connected in this browser. Reconnect it in Settings.", 401);
+      if (!tenantId) return notHere("Xero");
       prefix = "xero";
       refreshMaxAge = 60 * 60 * 24 * 60;
       result = await syncXero({ accessToken: cookie("xero_access_token"), refreshToken: cookie("xero_refresh_token") }, tenantId);

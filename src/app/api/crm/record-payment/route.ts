@@ -22,7 +22,9 @@ export async function POST(request: NextRequest) {
   const cookie = (name: string) => request.cookies.get(name)?.value;
   try {
     const realmId = cookie("qb_realm_id");
-    if (!realmId) throw new CrmError("QuickBooks is not connected in this browser. Reconnect it in Settings.", 401);
+    if (!realmId) {
+      return NextResponse.json({ error: "QuickBooks isn't connected in this browser yet.", code: "not_connected_here" }, { status: 401 });
+    }
     const { results, refreshed } = await recordQuickBooksPayments(
       { accessToken: cookie("qb_access_token"), refreshToken: cookie("qb_refresh_token") },
       realmId,

@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { BadgeCheck, FlaskConical, Landmark, Link2, Plug, Trash2, UserPlus, Users } from "lucide-react";
 import { Avatar, Banner, Button, Card, CardHeader, EmptyState, Field, Input, PageHeader, Pill, Splash, Tabs, useAction, useToast } from "@/components/ui";
+import { ConnectCrmHere } from "@/components/agency/ConnectCrmHere";
 import { BankConnect } from "@/components/BankConnect";
 import { Confirm } from "@/components/Confirm";
 import { useAgency } from "@/lib/agency";
@@ -246,7 +247,7 @@ const SOON = [
 ];
 
 function Crm() {
-  const { org, actor } = useAgency();
+  const { org, actor, crmNotConnectedHere } = useAgency();
   const router = useRouter();
   const params = useSearchParams();
   const toast = useToast();
@@ -300,10 +301,10 @@ function Crm() {
               Disconnect
             </Button>
           </div>
-          {org.crm.lastSyncError && (
+          <ConnectCrmHere returnTo="/agency/settings?tab=crm" className="mt-4" />
+          {org.crm.lastSyncError && !crmNotConnectedHere && (
             <Banner tone="warn" title="Last sync failed" className="mt-4" action={connected !== "sandbox" ? <Button size="sm" onClick={() => window.location.assign(`/api/auth/${connected}/connect?returnTo=/agency/settings`)}>Reconnect</Button> : undefined}>
               {org.crm.lastSyncError}
-              {connected !== "sandbox" && " The connection lives in the browser that authorised it — reconnect here to sync from this browser."}
             </Banner>
           )}
         </Card>

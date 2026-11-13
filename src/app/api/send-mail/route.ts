@@ -13,6 +13,18 @@ interface MailMessage {
   text?: string;
 }
 
+/**
+ * A problem with this server's setup (missing settings, Brevo rejecting the key or the server's IP),
+ * not with the email. Emails are left in the queue untouched so a correctly set-up server sends them.
+ */
+class MailConfigError extends Error {}
+
+function configProblem(): string | null {
+  if (!process.env.BREVO_API_KEY) return "BREVO_API_KEY is not set on this server";
+  if (!process.env.MAIL_FROM_EMAIL) return "MAIL_FROM_EMAIL is not set on this server";
+  return null;
+}
+
 /** Sends one email through Brevo's transactional API. Returns the provider message id. */
 async function sendViaBrevo(to: string, message: MailMessage, fromName?: string, replyTo?: string): Promise<string> {
   const key = process.env.BREVO_API_KEY;
@@ -35,6 +47,8 @@ async function sendViaBrevo(to: string, message: MailMessage, fromName?: string,
   });
 
   const body = await res.text();
+  // 401/403: Brevo rejected the key or this server's IP address (Authorized IPs) — a setup problem.
+  if (res.status === 401 || res.status === 403) throw new MailConfigError(`Brevo ${res.status}: ${body}`);
   if (!res.ok) throw new Error(`Brevo ${res.status}: ${body}`);
   try {
     return (JSON.parse(body).messageId as string) || "sent";
@@ -66,6 +80,8 @@ type MailDoc = {
 };
 
 export async function POST() {
+  const problem = configProblem();
+  if (problem) return NextResponse.json({ error: problem, processed: 0 }, { status: 503 });
   let docs;
   try {
     const [pending, processing] = await Promise.all([
@@ -100,6 +116,12 @@ export async function POST() {
       results.push({ id: d.id, state: "SUCCESS" });
     } catch (err) {
       const message = err instanceof Error ? err.message : "send failed";
+      if (err instanceof MailConfigError) {
+        // Put it back exactly as it was (no attempt used) and stop: every other email would fail too.
+        await updateDoc(ref, { status: "pending", attempts: attempts - 1, delivery: { state: "WAITING", error: message, endTime: Date.now() } });
+        results.push({ id: d.id, state: "WAITING", error: message });
+        return NextResponse.json({ error: message, processed: results.length, results }, { status: 503 });
+      }
       // Transient failures go back in the queue; after MAX_ATTEMPTS the email is marked failed.
       const retry = attempts < MAX_ATTEMPTS;
       await updateDoc(ref, { status: retry ? "pending" : "error", delivery: { state: retry ? "RETRY" : "ERROR", error: message, endTime: Date.now() } });

@@ -11,7 +11,18 @@ import { C } from "../db";
 import { invoiceFingerprint, normEmail, safeId } from "../domain";
 import { newId, providerName } from "../actions";
 import { generateSandbox } from "./sandbox";
-import type { Allocation, Contact, CrmSyncPayload, Invoice, InvoiceStatus, Org } from "../types";
+import type { Allocation, Contact, CrmProvider, CrmSyncPayload, Invoice, InvoiceStatus, Org } from "../types";
+
+/**
+ * The CRM login lives in the browser that authorised it; this browser doesn't have it. It is not an
+ * org-wide failure (another browser may be syncing fine), so it is never written to the org.
+ */
+export class CrmNotConnectedHere extends Error {
+  constructor(provider: CrmProvider) {
+    super(`${providerName(provider)} isn't connected in this browser yet.`);
+    this.name = "CrmNotConnectedHere";
+  }
+}
 
 export interface SyncResult {
   created: number;
@@ -25,6 +36,7 @@ async function fetchPayload(org: Org): Promise<CrmSyncPayload> {
   }
   const res = await fetch(`/api/crm/sync?provider=${provider}`, { cache: "no-store" });
   const body = await res.json().catch(() => null);
+  if (body?.code === "not_connected_here") throw new CrmNotConnectedHere(provider);
   if (!res.ok || !body) throw new Error(body?.error || `${providerName(provider)} sync failed (${res.status}).`);
   return body as CrmSyncPayload;
 }
@@ -51,7 +63,9 @@ export async function pushPaymentsToCrm(org: Org, invoices: Invoice[]): Promise<
       items: pending.map((i) => ({ crmId: i.crmId, amount: i.amount, paidAt: i.paidAt ?? Date.now(), reference: i.paymentId ?? i.id })),
     }),
   });
-  const body = (await res.json().catch(() => null)) as { results?: { crmId: string; state: string; qbPaymentId?: string; error?: string }[]; error?: string } | null;
+  const body = (await res.json().catch(() => null)) as { results?: { crmId: string; state: string; qbPaymentId?: string; error?: string }[]; error?: string; code?: string } | null;
+  // Not connected in this browser: another browser of the agency will write it back.
+  if (body?.code === "not_connected_here") return 0;
   if (!res.ok || !body?.results) throw new Error(body?.error || `Could not update QuickBooks (${res.status}).`);
 
   const now = Date.now();
@@ -89,6 +103,7 @@ export async function runSync(org: Org, invoices: Invoice[] = []): Promise<SyncR
   try {
     payload = await fetchPayload(org);
   } catch (err) {
+    if (err instanceof CrmNotConnectedHere) throw err;
     const message = err instanceof Error ? err.message : "Sync failed.";
     await updateDoc(doc(db, C.orgs, org.id), { "crm.lastSyncAt": Date.now(), "crm.lastSyncError": message });
     throw err;
